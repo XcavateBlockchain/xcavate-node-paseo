@@ -1,4 +1,3 @@
-pub mod governance;
 pub mod xcm_config;
 
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
@@ -8,7 +7,7 @@ use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
     traits::{
-        AsEnsureOriginWithArg, ConstU32, ConstU64, Contains, EitherOfDiverse, InstanceFilter,
+        AsEnsureOriginWithArg, ConstU32, ConstU64, Contains, InstanceFilter,
         TransformOrigin,
     },
     weights::{ConstantMultiplier, Weight},
@@ -18,8 +17,6 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot, EnsureSigned,
 };
-pub use governance::origins::pallet_custom_origins;
-use governance::{origins::Treasurer, TreasurySpender};
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
@@ -54,7 +51,7 @@ use crate::{
     },
     weights::{self, BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
     Aura, Balances, CollatorSelection, MessageQueue, OriginCaller, PalletInfo, ParachainSystem,
-    Preimage, Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
+    Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
     RuntimeOrigin, RuntimeTask, Session, SessionKeys, System, Treasury, WeightToFee, XcmpQueue,
 };
 
@@ -150,50 +147,6 @@ impl frame_system::Config for Runtime {
     type SS58Prefix = SS58Prefix;
     /// Runtime version.
     type Version = Version;
-}
-
-parameter_types! {
-    pub MaximumSchedulerWeight: frame_support::weights::Weight = Perbill::from_percent(80) *
-        RuntimeBlockWeights::get().max_block;
-    pub const MaxScheduledRuntimeCallsPerBlock: u32 = 50;
-}
-
-impl pallet_scheduler::Config for Runtime {
-    type MaxScheduledPerBlock = MaxScheduledRuntimeCallsPerBlock;
-    type MaximumWeight = MaximumSchedulerWeight;
-    type OriginPrivilegeCmp = frame_support::traits::EqualPrivilegeOnly;
-    type PalletsOrigin = OriginCaller;
-    type Preimages = Preimage;
-    type RuntimeCall = RuntimeCall;
-    type RuntimeEvent = RuntimeEvent;
-    type RuntimeOrigin = RuntimeOrigin;
-    type ScheduleOrigin = EnsureRoot<AccountId>;
-    /// Rerun benchmarks if you are making changes to runtime configuration.
-    type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
-}
-
-parameter_types! {
-    pub const PreimageBaseDeposit: Balance = deposit(2, 64);
-    pub const PreimageByteDeposit: Balance = deposit(0, 1);
-    pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
-}
-
-impl pallet_preimage::Config for Runtime {
-    type Consideration = frame_support::traits::fungible::HoldConsideration<
-        AccountId,
-        Balances,
-        PreimageHoldReason,
-        frame_support::traits::LinearStoragePrice<
-            PreimageBaseDeposit,
-            PreimageByteDeposit,
-            Balance,
-        >,
-    >;
-    type Currency = Balances;
-    type ManagerOrigin = EnsureRoot<AccountId>;
-    type RuntimeEvent = RuntimeEvent;
-    /// Rerun benchmarks if you are making changes to runtime configuration.
-    type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -557,10 +510,11 @@ parameter_types! {
     pub TreasuryInteriorLocation: InteriorLocation = PalletInstance(13).into();
     pub const MaxApprovals: u32 = 100;
     pub TreasuryAccount: AccountId = Treasury::account_id();
+    pub RootOperatorAccountId: AccountId = AccountId::from([0xffu8; 32]);
 }
 
 impl pallet_treasury::Config for Runtime {
-    type ApproveOrigin = EitherOfDiverse<EnsureRoot<AccountId>, Treasurer>;
+    type ApproveOrigin = EnsureRoot<AccountId>;
     type AssetKind = AssetKind;
     type BalanceConverter = frame_support::traits::tokens::UnityAssetBalanceConversion;
     #[cfg(feature = "runtime-benchmarks")]
@@ -584,10 +538,10 @@ impl pallet_treasury::Config for Runtime {
     type ProposalBond = ProposalBond;
     type ProposalBondMaximum = ProposalBondMaximum;
     type ProposalBondMinimum = ProposalBondMinimum;
-    type RejectOrigin = EitherOfDiverse<EnsureRoot<AccountId>, Treasurer>;
+    type RejectOrigin = EnsureRoot<AccountId>;
     type RuntimeEvent = RuntimeEvent;
     type SpendFunds = ();
-    type SpendOrigin = TreasurySpender;
+    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
     type SpendPeriod = SpendPeriod;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;

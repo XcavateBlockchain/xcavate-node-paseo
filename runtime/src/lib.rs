@@ -27,7 +27,6 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 
 use crate::{
-    configs::pallet_custom_origins,
     constants::{currency::MILLICENTS, POLY_DEGREE, P_FACTOR, Q_FACTOR},
     weights::ExtrinsicBaseWeight,
 };
@@ -120,8 +119,6 @@ construct_runtime!(
         Proxy: pallet_proxy = 4,
         Utility: pallet_utility = 5,
         Multisig: pallet_multisig = 6,
-        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 7,
-        Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>, HoldReason} = 8,
 
         // Monetary
         Balances: pallet_balances = 10,
@@ -131,10 +128,6 @@ construct_runtime!(
 
         // Governance
         Sudo: pallet_sudo = 15,
-        ConvictionVoting: pallet_conviction_voting::{Pallet, Call, Storage, Event<T>} = 16,
-        Referenda: pallet_referenda::{Pallet, Call, Storage, Event<T>} = 17,
-        Origins: pallet_custom_origins::{Origin} = 18,
-        Whitelist: pallet_whitelist::{Pallet, Call, Storage, Event<T>} = 19,
 
         // Collator Support. The order of these 4 are important and shall not change.
         Authorship: pallet_authorship = 20,
