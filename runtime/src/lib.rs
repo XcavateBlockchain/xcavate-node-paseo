@@ -125,7 +125,6 @@ construct_runtime!(
         TransactionPayment: pallet_transaction_payment = 11,
         LocalAssets: pallet_assets::<Instance1> = 12,
         ForeignAssets: pallet_assets::<Instance2> = 13,
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Config<T>, Event<T>} = 14,
 
         // Governance
         Sudo: pallet_sudo = 15,

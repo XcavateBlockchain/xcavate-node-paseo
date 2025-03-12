@@ -1,17 +1,27 @@
 #!/bin/bash
 
-while getopts f: flag
-do
-    case "${flag}" in
-        f) filename=${OPTARG};;
-    esac
+pallets=(
+    pallet_assets
+    pallet_balances
+    pallet_session
+    pallet_timestamp
+    pallet_message_queue
+    pallet_sudo
+    pallet_collator_selection  
+    cumulus_pallet_xcmp_queue  
+    cumulus_pallet_parachain_system
+    pallet_proxy
+    pallet_multisig
+    pallet_xcm
+    pallet_utility
+)
+
+# Generate weights
+for pallet_name in "${pallets[@]}"; do
+    ./target/release/xcavate-node benchmark pallet \
+        --pallet $pallet_name \
+        --extrinsic "*" \
+        --steps 50 \
+        --repeat 20 \
+        --output ./runtime/src/substrate_weights/$pallet_name.rs
 done
-
-mkdir benchmarking
-mkdir benchmarking/results
-mkdir benchmarking/new-benchmarks
-
-while IFS= read -r line; do
-    echo "Creating benchmark for: $line"
-    target/release/parachain-template-node benchmark pallet --steps=50 --repeat=20 --extrinsic=* --wasm-execution=compiled --heap-pages=4096 --json-file=benchmarking/results/results-$line.json --pallet=$line --chain=dev --output=benchmarking/new-benchmarks/$line.rs
-done < $filename

@@ -5,22 +5,20 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
-use polkadot_parachain_primitives::primitives::{self, Sibling};
+use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use xcm::latest::prelude::*;
 use xcm_builder::{
     AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowTopLevelPaidExecutionFrom,
     DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin, FixedWeightBounds,
-    FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter, IsChildSystemParachain,
+    FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter,
     IsConcrete, NativeAsset, NoChecking, ParentIsPreset, RelayChainAsNative,
     SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
     SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId,
-    UsingComponents, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
-    XcmFeeToAccount,
+    UsingComponents, WithComputedOrigin, WithUniqueTopic,
 };
 use xcm_executor::XcmExecutor;
 
-use super::TreasuryAccount;
 use crate::{
     configs::{
         weights, Balances, ParachainSystem, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
@@ -157,10 +155,7 @@ impl xcm_executor::Config for XcmConfig {
     type Barrier = Barrier;
     type CallDispatcher = RuntimeCall;
     /// When changing this config, keep in mind, that you should collect fees.
-    type FeeManager = XcmFeeManagerFromComponents<
-        IsChildSystemParachain<primitives::Id>,
-        XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
-    >;
+    type FeeManager = ();
     type HrmpChannelAcceptedHandler = ();
     type HrmpChannelClosingHandler = ();
     type HrmpNewChannelOpenRequestHandler = ();

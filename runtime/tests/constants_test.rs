@@ -164,7 +164,7 @@ mod runtime_tests {
 
         assert_eq!(DepositFactor::get(), deposit(0, 32));
 
-        assert_eq!(MaxSignatories::get(), 100);
+        assert_eq!(MaxSignatories::get(), 20);
     }
 
     #[test]
