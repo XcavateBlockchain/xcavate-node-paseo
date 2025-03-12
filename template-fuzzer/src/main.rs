@@ -7,7 +7,7 @@ use frame_support::{
     traits::{IntegrityTest, TryState, TryStateSelect},
     weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
 };
-use generic_runtime_template::{
+use xcavate_runtime::{
     constants::SLOT_DURATION, AllPalletsWithSystem, Balance, Balances, BlockNumber, Executive,
     Runtime, RuntimeCall, RuntimeOrigin, SudoConfig, UncheckedExtrinsic,
 };
@@ -25,7 +25,7 @@ fn main() {
     let endowed_accounts: Vec<AccountId> = (0..5).map(|i| [i; 32].into()).collect();
 
     let genesis_storage: Storage = {
-        use generic_runtime_template::{
+        use xcavate_runtime::{
             BalancesConfig, CollatorSelectionConfig, RuntimeGenesisConfig, SessionConfig,
             SessionKeys,
         };

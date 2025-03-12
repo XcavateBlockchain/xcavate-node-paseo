@@ -18,7 +18,7 @@ use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
 // Substrate Imports
 use frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
 // Local Runtime Types
-use generic_runtime_template::{
+use xcavate_runtime::{
     apis::RuntimeApi,
     opaque::{Block, Hash},
 };

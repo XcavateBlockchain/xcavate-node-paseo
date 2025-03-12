@@ -1,5 +1,5 @@
 [package]
-name = "generic-runtime-template"
+name = "xcavate-runtime"
 authors = { workspace = true }
 description = "A generic parachain runtime template"
 edition = { workspace = true }

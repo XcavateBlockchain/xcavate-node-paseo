@@ -15,7 +15,7 @@ use frame_support::{
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
-    EnsureRoot, EnsureSigned,
+    EnsureRoot, EnsureRootWithSuccess,
 };
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -270,25 +270,27 @@ parameter_types! {
     pub const MetadataDepositBase: Balance = deposit(1, 68);
     pub const MetadataDepositPerByte: Balance = deposit(0, 1);
     pub const RemoveItemsLimit: u32 = 1000;
+    pub const ZeroDeposit: Balance = 0;
+    pub RootAccountId: AccountId = AccountId::from([0xffu8; 32]);
 }
 
 impl pallet_assets::Config<pallet_assets::Instance1> for Runtime {
     type ApprovalDeposit = ApprovalDeposit;
     type AssetAccountDeposit = AssetAccountDeposit;
-    type AssetDeposit = AssetDeposit;
+    type AssetDeposit = ZeroDeposit;
     type AssetId = u32;
     type AssetIdParameter = parity_scale_codec::Compact<u32>;
     type Balance = Balance;
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = ();
     type CallbackHandle = ();
-    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureRootWithSuccess<AccountId, RootAccountId>>;
     type Currency = Balances;
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountId>;
     type Freezer = ();
-    type MetadataDepositBase = MetadataDepositBase;
-    type MetadataDepositPerByte = MetadataDepositPerByte;
+    type MetadataDepositBase = ZeroDeposit;
+    type MetadataDepositPerByte = ZeroDeposit;
     type RemoveItemsLimit = RemoveItemsLimit;
     type RuntimeEvent = RuntimeEvent;
     type StringLimit = StringLimit;
@@ -306,7 +308,7 @@ impl pallet_assets::Config<pallet_assets::Instance2> for Runtime {
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = ();
     type CallbackHandle = ();
-    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureRootWithSuccess<AccountId, RootAccountId>>;
     type Currency = Balances;
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountId>;

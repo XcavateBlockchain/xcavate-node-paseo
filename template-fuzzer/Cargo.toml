@@ -18,7 +18,7 @@ workspace = true
 substrate-runtime-fuzzer = { workspace = true }
 ziggy = { workspace = true }
 
-generic-runtime-template = { path = "../runtime" }
+xcavate-runtime = { path = "../runtime" }
 parachains-common = { workspace = true }
 
 parity-scale-codec = { workspace = true }
@@ -42,7 +42,7 @@ cumulus-test-relay-sproof-builder = { workspace = true }
 default = [ "std", "try-runtime" ]
 std = [
 	"frame-support/std",
-	"generic-runtime-template/std",
+	"xcavate-runtime/std",
 	"pallet-timestamp/std",
 	"parity-scale-codec/std",
 	"sp-consensus-aura/std",
@@ -51,7 +51,7 @@ std = [
 try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
-	"generic-runtime-template/try-runtime",
+	"xcavate-runtime/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"sp-runtime/try-runtime",
 ]

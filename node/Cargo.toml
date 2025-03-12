@@ -1,5 +1,5 @@
 [package]
-name = "generic-template-node"
+name = "xcavate-node"
 authors = { workspace = true }
 build = "build.rs"
 description = "Node compatible with generic runtime template."
@@ -19,7 +19,7 @@ serde = { workspace = true, features = [ "derive" ] }
 serde_json = { workspace = true }
 
 # Local
-generic-runtime-template = { path = "../runtime" }
+xcavate-runtime = { path = "../runtime" }
 
 # Substrate
 frame-benchmarking = { workspace = true }
@@ -80,14 +80,14 @@ experimental = []
 runtime-benchmarks = [
 	"frame-benchmarking-cli/runtime-benchmarks",
 	"frame-benchmarking/runtime-benchmarks",
-	"generic-runtime-template/runtime-benchmarks",
+	"xcavate-runtime/runtime-benchmarks",
 	"polkadot-cli/runtime-benchmarks",
 	"polkadot-primitives/runtime-benchmarks",
 	"sc-service/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
 try-runtime = [
-	"generic-runtime-template/try-runtime",
+	"xcavate-runtime/try-runtime",
 	"polkadot-cli/try-runtime",
 	"sp-runtime/try-runtime",
 ]
