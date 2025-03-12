@@ -1,6 +1,6 @@
 use cumulus_primitives_core::ParaId;
 use xcavate_runtime::{
-    constants::currency::EXISTENTIAL_DEPOSIT, AccountId, AuraId, Signature,
+    constants::currency::{EXISTENTIAL_DEPOSIT, CENTS}, AccountId, AuraId, Signature, Balance
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
@@ -66,9 +66,8 @@ pub fn template_session_keys(keys: AuraId) -> xcavate_runtime::SessionKeys {
 }
 
 pub fn development_config() -> ChainSpec {
-    // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
-    properties.insert("tokenSymbol".into(), "UNIT".into());
+    properties.insert("tokenSymbol".into(), "XCAV".into());
     properties.insert("tokenDecimals".into(), 12.into());
     properties.insert("ss58Format".into(), 42.into());
     // This is very important for us, it lets us track the usage of our templates, and have no downside for the node/runtime. Please do not remove :)
@@ -97,30 +96,16 @@ pub fn development_config() -> ChainSpec {
                 get_collator_keys_from_seed("Bob"),
             ),
         ],
-        vec![
-            get_account_id_from_seed::<sr25519::Public>("Alice"),
-            get_account_id_from_seed::<sr25519::Public>("Bob"),
-            get_account_id_from_seed::<sr25519::Public>("Charlie"),
-            get_account_id_from_seed::<sr25519::Public>("Dave"),
-            get_account_id_from_seed::<sr25519::Public>("Eve"),
-            get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-            get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-        ],
-        get_account_id_from_seed::<sr25519::Public>("Alice"),
+        get_endowed_accounts(),
+        get_root_account(),
         1000.into(),
     ))
     .build()
 }
 
 pub fn local_testnet_config() -> ChainSpec {
-    // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
-    properties.insert("tokenSymbol".into(), "UNIT".into());
+    properties.insert("tokenSymbol".into(), "XCAV".into());
     properties.insert("tokenDecimals".into(), 12.into());
     properties.insert("ss58Format".into(), 42.into());
 
@@ -148,21 +133,8 @@ pub fn local_testnet_config() -> ChainSpec {
                 get_collator_keys_from_seed("Bob"),
             ),
         ],
-        vec![
-            get_account_id_from_seed::<sr25519::Public>("Alice"),
-            get_account_id_from_seed::<sr25519::Public>("Bob"),
-            get_account_id_from_seed::<sr25519::Public>("Charlie"),
-            get_account_id_from_seed::<sr25519::Public>("Dave"),
-            get_account_id_from_seed::<sr25519::Public>("Eve"),
-            get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-            get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-        ],
-        get_account_id_from_seed::<sr25519::Public>("Alice"),
+        get_endowed_accounts(),
+        get_root_account(),
         1000.into(),
     ))
     .with_protocol_id("template-local")
@@ -176,9 +148,11 @@ fn testnet_genesis(
     root: AccountId,
     id: ParaId,
 ) -> serde_json::Value {
+    pub const ENDOWMENT: Balance = 100 * CENTS;
+
     serde_json::json!({
         "balances": {
-            "balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 60)).collect::<Vec<_>>(),
+            "balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>(),
         },
         "parachainInfo": {
             "parachainId": id,
@@ -205,4 +179,20 @@ fn testnet_genesis(
         },
         "sudo": { "key": Some(root) }
     })
+}
+
+pub fn get_root_account() -> AccountId {
+    let json_data = &include_bytes!("../../seed/accounts.json")[..];
+    let additional_accounts_with_balance: Vec<AccountId> =
+        serde_json::from_slice(json_data).unwrap_or_default();
+
+    additional_accounts_with_balance[0].clone()
+}
+
+pub fn get_endowed_accounts() -> Vec<AccountId> {
+    let json_data = &include_bytes!("../../seed/accounts.json")[..];
+    let additional_accounts_with_balance: Vec<AccountId> =
+        serde_json::from_slice(json_data).unwrap_or_default();
+
+    additional_accounts_with_balance
 }

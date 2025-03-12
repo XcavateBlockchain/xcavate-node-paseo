@@ -2,12 +2,12 @@
 name = "xcavate-node"
 authors = { workspace = true }
 build = "build.rs"
-description = "Node compatible with generic runtime template."
+description = "Xcavate node"
 edition = { workspace = true }
 license = { workspace = true }
 publish = false
 repository = { workspace = true }
-version = "2.0.0"
+version = "1.0.0"
 
 [dependencies]
 clap = { workspace = true }

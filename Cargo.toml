@@ -8,6 +8,7 @@ description = "Generic runtime template for Polkadot Para{chains, cores}"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/OpenZeppelin/polkadot-runtime-templates"
+homepage = "https://pendulumchain.org"
 
 [workspace.dependencies]
 clap = { version = "4.5.3", features = [ "derive" ] }

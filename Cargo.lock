@@ -14691,7 +14691,7 @@ dependencies = [
 
 [[package]]
 name = "xcavate-node"
-version = "2.0.0"
+version = "1.0.0"
 dependencies = [
  "clap",
  "color-print",
@@ -14749,7 +14749,7 @@ dependencies = [
 
 [[package]]
 name = "xcavate-runtime"
-version = "2.0.0"
+version = "1.0.0"
 dependencies = [
  "assets-common",
  "cumulus-pallet-aura-ext",
