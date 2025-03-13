@@ -1,5 +1,5 @@
 // general
-./target/release/generic-template-node \
+./target/release/xcavate-node \
 -lbasic-authorship=trace \
 --collator \
 --force-authoring \
@@ -19,7 +19,7 @@
 --blocks-pruning=256
 
 
-./target/release/generic-template-node \
+./target/release/xcavate-node \
 -lbasic-authorship=trace \
 --collator \
 --force-authoring \
@@ -39,5 +39,5 @@
 --blocks-pruning=256
 
 
-./target/release/generic-template-node purge-chain --chain ./chainspec/raw-parachain-chainspec.json
-./target/release/generic-template-node purge-chain --chain ./chainspec/plain-parachain-chainspec.json
+./target/release/xcavate-node purge-chain --chain ./chainspec/raw-parachain-chainspec.json
+./target/release/xcavate-node purge-chain --chain ./chainspec/plain-parachain-chainspec.json
