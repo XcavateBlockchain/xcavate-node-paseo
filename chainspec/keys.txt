@@ -1,13 +1,15 @@
-ganesh@Ganesh-Mac xcavate-node-paseo % ./target/release/xcavate-node key generate --scheme Sr25519 --password-interactive
+ganesh@Ganesh-Mac generic-template % ./target/release/xcavate-node key generate --scheme Sr25519 --password-interactive
 Key password: 
-Secret phrase:       trend near lunch caution differ tenant attract shine top upon online raven
+Secret phrase:       barrel space issue thought leaf sponsor trick address trip chicken soap rail
   Network ID:        substrate
-  Secret seed:       0xd05a895c045bc51dc87baa12a0b49151ac0bc34b9a6e2db120f61f829240d53d
-  Public key (hex):  0x985ca51a663e054d8e89c09d5f1a3f0a1ad33f9509a591370fe38ec23713011d
-  Account ID:        0x985ca51a663e054d8e89c09d5f1a3f0a1ad33f9509a591370fe38ec23713011d
-  Public key (SS58): 5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8
-  SS58 Address:      5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8
-ganesh@Ganesh-Mac xcavate-node-paseo % 
+  Secret seed:       0xf227c2e4565b66aa61c8b06b711f3c7ab66422b60422c943f1c880c109d22839
+  Public key (hex):  0xd44affb60b218da356c9c0c83fc6f3d7f6f7dbd901592d1a835435e19c293f56
+  Account ID:        0xd44affb60b218da356c9c0c83fc6f3d7f6f7dbd901592d1a835435e19c293f56
+  Public key (SS58): 5Gs4HfCz8USJqzHrWy486NQXYWGtQgmDYt86zmthzsRL4gQS
+  SS58 Address:      5Gs4HfCz8USJqzHrWy486NQXYWGtQgmDYt86zmthzsRL4gQS
+ganesh@Ganesh-Mac generic-template % 
+
+5GwzYGqQCMn43SqGHuaybF6vUCWXttYh5iRP8qEy11tDQ9oL
 
 
 
@@ -15,21 +17,21 @@ ganesh@Ganesh-Mac xcavate-node-paseo %
 ./target/release/xcavate-node key insert --base-path ./tmp/collator1 \
   --chain ./chainspec/raw-parachain-chainspec.json \
   --scheme Sr25519 \
-  --suri "trend near lunch caution differ tenant attract shine top upon online raven" \
+  --suri "mass spray run false cover wing general goat replace hungry gas search" \
   --password-interactive \
   --key-type aura
 
 
-ganesh@Ganesh-Mac xcavate-node-paseo % ./target/release/xcavate-node key generate --scheme Sr25519 --password-interactive
+ganesh@Ganesh-Mac generic-template % ./target/release/xcavate-node key generate --scheme Sr25519 --password-interactive
 Key password: 
-Secret phrase:       erase repeat divide inflict sunny parent primary armor scissors valve come frost
+Secret phrase:       defense quarter raccoon argue page sting pyramid foster stick raccoon zebra model
   Network ID:        substrate
-  Secret seed:       0x4af289a20d9f405c14e45d746de7fbbb67cb35c9c3718536d6fedb037fcd3f12
-  Public key (hex):  0x12a699b448e24866fa488b27fd886debd958374ffca7fff319f443bdc0a92d27
-  Account ID:        0x12a699b448e24866fa488b27fd886debd958374ffca7fff319f443bdc0a92d27
-  Public key (SS58): 5CVAD7q8Tpmhn5xxPuCR1rWYKSF5mkRcqR1p42u8VmCwaqvS
-  SS58 Address:      5CVAD7q8Tpmhn5xxPuCR1rWYKSF5mkRcqR1p42u8VmCwaqvS
-ganesh@Ganesh-Mac xcavate-node-paseo % 
+  Secret seed:       0xa13c61ad044c86217276174b39fd58081246ab6b551f69e8aef0de1b9b01609e
+  Public key (hex):  0x4836b101db11639d91516cbf057176e760d9d61f712c00e7acf61404b1a4f83f
+  Account ID:        0x4836b101db11639d91516cbf057176e760d9d61f712c00e7acf61404b1a4f83f
+  Public key (SS58): 5DhPYws9T8LrxqaLNRYDGcssqSmiNZauMDS4svsQzrfda5m4
+  SS58 Address:      5DhPYws9T8LrxqaLNRYDGcssqSmiNZauMDS4svsQzrfda5m4
+ganesh@Ganesh-Mac generic-template % 
 
 5DhPYws9T8LrxqaLNRYDGcssqSmiNZauMDS4svsQzrfda5m4
 
@@ -37,6 +39,6 @@ ganesh@Ganesh-Mac xcavate-node-paseo %
 ./target/release/xcavate-node key insert --base-path ./tmp/collator2 \
   --chain ./chainspec/raw-parachain-chainspec.json \
   --scheme Sr25519 \
-  --suri "erase repeat divide inflict sunny parent primary armor scissors valve come frost" \
+  --suri "defense quarter raccoon argue page sting pyramid foster stick raccoon zebra model" \
   --password-interactive \
   --key-type aura
