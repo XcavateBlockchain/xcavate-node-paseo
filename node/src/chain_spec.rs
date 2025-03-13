@@ -5,8 +5,9 @@ use xcavate_runtime::{
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use crate::constant::xcavate;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec =
@@ -64,6 +65,55 @@ where
 pub fn template_session_keys(keys: AuraId) -> xcavate_runtime::SessionKeys {
     xcavate_runtime::SessionKeys { aura: keys }
 }
+
+pub fn live_xcavate_config() -> ChainSpec {
+    // Give your base currency a unit name and decimal places
+    let mut properties = sc_chain_spec::Properties::new();
+    properties.insert("tokenSymbol".into(), xcavate::TOKEN_SYMBOL.into());
+    properties.insert("tokenDecimals".into(), xcavate::TOKEN_DECIMALS.into());
+    properties.insert("ss58Format".into(), xcavate::SS58_FORMAT.into());
+    // This is very important for us, it lets us track the usage of our templates, and have no downside for the node/runtime. Please do not remove :)
+    properties.insert("basedOn".into(), "OpenZeppelin Generic Template".into());
+
+    // collators1
+    let collator_0_account_id: AccountId =
+        AccountId::from_ss58check("5Gs4HfCz8USJqzHrWy486NQXYWGtQgmDYt86zmthzsRL4gQS").unwrap();
+    let collator_0_aura_id: AuraId =
+        AuraId::from_ss58check("5Gs4HfCz8USJqzHrWy486NQXYWGtQgmDYt86zmthzsRL4gQS").unwrap();
+    // collators2
+    let collator_1_account_id: AccountId =
+        AccountId::from_ss58check("5DhPYws9T8LrxqaLNRYDGcssqSmiNZauMDS4svsQzrfda5m4").unwrap();
+    let collator_1_aura_id: AuraId =
+        AuraId::from_ss58check("5DhPYws9T8LrxqaLNRYDGcssqSmiNZauMDS4svsQzrfda5m4").unwrap();
+
+    ChainSpec::builder(
+        xcavate_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+        Extensions {
+            relay_chain: xcavate::RELAY_CHAIN.into(),
+            // You MUST set this to the correct network!
+            para_id: xcavate::PARACHAIN_ID,
+        },
+    )
+    .with_name("Xcavate live")
+    .with_id("live")
+    .with_chain_type(ChainType::Development)
+    .with_genesis_config_patch(testnet_genesis(
+        // initial collators.
+        vec![
+            // XCAVATE COLLATOR 0
+            (collator_0_account_id, collator_0_aura_id),
+            // XCAVATE COLLATOR 1
+            (collator_1_account_id, collator_1_aura_id),
+        ],
+        get_endowed_accounts(),
+        get_root_account(),
+        xcavate::PARACHAIN_ID.into(),
+    ))
+    .with_protocol_id("xcavate-live")
+    .with_properties(properties)
+    .build()
+}
+
 
 pub fn development_config() -> ChainSpec {
     let mut properties = sc_chain_spec::Properties::new();

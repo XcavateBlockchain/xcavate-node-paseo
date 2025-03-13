@@ -1,0 +1,43 @@
+// general
+./target/release/generic-template-node \
+-lbasic-authorship=trace \
+--collator \
+--force-authoring \
+--chain ./chainspec/raw-parachain-chainspec.json \
+--base-path ./tmp/collator1 \
+--port 40336 \
+--rpc-port 8848 \
+--rpc-cors=all \
+-- \
+--execution wasm \
+--chain  ./chainspec/paseo.raw.json \
+--port 30344 \
+--rpc-port 9978 \
+--sync warp \
+--rpc-methods unsafe \
+--unsafe-rpc-external \
+--blocks-pruning=256
+
+
+./target/release/generic-template-node \
+-lbasic-authorship=trace \
+--collator \
+--force-authoring \
+--chain ./chainspec/raw-parachain-chainspec.json \
+--base-path ./tmp/collator2 \
+--port 40333 \
+--rpc-port 8844 \
+--bootnodes /ip4/127.0.0.1/tcp/40336/p2p/12D3KooWJZwUF1sYW8v37URR4sxtkRUzRJEfvBqZ5YKP9CCaWqh9 \
+-- \
+--execution wasm \
+--chain ./chainspec/paseo.raw.json \
+--port 30343 \
+--rpc-port 9977 \
+--sync warp \
+--rpc-methods unsafe \
+--unsafe-rpc-external \
+--blocks-pruning=256
+
+
+./target/release/generic-template-node purge-chain --chain ./chainspec/raw-parachain-chainspec.json
+./target/release/generic-template-node purge-chain --chain ./chainspec/plain-parachain-chainspec.json
