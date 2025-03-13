@@ -77,14 +77,14 @@ pub fn live_xcavate_config() -> ChainSpec {
 
     // collators1
     let collator_0_account_id: AccountId =
-        AccountId::from_ss58check("5Gs4HfCz8USJqzHrWy486NQXYWGtQgmDYt86zmthzsRL4gQS").unwrap();
+        AccountId::from_ss58check("5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8").unwrap();
     let collator_0_aura_id: AuraId =
-        AuraId::from_ss58check("5Gs4HfCz8USJqzHrWy486NQXYWGtQgmDYt86zmthzsRL4gQS").unwrap();
+        AuraId::from_ss58check("5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8").unwrap();
     // collators2
     let collator_1_account_id: AccountId =
-        AccountId::from_ss58check("5DhPYws9T8LrxqaLNRYDGcssqSmiNZauMDS4svsQzrfda5m4").unwrap();
+        AccountId::from_ss58check("5CVAD7q8Tpmhn5xxPuCR1rWYKSF5mkRcqR1p42u8VmCwaqvS").unwrap();
     let collator_1_aura_id: AuraId =
-        AuraId::from_ss58check("5DhPYws9T8LrxqaLNRYDGcssqSmiNZauMDS4svsQzrfda5m4").unwrap();
+        AuraId::from_ss58check("5CVAD7q8Tpmhn5xxPuCR1rWYKSF5mkRcqR1p42u8VmCwaqvS").unwrap();
 
     ChainSpec::builder(
         xcavate_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
@@ -97,7 +97,7 @@ pub fn live_xcavate_config() -> ChainSpec {
     .with_name("Xcavate live")
     .with_id("live")
     .with_chain_type(ChainType::Development)
-    .with_genesis_config_patch(testnet_genesis(
+    .with_genesis_config_patch(live_genesis(
         // initial collators.
         vec![
             // XCAVATE COLLATOR 0
@@ -203,6 +203,43 @@ fn testnet_genesis(
     serde_json::json!({
         "balances": {
             "balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>(),
+        },
+        "parachainInfo": {
+            "parachainId": id,
+        },
+        "collatorSelection": {
+            "invulnerables": invulnerables.iter().cloned().map(|(acc, _)| acc).collect::<Vec<_>>(),
+            "candidacyBond": EXISTENTIAL_DEPOSIT * 16,
+        },
+        "session": {
+            "keys": invulnerables
+                .into_iter()
+                .map(|(acc, aura)| {
+                    (
+                        acc.clone(),                 // account id
+                        acc,                         // validator id
+                        template_session_keys(aura), // session keys
+                    )
+                })
+            .collect::<Vec<_>>(),
+        },
+        "polkadotXcm": {
+            "safeXcmVersion": Some(SAFE_XCM_VERSION),
+        },
+        "sudo": { "key": Some(root) }
+    })
+}
+
+fn live_genesis(
+    invulnerables: Vec<(AccountId, AuraId)>,
+    endowed_accounts: Vec<AccountId>,
+    root: AccountId,
+    id: ParaId,
+) -> serde_json::Value {
+
+    serde_json::json!({
+        "balances": {
+            "balances": endowed_accounts.iter().cloned().map(|k| (k, xcavate::ENDOWMENT)).collect::<Vec<_>>(),
         },
         "parachainInfo": {
             "parachainId": id,
