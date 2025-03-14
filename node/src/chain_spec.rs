@@ -1,6 +1,6 @@
 use cumulus_primitives_core::ParaId;
 use xcavate_runtime::{
-    constants::currency::{EXISTENTIAL_DEPOSIT, CENTS}, AccountId, AuraId, Signature, Balance
+    constants::currency::{EXISTENTIAL_DEPOSIT, CENTS}, AccountId, AuraId, Signature, Balance,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
@@ -94,9 +94,9 @@ pub fn live_xcavate_config() -> ChainSpec {
             para_id: xcavate::PARACHAIN_ID,
         },
     )
-    .with_name("Xcavate live")
-    .with_id("live")
-    .with_chain_type(ChainType::Development)
+    .with_name("Xcavate")
+    .with_id("xcavate")
+    .with_chain_type(ChainType::Live)
     .with_genesis_config_patch(live_genesis(
         // initial collators.
         vec![
@@ -109,7 +109,7 @@ pub fn live_xcavate_config() -> ChainSpec {
         get_root_account(),
         xcavate::PARACHAIN_ID.into(),
     ))
-    .with_protocol_id("xcavate-live")
+    .with_protocol_id("xcavate-chain")
     .with_properties(properties)
     .build()
 }
