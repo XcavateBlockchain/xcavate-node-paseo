@@ -5,7 +5,7 @@
 --force-authoring \
 --chain ./chainspec/raw-parachain-chainspec.json \
 --base-path ./tmp/collator1 \
---port 40336 \
+--port 40334 \
 --rpc-port 8848 \
 --rpc-cors=all \
 -- \
@@ -27,7 +27,7 @@
 --base-path ./tmp/collator2 \
 --port 40333 \
 --rpc-port 8844 \
---bootnodes /ip4/127.0.0.1/tcp/40336/p2p/12D3KooWJZwUF1sYW8v37URR4sxtkRUzRJEfvBqZ5YKP9CCaWqh9 \
+--bootnodes /ip4/127.0.0.1/tcp/40334/p2p/12D3KooWJZwUF1sYW8v37URR4sxtkRUzRJEfvBqZ5YKP9CCaWqh9 \
 -- \
 --execution wasm \
 --chain ./chainspec/paseo.raw.json \

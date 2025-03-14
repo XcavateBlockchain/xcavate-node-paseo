@@ -50,7 +50,7 @@
           "candidacyBond": 16000000000,
           "invulnerables": [
             "5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8",
-            "5CVAD7q8Tpmhn5xxPuCR1rWYKSF5mkRcqR1p42u8VmCwaqvS"
+            "5FRsmDdUdCViXjDrkGUahHC9x8vS4Egb2Bh4aqqk5gNEfSBQ"
           ]
         },
         "parachainInfo": {
@@ -69,10 +69,10 @@
               }
             ],
             [
-              "5CVAD7q8Tpmhn5xxPuCR1rWYKSF5mkRcqR1p42u8VmCwaqvS",
-              "5CVAD7q8Tpmhn5xxPuCR1rWYKSF5mkRcqR1p42u8VmCwaqvS",
+              "5FRsmDdUdCViXjDrkGUahHC9x8vS4Egb2Bh4aqqk5gNEfSBQ",
+              "5FRsmDdUdCViXjDrkGUahHC9x8vS4Egb2Bh4aqqk5gNEfSBQ",
               {
-                "aura": "5CVAD7q8Tpmhn5xxPuCR1rWYKSF5mkRcqR1p42u8VmCwaqvS"
+                "aura": "5FRsmDdUdCViXjDrkGUahHC9x8vS4Egb2Bh4aqqk5gNEfSBQ"
               }
             ]
           ]

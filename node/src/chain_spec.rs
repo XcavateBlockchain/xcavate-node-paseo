@@ -75,16 +75,16 @@ pub fn live_xcavate_config() -> ChainSpec {
     // This is very important for us, it lets us track the usage of our templates, and have no downside for the node/runtime. Please do not remove :)
     properties.insert("basedOn".into(), "OpenZeppelin Generic Template".into());
 
-    // collators1
+    // collators1 - ganesh
     let collator_0_account_id: AccountId =
         AccountId::from_ss58check("5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8").unwrap();
     let collator_0_aura_id: AuraId =
         AuraId::from_ss58check("5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8").unwrap();
-    // collators2
+    // collators2 - connor
     let collator_1_account_id: AccountId =
-        AccountId::from_ss58check("5CVAD7q8Tpmhn5xxPuCR1rWYKSF5mkRcqR1p42u8VmCwaqvS").unwrap();
+        AccountId::from_ss58check("5FRsmDdUdCViXjDrkGUahHC9x8vS4Egb2Bh4aqqk5gNEfSBQ").unwrap();
     let collator_1_aura_id: AuraId =
-        AuraId::from_ss58check("5CVAD7q8Tpmhn5xxPuCR1rWYKSF5mkRcqR1p42u8VmCwaqvS").unwrap();
+        AuraId::from_ss58check("5FRsmDdUdCViXjDrkGUahHC9x8vS4Egb2Bh4aqqk5gNEfSBQ").unwrap();
 
     ChainSpec::builder(
         xcavate_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
