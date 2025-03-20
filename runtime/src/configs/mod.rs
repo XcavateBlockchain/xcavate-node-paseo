@@ -36,7 +36,7 @@ use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
 
 use crate::{
     constants::{
-        currency::{deposit, CENTS, EXISTENTIAL_DEPOSIT, MICROCENTS},
+        currency::{deposit, XCAV, EXISTENTIAL_DEPOSIT, MICROXCAV},
         AVERAGE_ON_INITIALIZE_RATIO, HOURS, MAXIMUM_BLOCK_WEIGHT, MAX_BLOCK_LENGTH,
         NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
     },
@@ -259,7 +259,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-    pub const AssetDeposit: Balance = 10 * CENTS;
+    pub const AssetDeposit: Balance = 10 * XCAV;
     pub const AssetAccountDeposit: Balance = deposit(1, 16);
     pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
     pub const StringLimit: u32 = 50;
@@ -320,7 +320,7 @@ impl pallet_assets::Config<pallet_assets::Instance2> for Runtime {
 
 parameter_types! {
     /// Relay Chain `TransactionByteFee` / 10
-    pub const TransactionByteFee: Balance = 10 * MICROCENTS;
+    pub const TransactionByteFee: Balance = 10 * MICROXCAV;
     pub const OperationalFeeMultiplier: u8 = 5;
 }
 
@@ -404,7 +404,7 @@ parameter_types! {
     /// The asset ID for the asset that we use to pay for message delivery fees.
     pub FeeAssetId: AssetId = AssetId(RelayLocation::get());
     /// The base fee for the message delivery fees. Kusama is based for the reference.
-    pub const ToSiblingBaseDeliveryFee: u128 = CENTS.saturating_mul(3);
+    pub const ToSiblingBaseDeliveryFee: u128 = XCAV.saturating_mul(3);
 }
 
 impl cumulus_pallet_xcmp_queue::Config for Runtime {

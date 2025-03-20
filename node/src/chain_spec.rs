@@ -1,6 +1,6 @@
 use cumulus_primitives_core::ParaId;
 use xcavate_runtime::{
-    constants::currency::{EXISTENTIAL_DEPOSIT, CENTS}, AccountId, AuraId, Signature, Balance,
+    constants::currency::{EXISTENTIAL_DEPOSIT, XCAV}, AccountId, AuraId, Signature, Balance,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
@@ -198,7 +198,7 @@ fn testnet_genesis(
     root: AccountId,
     id: ParaId,
 ) -> serde_json::Value {
-    pub const ENDOWMENT: Balance = 100 * CENTS;
+    pub const ENDOWMENT: Balance = 100 * XCAV;
 
     serde_json::json!({
         "balances": {

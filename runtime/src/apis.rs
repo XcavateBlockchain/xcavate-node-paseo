@@ -225,7 +225,7 @@ impl_runtime_apis! {
             use cumulus_primitives_core::ParaId;
             use frame_system_benchmarking::Pallet as SystemBench;
 
-            use super::{*, types::*, configs::*, constants::currency::CENTS};
+            use super::{*, types::*, configs::*, constants::currency::XCAV};
 
             impl frame_system_benchmarking::Config for Runtime {
                 fn setup_set_code_requirements(code: &sp_std::vec::Vec<u8>) -> Result<(), BenchmarkError> {
@@ -245,7 +245,7 @@ impl_runtime_apis! {
                     ExistentialDeposit::get()
                 ).into());
                 /// The base fee for the message delivery fees. Kusama is based for the reference.
-                pub const ToParentBaseDeliveryFee: u128 = CENTS.saturating_mul(3);
+                pub const ToParentBaseDeliveryFee: u128 = XCAV.saturating_mul(3);
             }
             pub type PriceForParentDelivery = polkadot_runtime_common::xcm_sender::ExponentialPrice<
                 FeeAssetId,

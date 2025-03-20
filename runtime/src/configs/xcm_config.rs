@@ -25,7 +25,7 @@ use crate::{
         WeightToFee, XcmpQueue,
     },
     types::{AccountId, Balance},
-    AllPalletsWithSystem, ForeignAssets, ParachainInfo, PolkadotXcm,
+    AllPalletsWithSystem, Assets, ParachainInfo, PolkadotXcm,
 };
 
 parameter_types! {
@@ -33,7 +33,7 @@ parameter_types! {
     pub const RelayNetwork: Option<NetworkId> = None;
     pub PlaceholderAccount: AccountId = PolkadotXcm::check_account();
     pub AssetsPalletLocation: Location =
-        PalletInstance(<ForeignAssets as PalletInfoAccess>::index() as u8).into();
+        PalletInstance(<Assets as PalletInfoAccess>::index() as u8).into();
     pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
     pub UniversalLocation: InteriorLocation = Parachain(ParachainInfo::parachain_id().into()).into();
 }
@@ -72,7 +72,7 @@ pub type LocalAssetTransactor = FungibleAdapter<
 /// Means for transacting assets besides the native currency on this chain.
 pub type LocalFungiblesTransactor = FungiblesAdapter<
     // Use this fungibles implementation:
-    ForeignAssets,
+    Assets,
     // Use this currency when it is a fungible asset matching the given location or name:
     TrustBackedAssetsConvertedConcreteId,
     // Convert an XCM MultiLocation into a local account id:

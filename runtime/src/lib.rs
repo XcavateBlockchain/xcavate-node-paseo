@@ -27,7 +27,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 
 use crate::{
-    constants::{currency::MILLICENTS, POLY_DEGREE, P_FACTOR, Q_FACTOR},
+    constants::{currency::MILLIXCAV, POLY_DEGREE, P_FACTOR, Q_FACTOR},
     weights::ExtrinsicBaseWeight,
 };
 pub use crate::{
@@ -57,7 +57,7 @@ impl WeightToFeePolynomial for WeightToFee {
     fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
         // in Paseo, extrinsic base weight (smallest non-zero weight) is mapped to 1
         // MILLIUNIT: in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
-        let p = MILLICENTS / P_FACTOR;
+        let p = MILLIXCAV / P_FACTOR;
         let q = Q_FACTOR * Balance::from(ExtrinsicBaseWeight::get().ref_time());
         smallvec![WeightToFeeCoefficient {
             degree: POLY_DEGREE,
@@ -123,8 +123,8 @@ construct_runtime!(
         // Monetary
         Balances: pallet_balances = 10,
         TransactionPayment: pallet_transaction_payment = 11,
-        LocalAssets: pallet_assets::<Instance1> = 12,
-        ForeignAssets: pallet_assets::<Instance2> = 13,
+        RealEstateAssets: pallet_assets::<Instance1> = 12,
+        Assets: pallet_assets::<Instance2> = 13,
 
         // Governance
         Sudo: pallet_sudo = 15,

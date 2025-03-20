@@ -3,18 +3,16 @@ mod constant_tests {
 
     #[test]
     fn test_constants() {
-        assert_eq!(MICROCENTS, 1_000_000);
+        assert_eq!(MICROXCAV, 1_000_000);
 
-        assert_eq!(MILLICENTS, 1_000_000_000);
+        assert_eq!(MILLIXCAV, 1_000_000_000);
 
-        assert_eq!(CENTS, 1_000 * MILLICENTS);
+        assert_eq!(XCAV, 1_000 * MILLIXCAV);
 
-        assert_eq!(DOLLARS, 100 * CENTS);
-
-        assert_eq!(EXISTENTIAL_DEPOSIT, MILLICENTS);
+        assert_eq!(EXISTENTIAL_DEPOSIT, MILLIXCAV);
 
         // Ensure deposit function behavior remains constant
-        assert_eq!(deposit(2, 3), 2 * 15 * CENTS + 3 * 6 * CENTS);
+        assert_eq!(deposit(2, 3), 2 * 100 * MILLIXCAV + 3 * 10 * MICROXCAV);
     }
 }
 
@@ -118,7 +116,7 @@ mod runtime_tests {
 
     #[test]
     fn assets_constants() {
-        assert_eq!(AssetDeposit::get(), 10 * CENTS);
+        assert_eq!(AssetDeposit::get(), 10 * XCAV);
 
         assert_eq!(AssetAccountDeposit::get(), deposit(1, 16));
 
@@ -135,7 +133,7 @@ mod runtime_tests {
 
     #[test]
     fn transaction_payment_constants() {
-        assert_eq!(TransactionByteFee::get(), 10 * MICROCENTS);
+        assert_eq!(TransactionByteFee::get(), 10 * MICROXCAV);
 
         assert_eq!(OperationalFeeMultiplier::get(), 5);
     }
