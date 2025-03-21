@@ -27,7 +27,7 @@
 --base-path ./tmp/collator2 \
 --port 40333 \
 --rpc-port 8844 \
---bootnodes /ip4/127.0.0.1/tcp/40334/p2p/12D3KooWJZwUF1sYW8v37URR4sxtkRUzRJEfvBqZ5YKP9CCaWqh9 \
+--bootnodes /ip4/127.0.0.1/tcp/40334/p2p/12D3KooWC5x6KM7wGYoM2tsWaqrfsH73zR4gN6FWTjx1DqvRh3zu \
 -- \
 --execution wasm \
 --chain ./chainspec/paseo.raw.json \
@@ -37,6 +37,9 @@
 --rpc-methods unsafe \
 --unsafe-rpc-external \
 --blocks-pruning=256
+
+12D3KooWC5x6KM7wGYoM2tsWaqrfsH73zR4gN6FWTjx1DqvRh3zu
+
 
 
 ./target/release/xcavate-node purge-chain --chain ./chainspec/raw-parachain-chainspec.json
