@@ -27,7 +27,7 @@
 --base-path ./tmp/collator2 \
 --port 40333 \
 --rpc-port 8844 \
---bootnodes /ip4/127.0.0.1/tcp/40334/p2p/12D3KooWC5x6KM7wGYoM2tsWaqrfsH73zR4gN6FWTjx1DqvRh3zu \
+--bootnodes /ip4/127.0.0.1/tcp/40334/p2p/12D3KooWCx4aQyznLKowaVbNbwwGgq2cdvtJnem2C551wGDZhYS5 \
 -- \
 --execution wasm \
 --chain ./chainspec/paseo.raw.json \
@@ -38,7 +38,7 @@
 --unsafe-rpc-external \
 --blocks-pruning=256
 
-12D3KooWC5x6KM7wGYoM2tsWaqrfsH73zR4gN6FWTjx1DqvRh3zu
+12D3KooWCx4aQyznLKowaVbNbwwGgq2cdvtJnem2C551wGDZhYS5
 
 
 
