@@ -85,7 +85,7 @@ mod runtime_tests {
 
         assert_eq!(MAX_BLOCK_LENGTH, 5 * 1024 * 1024);
 
-        assert_eq!(SS58Prefix::get(), 42);
+        assert_eq!(SS58Prefix::get(), 0);
 
         assert_eq!(<Runtime as frame_system::Config>::MaxConsumers::get(), 16);
     }

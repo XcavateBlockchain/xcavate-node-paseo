@@ -119,7 +119,7 @@ pub fn development_config() -> ChainSpec {
     let mut properties = sc_chain_spec::Properties::new();
     properties.insert("tokenSymbol".into(), "XCAV".into());
     properties.insert("tokenDecimals".into(), 12.into());
-    properties.insert("ss58Format".into(), 42.into());
+    properties.insert("ss58Format".into(), 0.into());
     // This is very important for us, it lets us track the usage of our templates, and have no downside for the node/runtime. Please do not remove :)
     properties.insert("basedOn".into(), "OpenZeppelin Generic Template".into());
 
@@ -157,7 +157,7 @@ pub fn local_testnet_config() -> ChainSpec {
     let mut properties = sc_chain_spec::Properties::new();
     properties.insert("tokenSymbol".into(), "XCAV".into());
     properties.insert("tokenDecimals".into(), 12.into());
-    properties.insert("ss58Format".into(), 42.into());
+    properties.insert("ss58Format".into(), 0.into());
 
     #[allow(deprecated)]
     ChainSpec::builder(

@@ -9,6 +9,6 @@ pub const RELAY_CHAIN: &str = "paseo";
 // token properties
 pub const TOKEN_SYMBOL: &str = "XCAV";
 pub const TOKEN_DECIMALS: u32 = 12;
-pub const SS58_FORMAT: u32 = 42;
+pub const SS58_FORMAT: u32 = 0;
 
 pub const ENDOWMENT: Balance = 100 * UNIT;
