@@ -167,7 +167,7 @@ mod runtime_tests {
 
     #[test]
     fn session_constants() {
-        assert_eq!(Period::get(), 6 * HOURS);
+        assert_eq!(Period::get(), 1 * HOURS);
 
         assert_eq!(Offset::get(), 0);
     }

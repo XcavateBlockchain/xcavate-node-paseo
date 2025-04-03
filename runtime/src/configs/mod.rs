@@ -45,7 +45,7 @@ use crate::{
         CollatorSelectionUpdateOrigin, ConsensusHook, Hash, Nonce,
         PriceForSiblingParachainDelivery,
     },
-    weights::{self, BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
+    weights::{self, BlockExecutionWeight, ExtrinsicBaseWeight, ParityDbWeight},
     Aura, Balances, CollatorSelection, MessageQueue, OriginCaller, PalletInfo, ParachainSystem,
     Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
     RuntimeOrigin, RuntimeTask, Session, SessionKeys, System, WeightToFee, XcmpQueue,
@@ -119,7 +119,7 @@ impl frame_system::Config for Runtime {
     /// Block & extrinsics weights: base values and limits.
     type BlockWeights = RuntimeBlockWeights;
     /// The weight of database operations that the runtime can invoke.
-    type DbWeight = RocksDbWeight;
+    type DbWeight = ParityDbWeight;
     /// The type for hashing blocks and tries.
     type Hash = Hash;
     /// The lookup mechanism to get account ID from whatever is passed in
@@ -446,7 +446,7 @@ parameter_types! {
     // The first session will have length of Offset,
     // and the following sessions will have length of Period.
     // This may prove nonsensical if Offset >= Period.
-    pub const Period: u32 = 6 * HOURS;
+    pub const Period: u32 = 1 * HOURS;
     pub const Offset: u32 = 0;
 }
 
