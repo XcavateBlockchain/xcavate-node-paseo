@@ -25,7 +25,7 @@ set -e
 ./target/release/xcavate-node export-genesis-state --chain raw-parachain-chainspec.json para-3413-genesis-state
 
 # Move the generated chainspec, raw, wasm, genesis state to the chainspec directory
-# mv ./plain-parachain-chainspec.json chainspec
-# mv ./raw-parachain-chainspec.json chainspec
-# mv ./para-4683-wasm chainspec
-# mv ./para-4683-genesis-state chainspec
+mv ./plain-parachain-chainspec.json chainspec-polkadot
+mv ./raw-parachain-chainspec.json chainspec-polkadot
+mv ./para-3413-wasm chainspec-polkadot
+mv ./para-3413-genesis-state chainspec-polkadot

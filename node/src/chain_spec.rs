@@ -77,9 +77,9 @@ pub fn polkadot_live_xcavate_config() -> ChainSpec {
 
     // collators1 - ganesh
     let collator_0_account_id: AccountId =
-        AccountId::from_ss58check("5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8").unwrap();
+        AccountId::from_ss58check("14GND41vzk5bDN88sL8bAkXVPfxs4qqTNvPvZa4kvk3AQCS4").unwrap();
     let collator_0_aura_id: AuraId =
-        AuraId::from_ss58check("5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8").unwrap();
+        AuraId::from_ss58check("14GND41vzk5bDN88sL8bAkXVPfxs4qqTNvPvZa4kvk3AQCS4").unwrap();
     // collators2 - connor
     let collator_1_account_id: AccountId =
         AccountId::from_ss58check("5FZ1JXzkPnjxTvbsief2wi2JZJvgBdzjXyi5nCh9g7FPDhvX").unwrap();
