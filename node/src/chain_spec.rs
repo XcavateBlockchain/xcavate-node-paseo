@@ -82,9 +82,9 @@ pub fn polkadot_live_xcavate_config() -> ChainSpec {
         AuraId::from_ss58check("14GND41vzk5bDN88sL8bAkXVPfxs4qqTNvPvZa4kvk3AQCS4").unwrap();
     // collators2 - connor
     let collator_1_account_id: AccountId =
-        AccountId::from_ss58check("5FZ1JXzkPnjxTvbsief2wi2JZJvgBdzjXyi5nCh9g7FPDhvX").unwrap();
+        AccountId::from_ss58check("14iBfR3teKkEEKRa1sFGsybuvuUhx4aGgrX9RtUyfkTxUr7D").unwrap();
     let collator_1_aura_id: AuraId =
-        AuraId::from_ss58check("5FZ1JXzkPnjxTvbsief2wi2JZJvgBdzjXyi5nCh9g7FPDhvX").unwrap();
+        AuraId::from_ss58check("14iBfR3teKkEEKRa1sFGsybuvuUhx4aGgrX9RtUyfkTxUr7D").unwrap();
 
     ChainSpec::builder(
         xcavate_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
