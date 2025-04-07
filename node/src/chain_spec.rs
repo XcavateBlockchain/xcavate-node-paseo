@@ -66,6 +66,54 @@ pub fn template_session_keys(keys: AuraId) -> xcavate_runtime::SessionKeys {
     xcavate_runtime::SessionKeys { aura: keys }
 }
 
+pub fn polkadot_live_xcavate_config() -> ChainSpec {
+    // Give your base currency a unit name and decimal places
+    let mut properties = sc_chain_spec::Properties::new();
+    properties.insert("tokenSymbol".into(), xcavate::TOKEN_SYMBOL.into());
+    properties.insert("tokenDecimals".into(), xcavate::TOKEN_DECIMALS.into());
+    properties.insert("ss58Format".into(), xcavate::SS58_FORMAT.into());
+    // This is very important for us, it lets us track the usage of our templates, and have no downside for the node/runtime. Please do not remove :)
+    properties.insert("basedOn".into(), "OpenZeppelin Generic Template".into());
+
+    // collators1 - ganesh
+    let collator_0_account_id: AccountId =
+        AccountId::from_ss58check("5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8").unwrap();
+    let collator_0_aura_id: AuraId =
+        AuraId::from_ss58check("5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8").unwrap();
+    // collators2 - connor
+    let collator_1_account_id: AccountId =
+        AccountId::from_ss58check("5FZ1JXzkPnjxTvbsief2wi2JZJvgBdzjXyi5nCh9g7FPDhvX").unwrap();
+    let collator_1_aura_id: AuraId =
+        AuraId::from_ss58check("5FZ1JXzkPnjxTvbsief2wi2JZJvgBdzjXyi5nCh9g7FPDhvX").unwrap();
+
+    ChainSpec::builder(
+        xcavate_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+        Extensions {
+            relay_chain: xcavate::RELAY_POLKADOT_CHAIN.into(),
+            // You MUST set this to the correct network!
+            para_id: xcavate::PARACHAIN_POLKADOT_ID,
+        },
+    )
+    .with_name("Xcavate Polkadot")
+    .with_id("xcavate polkadot")
+    .with_chain_type(ChainType::Live)
+    .with_genesis_config_patch(live_genesis(
+        // initial collators.
+        vec![
+            // XCAVATE COLLATOR 0
+            (collator_0_account_id, collator_0_aura_id),
+            // XCAVATE COLLATOR 1
+            (collator_1_account_id, collator_1_aura_id),
+        ],
+        get_endowed_accounts(),
+        get_root_account(),
+        xcavate::PARACHAIN_POLKADOT_ID.into(),
+    ))
+    .with_protocol_id("xcavate-polkadot-chain")
+    .with_properties(properties)
+    .build()
+}
+
 pub fn live_xcavate_config() -> ChainSpec {
     // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
@@ -89,9 +137,9 @@ pub fn live_xcavate_config() -> ChainSpec {
     ChainSpec::builder(
         xcavate_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
         Extensions {
-            relay_chain: xcavate::RELAY_CHAIN.into(),
+            relay_chain: xcavate::RELAY_PASEO_CHAIN.into(),
             // You MUST set this to the correct network!
-            para_id: xcavate::PARACHAIN_ID,
+            para_id: xcavate::PARACHAIN_PASEO_ID,
         },
     )
     .with_name("Xcavate")
@@ -107,7 +155,7 @@ pub fn live_xcavate_config() -> ChainSpec {
         ],
         get_endowed_accounts(),
         get_root_account(),
-        xcavate::PARACHAIN_ID.into(),
+        xcavate::PARACHAIN_PASEO_ID.into(),
     ))
     .with_protocol_id("xcavate-chain")
     .with_properties(properties)

@@ -20,7 +20,8 @@ use crate::{
 
 fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
     Ok(match id {
-        "" => Box::new(chain_spec::live_xcavate_config()),
+        "" => Box::new(chain_spec::polkadot_live_xcavate_config()),
+        "pas" => Box::new(chain_spec::live_xcavate_config()),
         "dev" => Box::new(chain_spec::development_config()),
         "template-paseo" => Box::new(chain_spec::local_testnet_config()),
         "local" => Box::new(chain_spec::local_testnet_config()),
