@@ -19,13 +19,13 @@ set -e
 ./target/release/xcavate-node build-spec --chain plain-parachain-chainspec.json --disable-default-bootnode --raw > raw-parachain-chainspec.json
 
 # Export the WebaAssembly runtime for the parachain
-./target/release/xcavate-node export-genesis-wasm --chain raw-parachain-chainspec.json para-4683-wasm
+./target/release/xcavate-node export-genesis-wasm --chain raw-parachain-chainspec.json para-3413-wasm
 
 # Generate a parachain genesis state
-./target/release/xcavate-node export-genesis-state --chain raw-parachain-chainspec.json para-4683-genesis-state
+./target/release/xcavate-node export-genesis-state --chain raw-parachain-chainspec.json para-3413-genesis-state
 
 # Move the generated chainspec, raw, wasm, genesis state to the chainspec directory
-mv ./plain-parachain-chainspec.json chainspec
-mv ./raw-parachain-chainspec.json chainspec
-mv ./para-4683-wasm chainspec
-mv ./para-4683-genesis-state chainspec
+# mv ./plain-parachain-chainspec.json chainspec
+# mv ./raw-parachain-chainspec.json chainspec
+# mv ./para-4683-wasm chainspec
+# mv ./para-4683-genesis-state chainspec
