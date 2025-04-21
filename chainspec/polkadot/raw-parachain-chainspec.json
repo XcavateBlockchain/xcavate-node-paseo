@@ -1,10 +1,10 @@
 {
-  "name": "Xcavate Polkadot",
-  "id": "xcavate polkadot",
+  "name": "Xcavate",
+  "id": "xcavate",
   "chainType": "Live",
   "bootNodes": [],
   "telemetryEndpoints": null,
-  "protocolId": "xcavate-polkadot-chain",
+  "protocolId": "xcavate",
   "properties": {
     "basedOn": "OpenZeppelin Generic Template",
     "ss58Format": 0,
