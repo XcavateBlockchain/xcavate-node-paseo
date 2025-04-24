@@ -2,7 +2,9 @@
   "name": "Xcavate Polkadot",
   "id": "xcavate polkadot",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+    "/dns/xcavate-polkadot-boot-ng.dwellir.com/tcp/443/wss/p2p/12D3KooWAf2YTHzrA2y3WsKhvLrx92H5fV2PfuUeNccEZYMi8sCv"
+  ],
   "telemetryEndpoints": null,
   "protocolId": "xcavate-polkadot-chain",
   "properties": {
