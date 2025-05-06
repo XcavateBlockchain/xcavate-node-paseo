@@ -5,7 +5,8 @@
   "bootNodes": [
     "/dns/xcavate-polkadot-boot-ng.dwellir.com/tcp/443/wss/p2p/12D3KooWAf2YTHzrA2y3WsKhvLrx92H5fV2PfuUeNccEZYMi8sCv",
     "/dns/boot.helikon.io/tcp/8730/p2p/12D3KooWRB1De3wRfCtTPbrV9Rci23BkzDqryLyiGqVvxmYb8zBR",
-    "/dns/boot.helikon.io/tcp/8732/wss/p2p/12D3KooWRB1De3wRfCtTPbrV9Rci23BkzDqryLyiGqVvxmYb8zBR"
+    "/dns/boot.helikon.io/tcp/8732/wss/p2p/12D3KooWRB1De3wRfCtTPbrV9Rci23BkzDqryLyiGqVvxmYb8zBR",
+    "/dns/boot.interweb-it.io/tcp/51473/p2p/12D3KooWRjz2BL8yvthXQ5zfeMnnsRqpXEzZpdwDTrGeT27gbUyc"
   ],
   "telemetryEndpoints": null,
   "protocolId": "xcavate-polkadot-chain",
