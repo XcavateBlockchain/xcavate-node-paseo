@@ -30,8 +30,8 @@ pub const POLY_DEGREE: u8 = 1;
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("template-parachain"),
     impl_name: create_runtime_str!("template-parachain"),
-    authoring_version: 1,
-    spec_version: 1,
+    authoring_version: 2,
+    spec_version: 2,
     impl_version: 0,
     apis: apis::RUNTIME_API_VERSIONS,
     transaction_version: 1,
