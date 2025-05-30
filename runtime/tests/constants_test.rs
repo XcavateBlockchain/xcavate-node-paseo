@@ -35,10 +35,10 @@ mod runtime_tests {
                 spec_name: create_runtime_str!("template-parachain"),
                 impl_name: create_runtime_str!("template-parachain"),
                 authoring_version: 1,
-                spec_version: 1,
+                spec_version: 2,
                 impl_version: 0,
                 apis: xcavate_runtime::apis::RUNTIME_API_VERSIONS,
-                transaction_version: 1,
+                transaction_version: 2,
                 state_version: 1,
             }
         );
