@@ -9,15 +9,18 @@ use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use xcm::latest::prelude::*;
 use xcm_builder::{
-    AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowTopLevelPaidExecutionFrom,
+    AccountId32Aliases, AllowTopLevelPaidExecutionFrom,
     DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin, FixedWeightBounds,
     FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter,
     IsConcrete, NativeAsset, NoChecking, ParentIsPreset, RelayChainAsNative,
     SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
     SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId,
     UsingComponents, WithComputedOrigin, WithUniqueTopic,
+    AllowKnownQueryResponses, AllowSubscriptionsFrom, AllowUnpaidExecutionFrom,
 };
 use xcm_executor::XcmExecutor;
+use parachains_common::xcm_config::ParentRelayOrSiblingParachains;
+
 
 use crate::{
     configs::{
@@ -121,7 +124,7 @@ parameter_types! {
 pub struct ParentOrParentsExecutivePlurality;
 impl Contains<Location> for ParentOrParentsExecutivePlurality {
     fn contains(location: &Location) -> bool {
-        matches!(location.unpack(), (1, []) | (1, [Plurality { id: BodyId::Executive, .. }]))
+        matches!(location.unpack(), (1, []) | (1, [Plurality { .. }]))
     }
 }
 
@@ -130,11 +133,17 @@ pub type Barrier = TrailingSetTopicAsId<
         DenyReserveTransferToRelayChain,
         (
             TakeWeightCredit,
+            AllowKnownQueryResponses<PolkadotXcm>,
             WithComputedOrigin<
                 (
-                    AllowTopLevelPaidExecutionFrom<Everything>,
-                    AllowExplicitUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
-                    // ^^^ Parent and its exec plurality get free execution
+					// If the message is one that immediately attempts to pay for execution, then
+					// allow it.
+					AllowTopLevelPaidExecutionFrom<Everything>,
+					// Parent, its pluralities (i.e. governance bodies), and the Fellows plurality
+					// get free execution.
+					AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
+					// Subscriptions for version tracking are OK.
+					AllowSubscriptionsFrom<ParentRelayOrSiblingParachains>,
                 ),
                 UniversalLocation,
                 ConstU32<8>,
