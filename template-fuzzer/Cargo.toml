@@ -15,7 +15,7 @@ workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-substrate-runtime-fuzzer = { workspace = true }
+quinn-proto = { version = "0.9.6", features = [ "arbitrary" ] }
 ziggy = { workspace = true }
 
 xcavate-runtime = { path = "../runtime" }
@@ -31,7 +31,13 @@ sp-runtime = { workspace = true }
 sp-state-machine = { workspace = true }
 
 pallet-balances = { workspace = true }
+pallet-collator-selection = { workspace = true }
+pallet-multisig = { workspace = true }
+pallet-scheduler = { workspace = true }
+pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
+pallet-utility = { workspace = true }
+pallet-whitelist = { workspace = true }
 
 cumulus-pallet-parachain-system = { workspace = true }
 cumulus-primitives-core = { workspace = true }
@@ -43,16 +49,30 @@ default = [ "std", "try-runtime" ]
 std = [
 	"frame-support/std",
 	"xcavate-runtime/std",
+	"pallet-collator-selection/std",
+	"pallet-multisig/std",
+	"pallet-scheduler/std",
+	"pallet-sudo/std",
 	"pallet-timestamp/std",
+	"pallet-utility/std",
+	"pallet-whitelist/std",
 	"parity-scale-codec/std",
 	"sp-consensus-aura/std",
 	"sp-runtime/std",
 ]
+fuzzing = []
+tanssi = []
 try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"xcavate-runtime/try-runtime",
+	"pallet-collator-selection/try-runtime",
+	"pallet-multisig/try-runtime",
+	"pallet-scheduler/try-runtime",
+	"pallet-sudo/try-runtime",
 	"pallet-timestamp/try-runtime",
+	"pallet-utility/try-runtime",
+	"pallet-whitelist/try-runtime",
 	"sp-runtime/try-runtime",
 ]
 

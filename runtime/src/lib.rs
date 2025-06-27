@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
+
+extern crate alloc;
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -12,9 +13,8 @@ pub mod constants;
 mod types;
 mod weights;
 
-use frame_support::{
-    construct_runtime,
-    weights::{WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
+use frame_support::weights::{
+    WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 };
 use smallvec::smallvec;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -27,7 +27,8 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 
 use crate::{
-    constants::{currency::MILLIXCAV, POLY_DEGREE, P_FACTOR, Q_FACTOR},
+    configs::pallet_custom_origins,
+    constants::{currency::MILLICENTS, POLY_DEGREE, P_FACTOR, Q_FACTOR},
     weights::ExtrinsicBaseWeight,
 };
 pub use crate::{
@@ -57,7 +58,7 @@ impl WeightToFeePolynomial for WeightToFee {
     fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
         // in Paseo, extrinsic base weight (smallest non-zero weight) is mapped to 1
         // MILLIUNIT: in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
-        let p = MILLIXCAV / P_FACTOR;
+        let p = MILLICENTS / P_FACTOR;
         let q = Q_FACTOR * Balance::from(ExtrinsicBaseWeight::get().ref_time());
         smallvec![WeightToFeeCoefficient {
             degree: POLY_DEGREE,
@@ -68,7 +69,9 @@ impl WeightToFeePolynomial for WeightToFee {
     }
 }
 
-/// Opaque types. These are used by the CLI to instantiate machinery that don't
+/// Opaque types
+///
+/// These are used by the CLI to instantiate machinery that don't
 /// need to know the specifics of the runtime. They can then be made to be
 /// agnostic over specific formats of data like extrinsics, allowing for them to
 /// continue syncing the network through upgrades to even the core data
@@ -91,10 +94,16 @@ pub mod opaque {
     pub type Hash = <BlakeTwo256 as HashT>::Output;
 }
 
+#[cfg(not(feature = "tanssi"))]
 impl_opaque_keys! {
     pub struct SessionKeys {
         pub aura: Aura,
     }
+}
+
+#[cfg(feature = "tanssi")]
+impl_opaque_keys! {
+    pub struct SessionKeys { }
 }
 
 /// The version information used to identify this runtime when compiled
@@ -106,47 +115,58 @@ pub fn native_version() -> NativeVersion {
     NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
 }
 
-// Create the runtime by composing the FRAME pallets that were previously
-// configured.
-construct_runtime!(
-    pub enum Runtime
-    {
-        // System Support
-        System: frame_system = 0,
-        ParachainSystem: cumulus_pallet_parachain_system = 1,
-        Timestamp: pallet_timestamp = 2,
-        ParachainInfo: parachain_info = 3,
-        Proxy: pallet_proxy = 4,
-        Utility: pallet_utility = 5,
-        Multisig: pallet_multisig = 6,
+use openzeppelin_pallet_abstractions_proc::openzeppelin_construct_runtime;
 
-        // Monetary
-        Balances: pallet_balances = 10,
-        TransactionPayment: pallet_transaction_payment = 11,
-        RealEstateAssets: pallet_assets::<Instance1> = 12,
-        Assets: pallet_assets::<Instance2> = 13,
+#[cfg(feature = "tanssi")]
+#[openzeppelin_construct_runtime]
+mod runtime {
+    struct System;
 
-        // Governance
-        Sudo: pallet_sudo = 15,
+    struct XCM;
 
-        // Collator Support. The order of these 4 are important and shall not change.
-        Authorship: pallet_authorship = 20,
-        CollatorSelection: pallet_collator_selection = 21,
-        Session: pallet_session = 22,
-        Aura: pallet_aura = 23,
-        AuraExt: cumulus_pallet_aura_ext = 24,
+    struct Assets;
 
-        // XCM Helpers
-        XcmpQueue: cumulus_pallet_xcmp_queue = 30,
-        PolkadotXcm: pallet_xcm = 31,
-        CumulusXcm: cumulus_pallet_xcm = 32,
-        MessageQueue: pallet_message_queue = 33,
+    struct Governance;
+
+    struct Tanssi;
+}
+
+#[cfg(not(feature = "tanssi"))]
+#[openzeppelin_construct_runtime]
+mod runtime {
+    struct System;
+
+    struct XCM;
+
+    struct Assets;
+
+    struct Governance;
+
+    struct Consensus;
+}
+
+#[cfg(test)]
+mod test {
+    use frame_support::weights::WeightToFeePolynomial;
+
+    use crate::{
+        constants::{POLY_DEGREE, VERSION},
+        native_version, WeightToFee,
+    };
+
+    #[test]
+    fn test_native_version() {
+        let version = native_version();
+        assert_eq!(version.runtime_version, VERSION);
     }
-);
 
-cumulus_pallet_parachain_system::register_validate_block! {
-    Runtime = Runtime,
-    BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
+    #[test]
+    fn test_weight_to_fee() {
+        let mut fee = WeightToFee::polynomial();
+        let coef = fee.pop().expect("no coef");
+        assert!(!coef.negative);
+        assert_eq!(coef.degree, POLY_DEGREE);
+    }
 }
 
 #[cfg(feature = "runtime-benchmarks")]

@@ -2,12 +2,12 @@
 name = "xcavate-node"
 authors = { workspace = true }
 build = "build.rs"
-description = "Xcavate node"
+description = "Node compatible with generic runtime template."
 edition = { workspace = true }
 license = { workspace = true }
 publish = false
 repository = { workspace = true }
-version = "1.0.0"
+version = "3.0.0"
 
 [dependencies]
 clap = { workspace = true }
@@ -70,13 +70,15 @@ cumulus-primitives-core = { workspace = true }
 cumulus-primitives-parachain-inherent = { workspace = true }
 cumulus-relay-chain-interface = { workspace = true }
 
+# Tanssi
+nimbus-consensus = { workspace = true }
+
 [build-dependencies]
 substrate-build-script-utils = { workspace = true }
 
 [features]
 default = []
 async-backing = []
-experimental = []
 runtime-benchmarks = [
 	"frame-benchmarking-cli/runtime-benchmarks",
 	"frame-benchmarking/runtime-benchmarks",
@@ -86,6 +88,7 @@ runtime-benchmarks = [
 	"sc-service/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
+tanssi = []
 try-runtime = [
 	"xcavate-runtime/try-runtime",
 	"polkadot-cli/try-runtime",

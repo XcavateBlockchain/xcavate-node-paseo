@@ -5,16 +5,24 @@ use std::{sync::Arc, time::Duration};
 
 use cumulus_client_cli::CollatorOptions;
 // Cumulus Imports
+#[cfg(not(feature = "tanssi"))]
 use cumulus_client_collator::service::CollatorService;
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
+#[cfg(not(feature = "tanssi"))]
 use cumulus_client_consensus_proposer::Proposer;
 use cumulus_client_service::{
     build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
     BuildNetworkParams, CollatorSybilResistance, DARecoveryProfile, ParachainHostFunctions,
     StartRelayChainTasksParams,
 };
-use cumulus_primitives_core::{relay_chain::{CollatorPair, ValidationCode}, ParaId};
-use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
+#[cfg(not(feature = "tanssi"))]
+use cumulus_primitives_core::relay_chain::CollatorPair;
+#[cfg(feature = "async-backing")]
+use cumulus_primitives_core::relay_chain::ValidationCode;
+use cumulus_primitives_core::ParaId;
+#[cfg(not(feature = "tanssi"))]
+use cumulus_relay_chain_interface::OverseerHandle;
+use cumulus_relay_chain_interface::RelayChainInterface;
 // Substrate Imports
 use frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
 // Local Runtime Types
@@ -26,11 +34,14 @@ use sc_client_api::Backend;
 use sc_consensus::ImportQueue;
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
 use sc_network::NetworkBlock;
-use sc_network_sync::SyncingService;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
-use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
+#[cfg(not(feature = "tanssi"))]
+use sc_telemetry::TelemetryHandle;
+use sc_telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
+#[cfg(not(feature = "tanssi"))]
 use sp_keystore::KeystorePtr;
+#[cfg(not(feature = "tanssi"))]
 use substrate_prometheus_endpoint::Registry;
 
 type ParachainExecutor = WasmExecutor<ParachainHostFunctions>;
@@ -47,7 +58,7 @@ pub type Service = PartialComponents<
     ParachainBackend,
     (),
     sc_consensus::DefaultImportQueue<Block>,
-    sc_transaction_pool::FullPool<Block, ParachainClient>,
+    sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>,
     (ParachainBlockImport, Option<Telemetry>, Option<TelemetryWorkerHandle>),
 >;
 
@@ -68,15 +79,16 @@ pub fn new_partial(config: &Configuration) -> Result<Service, sc_service::Error>
         .transpose()?;
 
     let heap_pages = config
+        .executor
         .default_heap_pages
         .map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h| HeapAllocStrategy::Static { extra_pages: h as _ });
 
     let executor = ParachainExecutor::builder()
-        .with_execution_method(config.wasm_method)
+        .with_execution_method(config.executor.wasm_method)
         .with_onchain_heap_alloc_strategy(heap_pages)
         .with_offchain_heap_alloc_strategy(heap_pages)
-        .with_max_runtime_instances(config.max_runtime_instances)
-        .with_runtime_cache_size(config.runtime_cache_size)
+        .with_max_runtime_instances(config.executor.max_runtime_instances)
+        .with_runtime_cache_size(config.executor.runtime_cache_size)
         .build();
 
     let (client, backend, keystore_container, task_manager) =
@@ -95,23 +107,34 @@ pub fn new_partial(config: &Configuration) -> Result<Service, sc_service::Error>
         telemetry
     });
 
-    let transaction_pool = sc_transaction_pool::BasicPool::new_full(
-        config.transaction_pool.clone(),
-        config.role.is_authority().into(),
-        config.prometheus_registry(),
-        task_manager.spawn_essential_handle(),
-        client.clone(),
+    let transaction_pool = Arc::from(
+        sc_transaction_pool::Builder::new(
+            task_manager.spawn_essential_handle(),
+            client.clone(),
+            config.role.is_authority().into(),
+        )
+        .with_options(config.transaction_pool.clone())
+        .with_prometheus(config.prometheus_registry())
+        .build(),
     );
 
-    let block_import = ParachainBlockImport::new(client.clone(), backend.clone());
-
-    let import_queue = build_import_queue(
-        client.clone(),
-        block_import.clone(),
-        config,
-        telemetry.as_ref().map(|telemetry| telemetry.handle()),
-        &task_manager,
-    )?;
+    #[cfg(feature = "tanssi")]
+    let (block_import, import_queue) =
+        import_queue(config, client.clone(), backend.clone(), &task_manager);
+    #[cfg(not(feature = "tanssi"))]
+    let (block_import, import_queue) = {
+        let block_import = ParachainBlockImport::new(client.clone(), backend.clone());
+        (
+            block_import.clone(),
+            build_import_queue(
+                client.clone(),
+                block_import,
+                config,
+                telemetry.as_ref().map(|telemetry| telemetry.handle()),
+                &task_manager,
+            )?,
+        )
+    };
 
     Ok(PartialComponents {
         backend,
@@ -139,14 +162,24 @@ async fn start_node_impl(
     let parachain_config = prepare_node_config(parachain_config);
 
     let params = new_partial(&parachain_config)?;
+    #[cfg(not(feature = "tanssi"))]
     let (block_import, mut telemetry, telemetry_worker_handle) = params.other;
-    let net_config = sc_network::config::FullNetworkConfiguration::new(&parachain_config.network);
+    #[cfg(feature = "tanssi")]
+    let (_, mut telemetry, telemetry_worker_handle) = params.other;
+    let net_config = sc_network::config::FullNetworkConfiguration::<
+        _,
+        _,
+        sc_network::NetworkWorker<Block, Hash>,
+    >::new(
+        &parachain_config.network,
+        parachain_config.prometheus_config.as_ref().map(|cfg| cfg.registry.clone()),
+    );
 
     let client = params.client.clone();
     let backend = params.backend.clone();
     let mut task_manager = params.task_manager;
 
-    let (relay_chain_interface, collator_key) = build_relay_chain_interface(
+    let relay_chain_interface = build_relay_chain_interface(
         polkadot_config,
         &parachain_config,
         telemetry_worker_handle,
@@ -157,12 +190,18 @@ async fn start_node_impl(
     .await
     .map_err(|e| sc_service::Error::Application(Box::new(e) as Box<_>))?;
 
+    #[cfg(not(feature = "tanssi"))]
+    let (relay_chain_interface, collator_key) = relay_chain_interface;
+    #[cfg(feature = "tanssi")]
+    let (relay_chain_interface, _) = relay_chain_interface;
+
     let validator = parachain_config.role.is_authority();
+    #[cfg(not(feature = "tanssi"))]
     let prometheus_registry = parachain_config.prometheus_registry().cloned();
     let transaction_pool = params.transaction_pool.clone();
     let import_queue_service = params.import_queue.service();
 
-    let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
+    let (network, system_rpc_tx, tx_handler_controller, sync_service) =
         build_network(BuildNetworkParams {
             parachain_config: &parachain_config,
             net_config,
@@ -178,24 +217,24 @@ async fn start_node_impl(
 
     if parachain_config.offchain_worker.enabled {
         use futures::FutureExt;
-
-        task_manager.spawn_handle().spawn(
-            "offchain-workers-runner",
-            "offchain-work",
+        let offchain_workers =
             sc_offchain::OffchainWorkers::new(sc_offchain::OffchainWorkerOptions {
                 runtime_api_provider: client.clone(),
+                is_validator: parachain_config.role.is_authority(),
                 keystore: Some(params.keystore_container.keystore()),
                 offchain_db: backend.offchain_storage(),
                 transaction_pool: Some(OffchainTransactionPoolFactory::new(
                     transaction_pool.clone(),
                 )),
-                network_provider: network.clone(),
-                is_validator: parachain_config.role.is_authority(),
+                network_provider: Arc::new(network.clone()),
                 enable_http_requests: false,
-                custom_extensions: move |_| vec![],
-            })
-            .run(client.clone(), task_manager.spawn_handle())
-            .boxed(),
+                custom_extensions: |_| vec![],
+            })?;
+
+        task_manager.spawn_handle().spawn(
+            "offchain-workers-runner",
+            "offchain-work",
+            offchain_workers.run(client.clone(), task_manager.spawn_handle()).boxed(),
         );
     }
 
@@ -203,12 +242,9 @@ async fn start_node_impl(
         let client = client.clone();
         let transaction_pool = transaction_pool.clone();
 
-        Box::new(move |deny_unsafe, _| {
-            let deps = crate::rpc::FullDeps {
-                client: client.clone(),
-                pool: transaction_pool.clone(),
-                deny_unsafe,
-            };
+        Box::new(move |_| {
+            let deps =
+                crate::rpc::FullDeps { client: client.clone(), pool: transaction_pool.clone() };
 
             crate::rpc::create_full(deps).map_err(Into::into)
         })
@@ -221,6 +257,9 @@ async fn start_node_impl(
         task_manager: &mut task_manager,
         config: parachain_config,
         keystore: params.keystore_container.keystore(),
+        #[cfg(not(feature = "async-backing"))]
+        backend,
+        #[cfg(feature = "async-backing")]
         backend: backend.clone(),
         network: network.clone(),
         sync_service: sync_service.clone(),
@@ -234,7 +273,7 @@ async fn start_node_impl(
         // Here you can check whether the hardware meets your chains' requirements. Putting a link
         // in there and swapping out the requirements for your own are probably a good idea. The
         // requirements for a para-chain are dictated by its relay-chain.
-        match SUBSTRATE_REFERENCE_HARDWARE.check_hardware(&hwbench) {
+        match SUBSTRATE_REFERENCE_HARDWARE.check_hardware(&hwbench, false) {
             Err(err) if validator => {
                 log::warn!(
                     "⚠️  The hardware does not meet the minimal requirements {} for role \
@@ -283,9 +322,11 @@ async fn start_node_impl(
         sync_service: sync_service.clone(),
     })?;
 
+    #[cfg(not(feature = "tanssi"))]
     if validator {
         start_consensus(
             client.clone(),
+            #[cfg(feature = "async-backing")]
             backend.clone(),
             block_import,
             prometheus_registry.as_ref(),
@@ -293,7 +334,6 @@ async fn start_node_impl(
             &task_manager,
             relay_chain_interface.clone(),
             transaction_pool,
-            sync_service.clone(),
             params.keystore_container.keystore(),
             relay_chain_slot_duration,
             para_id,
@@ -303,12 +343,40 @@ async fn start_node_impl(
         )?;
     }
 
-    start_network.start_network();
-
     Ok((task_manager, client))
 }
 
+#[cfg(feature = "tanssi")]
+pub fn import_queue(
+    parachain_config: &Configuration,
+    client: Arc<ParachainClient>,
+    backend: Arc<ParachainBackend>,
+    task_manager: &TaskManager,
+) -> (ParachainBlockImport, sc_consensus::BasicQueue<Block>) {
+    // The nimbus import queue ONLY checks the signature correctness
+    // Any other checks corresponding to the author-correctness should be done
+    // in the runtime
+    let block_import = ParachainBlockImport::new(client.clone(), backend);
+
+    let import_queue = nimbus_consensus::import_queue(
+        client,
+        block_import.clone(),
+        move |_, _| async move {
+            let time = sp_timestamp::InherentDataProvider::from_system_time();
+
+            Ok((time,))
+        },
+        &task_manager.spawn_essential_handle(),
+        parachain_config.prometheus_registry(),
+        false,
+    )
+    .expect("function never fails");
+
+    (block_import, import_queue)
+}
+
 /// Build the import queue for the parachain runtime.
+#[cfg(not(feature = "tanssi"))]
 fn build_import_queue(
     client: Arc<ParachainClient>,
     block_import: ParachainBlockImport,
@@ -316,8 +384,6 @@ fn build_import_queue(
     telemetry: Option<TelemetryHandle>,
     task_manager: &TaskManager,
 ) -> Result<sc_consensus::DefaultImportQueue<Block>, sc_service::Error> {
-    let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
-
     Ok(cumulus_client_consensus_aura::equivocation_import_queue::fully_verifying_import_queue::<
         sp_consensus_aura::sr25519::AuthorityPair,
         _,
@@ -331,23 +397,22 @@ fn build_import_queue(
             let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
             Ok(timestamp)
         },
-        slot_duration,
         &task_manager.spawn_essential_handle(),
         config.prometheus_registry(),
         telemetry,
     ))
 }
 
+#[cfg(not(feature = "tanssi"))]
 fn start_consensus(
     client: Arc<ParachainClient>,
-    backend: Arc<ParachainBackend>,
+    #[cfg(feature = "async-backing")] backend: Arc<ParachainBackend>,
     block_import: ParachainBlockImport,
     prometheus_registry: Option<&Registry>,
     telemetry: Option<TelemetryHandle>,
     task_manager: &TaskManager,
     relay_chain_interface: Arc<dyn RelayChainInterface>,
-    transaction_pool: Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
-    sync_oracle: Arc<SyncingService<Block>>,
+    transaction_pool: Arc<sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>>,
     keystore: KeystorePtr,
     relay_chain_slot_duration: Duration,
     para_id: ParaId,
@@ -355,6 +420,9 @@ fn start_consensus(
     overseer_handle: OverseerHandle,
     announce_block: Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
 ) -> Result<(), sc_service::Error> {
+    #[cfg(not(feature = "async-backing"))]
+    use cumulus_client_consensus_aura::collators::basic::{self as basic_aura, Params};
+    #[cfg(feature = "async-backing")]
     use cumulus_client_consensus_aura::collators::lookahead::{self as aura, Params};
 
     let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
@@ -377,13 +445,17 @@ fn start_consensus(
     let params = Params {
         create_inherent_data_providers: move |_, ()| async move { Ok(()) },
         block_import,
+        #[cfg(not(feature = "async-backing"))]
+        para_client: client,
+        #[cfg(feature = "async-backing")]
         para_client: client.clone(),
+        #[cfg(feature = "async-backing")]
         para_backend: backend,
         relay_client: relay_chain_interface,
+        #[cfg(feature = "async-backing")]
         code_hash_provider: move |block_hash| {
             client.code_at(block_hash).ok().map(ValidationCode).map(|c| c.hash())
         },
-        sync_oracle,
         keystore,
         collator_key,
         para_id,
@@ -391,14 +463,27 @@ fn start_consensus(
         relay_chain_slot_duration,
         proposer,
         collator_service,
+        // Very limited proposal time.
+        #[cfg(not(feature = "async-backing"))]
+        authoring_duration: Duration::from_millis(500),
+        #[cfg(feature = "async-backing")]
         authoring_duration: Duration::from_millis(1500),
+        #[cfg(not(feature = "async-backing"))]
+        collation_request_receiver: None,
+        #[cfg(feature = "async-backing")]
         reinitialize: false,
+        #[cfg(feature = "async-backing")]
+        max_pov_percentage: None,
     };
 
-    let fut =
-        aura::run::<Block, sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _, _, _, _>(
-            params,
-        );
+    #[cfg(not(feature = "async-backing"))]
+    let fut = basic_aura::run::<Block, sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(
+        params,
+    );
+    #[cfg(feature = "async-backing")]
+    let fut = aura::run::<Block, sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _, _, _>(
+        params,
+    );
     task_manager.spawn_essential_handle().spawn("aura", None, fut);
 
     Ok(())

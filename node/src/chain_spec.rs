@@ -1,7 +1,7 @@
 use cumulus_primitives_core::ParaId;
-use xcavate_runtime::{
-    constants::currency::{EXISTENTIAL_DEPOSIT, XCAV}, AccountId, AuraId, Signature, Balance,
-};
+#[cfg(not(feature = "tanssi"))]
+use xcavate_runtime::{constants::currency::EXISTENTIAL_DEPOSIT, AuraId};
+use xcavate_runtime::{AccountId, Signature};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
@@ -10,8 +10,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 use crate::constant::xcavate;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec =
-    sc_service::GenericChainSpec<xcavate_runtime::RuntimeGenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<Extensions>;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -46,6 +45,7 @@ type AccountPublic = <Signature as Verify>::Signer;
 ///
 /// This function's return type must always match the session keys of the chain
 /// in tuple format.
+#[cfg(not(feature = "tanssi"))]
 pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
     get_from_seed::<AuraId>(seed)
 }
@@ -62,6 +62,8 @@ where
 ///
 /// The input must be a tuple of individual keys (a single arg for now since we
 /// have just one key).
+///
+#[cfg(not(feature = "tanssi"))]
 pub fn template_session_keys(keys: AuraId) -> xcavate_runtime::SessionKeys {
     xcavate_runtime::SessionKeys { aura: keys }
 }
@@ -162,19 +164,19 @@ pub fn live_xcavate_config() -> ChainSpec {
     .build()
 }
 
-
 pub fn development_config() -> ChainSpec {
+    // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
-    properties.insert("tokenSymbol".into(), "XCAV".into());
+    properties.insert("tokenSymbol".into(), "UNIT".into());
     properties.insert("tokenDecimals".into(), 12.into());
-    properties.insert("ss58Format".into(), 0.into());
+    properties.insert("ss58Format".into(), 42.into());
     // This is very important for us, it lets us track the usage of our templates, and have no downside for the node/runtime. Please do not remove :)
     properties.insert("basedOn".into(), "OpenZeppelin Generic Template".into());
 
     ChainSpec::builder(
         xcavate_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
         Extensions {
-            relay_chain: "rococo-local".into(),
+            relay_chain: "paseo-local".into(),
             // You MUST set this to the correct network!
             para_id: 1000,
         },
@@ -184,6 +186,7 @@ pub fn development_config() -> ChainSpec {
     .with_chain_type(ChainType::Development)
     .with_genesis_config_patch(testnet_genesis(
         // initial collators.
+        #[cfg(not(feature = "tanssi"))]
         vec![
             (
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -194,24 +197,39 @@ pub fn development_config() -> ChainSpec {
                 get_collator_keys_from_seed("Bob"),
             ),
         ],
-        get_endowed_accounts(),
-        get_root_account(),
+        vec![
+            get_account_id_from_seed::<sr25519::Public>("Alice"),
+            get_account_id_from_seed::<sr25519::Public>("Bob"),
+            get_account_id_from_seed::<sr25519::Public>("Charlie"),
+            get_account_id_from_seed::<sr25519::Public>("Dave"),
+            get_account_id_from_seed::<sr25519::Public>("Eve"),
+            get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+            get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+        ],
+        get_account_id_from_seed::<sr25519::Public>("Alice"),
         1000.into(),
     ))
+    .with_properties(properties)
     .build()
 }
 
 pub fn local_testnet_config() -> ChainSpec {
+    // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
-    properties.insert("tokenSymbol".into(), "XCAV".into());
+    properties.insert("tokenSymbol".into(), "UNIT".into());
     properties.insert("tokenDecimals".into(), 12.into());
-    properties.insert("ss58Format".into(), 0.into());
+    properties.insert("ss58Format".into(), 42.into());
 
     #[allow(deprecated)]
     ChainSpec::builder(
         xcavate_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
         Extensions {
-            relay_chain: "rococo-local".into(),
+            relay_chain: "paseo-local".into(),
             // You MUST set this to the correct network!
             para_id: 1000,
         },
@@ -221,6 +239,7 @@ pub fn local_testnet_config() -> ChainSpec {
     .with_chain_type(ChainType::Local)
     .with_genesis_config_patch(testnet_genesis(
         // initial collators.
+        #[cfg(not(feature = "tanssi"))]
         vec![
             (
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -231,51 +250,26 @@ pub fn local_testnet_config() -> ChainSpec {
                 get_collator_keys_from_seed("Bob"),
             ),
         ],
-        get_endowed_accounts(),
-        get_root_account(),
+        vec![
+            get_account_id_from_seed::<sr25519::Public>("Alice"),
+            get_account_id_from_seed::<sr25519::Public>("Bob"),
+            get_account_id_from_seed::<sr25519::Public>("Charlie"),
+            get_account_id_from_seed::<sr25519::Public>("Dave"),
+            get_account_id_from_seed::<sr25519::Public>("Eve"),
+            get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+            get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+        ],
+        get_account_id_from_seed::<sr25519::Public>("Alice"),
         1000.into(),
     ))
     .with_protocol_id("template-local")
     .with_properties(properties)
     .build()
-}
-
-fn testnet_genesis(
-    invulnerables: Vec<(AccountId, AuraId)>,
-    endowed_accounts: Vec<AccountId>,
-    root: AccountId,
-    id: ParaId,
-) -> serde_json::Value {
-    pub const ENDOWMENT: Balance = 100 * XCAV;
-
-    serde_json::json!({
-        "balances": {
-            "balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>(),
-        },
-        "parachainInfo": {
-            "parachainId": id,
-        },
-        "collatorSelection": {
-            "invulnerables": invulnerables.iter().cloned().map(|(acc, _)| acc).collect::<Vec<_>>(),
-            "candidacyBond": EXISTENTIAL_DEPOSIT * 16,
-        },
-        "session": {
-            "keys": invulnerables
-                .into_iter()
-                .map(|(acc, aura)| {
-                    (
-                        acc.clone(),                 // account id
-                        acc,                         // validator id
-                        template_session_keys(aura), // session keys
-                    )
-                })
-            .collect::<Vec<_>>(),
-        },
-        "polkadotXcm": {
-            "safeXcmVersion": Some(SAFE_XCM_VERSION),
-        },
-        "sudo": { "key": Some(root) }
-    })
 }
 
 fn live_genesis(
@@ -314,6 +308,67 @@ fn live_genesis(
         "sudo": { "key": Some(root) }
     })
 }
+
+
+#[cfg(not(feature = "tanssi"))]
+fn testnet_genesis(
+    invulnerables: Vec<(AccountId, AuraId)>,
+    endowed_accounts: Vec<AccountId>,
+    root: AccountId,
+    id: ParaId,
+) -> serde_json::Value {
+    serde_json::json!({
+        "balances": {
+            "balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 60)).collect::<Vec<_>>(),
+        },
+        "parachainInfo": {
+            "parachainId": id,
+        },
+        "collatorSelection": {
+            "invulnerables": invulnerables.iter().cloned().map(|(acc, _)| acc).collect::<Vec<_>>(),
+            "candidacyBond": EXISTENTIAL_DEPOSIT * 16,
+        },
+        "session": {
+            "keys": invulnerables
+                .into_iter()
+                .map(|(acc, aura)| {
+                    (
+                        acc.clone(),                 // account id
+                        acc,                         // validator id
+                        template_session_keys(aura), // session keys
+                    )
+                })
+            .collect::<Vec<_>>(),
+        },
+        "treasury": {},
+        "polkadotXcm": {
+            "safeXcmVersion": Some(SAFE_XCM_VERSION),
+        },
+        "sudo": { "key": Some(root) }
+    })
+}
+
+#[cfg(feature = "tanssi")]
+fn testnet_genesis(
+    endowed_accounts: Vec<AccountId>,
+    root: AccountId,
+    id: ParaId,
+) -> serde_json::Value {
+    serde_json::json!({
+        "balances": {
+            "balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 60)).collect::<Vec<_>>(),
+        },
+        "parachainInfo": {
+            "parachainId": id,
+        },
+        "treasury": {},
+        "polkadotXcm": {
+            "safeXcmVersion": Some(SAFE_XCM_VERSION),
+        },
+        "sudo": { "key": Some(root) }
+    })
+}
+
 
 pub fn get_root_account() -> AccountId {
     let json_data = &include_bytes!("../../seed/accounts.json")[..];

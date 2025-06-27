@@ -1,5 +1,3 @@
-use std::net::SocketAddr;
-
 use cumulus_client_service::storage_proof_size::HostFunctions as ReclaimHostFunctions;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
@@ -7,7 +5,7 @@ use xcavate_runtime::Block;
 use log::info;
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
-    NetworkParams, Result, SharedParams, SubstrateCli,
+    NetworkParams, Result, RpcEndpoint, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
 use sp_runtime::traits::AccountIdConversion;
@@ -40,9 +38,9 @@ impl SubstrateCli for Cli {
 
     fn description() -> String {
         format!(
-            "Xcavate Collator\n\nThe command-line arguments provided first will be \
-             passed to the parachain node, while the arguments provided after -- will be passed \
-             to the relay chain node.\n\n{} <parachain-args> -- <relay-chain-args>",
+            "Xcavate Collator Template\n\nThe command-line arguments provided first will be \
+             passed to the Xcavate node, while the arguments provided after -- will be passed \
+             to the relay chain node.\n\n{} <Xcavate-args> -- <relay-chain-args>",
             Self::executable_name()
         )
     }
@@ -75,9 +73,9 @@ impl SubstrateCli for RelayChainCli {
 
     fn description() -> String {
         format!(
-            "Xcavate Collator\n\nThe command-line arguments provided first will be \
-             passed to the parachain node, while the arguments provided after -- will be passed \
-             to the relay chain node.\n\n{} <parachain-args> -- <relay-chain-args>",
+            "Xcavate Collator Template\n\nThe command-line arguments provided first will be \
+             passed to the Xcavate node, while the arguments provided after -- will be passed \
+             to the relay chain node.\n\n{} <Xcavate-args> -- <relay-chain-args>",
             Self::executable_name()
         )
     }
@@ -119,7 +117,10 @@ pub fn run() -> Result<()> {
 
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
+			runner.sync_run(|config| {
+                let chain_spec = config.chain_spec;
+                cmd.run(chain_spec, config.network)
+            })
 		},
 		Some(Subcommand::CheckBlock(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
@@ -186,7 +187,7 @@ pub fn run() -> Result<()> {
 			match cmd {
 				BenchmarkCmd::Pallet(cmd) =>
 					if cfg!(feature = "runtime-benchmarks") {
-						runner.sync_run(|config| cmd.run::<sp_runtime::traits::HashingFor<Block>, ReclaimHostFunctions>(config))
+						runner.sync_run(|config| cmd.run_with_spec::<sp_runtime::traits::HashingFor<Block>, ReclaimHostFunctions>(Some(config.chain_spec)))
 					} else {
 						Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
@@ -227,7 +228,7 @@ pub fn run() -> Result<()> {
 				let hwbench = (!cli.no_hardware_benchmarks)
 					.then_some(config.database.path().map(|database_path| {
 						let _ = std::fs::create_dir_all(database_path);
-						sc_sysinfo::gather_hwbench(Some(database_path))
+						sc_sysinfo::gather_hwbench(Some(database_path), &SUBSTRATE_REFERENCE_HARDWARE)
 					}))
 					.flatten();
 
@@ -305,7 +306,7 @@ impl CliConfiguration<Self> for RelayChainCli {
         Ok(self.shared_params().base_path()?.or_else(|| self.base_path.clone().map(Into::into)))
     }
 
-    fn rpc_addr(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
+    fn rpc_addr(&self, default_listen_port: u16) -> sc_cli::Result<Option<Vec<RpcEndpoint>>> {
         self.base.base.rpc_addr(default_listen_port)
     }
 
@@ -317,15 +318,9 @@ impl CliConfiguration<Self> for RelayChainCli {
         self.base.base.prometheus_config(default_listen_port, chain_spec)
     }
 
-    fn init<F>(
-        &self,
-        _support_url: &String,
-        _impl_version: &String,
-        _logger_hook: F,
-        _config: &sc_service::Configuration,
-    ) -> Result<()>
+    fn init<F>(&self, _support_url: &String, _impl_version: &String, _logger_hook: F) -> Result<()>
     where
-        F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
+        F: FnOnce(&mut sc_cli::LoggerBuilder),
     {
         unreachable!("PolkadotCli is never initialized; qed");
     }
