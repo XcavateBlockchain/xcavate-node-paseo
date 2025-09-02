@@ -503,4 +503,8 @@ impl<T: frame_system::Config> pallet_assets::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
+
+	fn transfer_all() -> Weight {
+		todo!()
+	}
 }

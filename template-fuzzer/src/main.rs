@@ -48,6 +48,7 @@ fn main() {
                     .iter()
                     .map(|x| (x.0.clone(), x.0.clone(), SessionKeys { aura: x.1.clone() }))
                     .collect::<Vec<_>>(),
+                ..Default::default()
             },
             collator_selection: CollatorSelectionConfig {
                 invulnerables: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
