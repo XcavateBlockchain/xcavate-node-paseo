@@ -10,8 +10,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 use crate::constant::xcavate;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec =
-    sc_service::GenericChainSpec<xcavate_runtime::RuntimeGenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<Extensions>;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -25,11 +24,12 @@ pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Pu
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
-#[serde(deny_unknown_fields)]
 pub struct Extensions {
     /// The relay chain of the Parachain.
+    #[serde(alias = "relayChain", alias = "RelayChain")]
     pub relay_chain: String,
     /// The id of the Parachain.
+    #[serde(alias = "paraId", alias = "ParaId")]
     pub para_id: u32,
 }
 
