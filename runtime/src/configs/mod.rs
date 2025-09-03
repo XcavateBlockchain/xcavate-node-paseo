@@ -256,6 +256,7 @@ impl pallet_balances::Config for Runtime {
     type RuntimeHoldReason = RuntimeHoldReason;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
+    type DoneSlashHandler = ();
 }
 
 parameter_types! {
@@ -335,6 +336,7 @@ impl pallet_transaction_payment::Config for Runtime {
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type RuntimeEvent = RuntimeEvent;
     type WeightToFee = WeightToFee;
+    type WeightInfo = ();
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -363,6 +365,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
     type XcmpMessageHandler = XcmpQueue;
+    type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
 }
 
 impl parachain_info::Config for Runtime {}
