@@ -18,7 +18,7 @@ use frame_system::{
     EnsureRoot, EnsureRootWithSuccess,
 };
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use scale_info::TypeInfo;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -177,6 +177,7 @@ parameter_types! {
     Copy,
     Clone,
     Decode,
+    DecodeWithMemTracking,
     Default,
     Encode,
     Eq,
@@ -230,6 +231,7 @@ impl pallet_proxy::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_proxy::WeightInfo<Runtime>;
+    type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -286,6 +288,7 @@ impl pallet_assets::Config<pallet_assets::Instance1> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountId>;
     type Freezer = ();
+    type Holder = ();
     type MetadataDepositBase = ZeroDeposit;
     type MetadataDepositPerByte = ZeroDeposit;
     type RemoveItemsLimit = RemoveItemsLimit;
@@ -310,6 +313,7 @@ impl pallet_assets::Config<pallet_assets::Instance2> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountId>;
     type Freezer = ();
+    type Holder = ();
     type MetadataDepositBase = MetadataDepositBase;
     type MetadataDepositPerByte = MetadataDepositPerByte;
     type RemoveItemsLimit = RemoveItemsLimit;
@@ -444,6 +448,7 @@ impl pallet_multisig::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
+    type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -466,6 +471,7 @@ impl pallet_session::Config for Runtime {
     type ValidatorId = <Self as frame_system::Config>::AccountId;
     // we don't have stash and controller, thus we don't need the convert as well.
     type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
+    type DisablingStrategy = ();
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_session::WeightInfo<Runtime>;
 }
@@ -516,4 +522,9 @@ impl pallet_utility::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
+}
+
+/// Configure the palelt weight reclaim tx.
+impl cumulus_pallet_weight_reclaim::Config for Runtime {
+	type WeightInfo = ();
 }

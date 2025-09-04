@@ -22,7 +22,8 @@ use sp_runtime::impl_opaque_keys;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
-use sp_std::prelude::*;
+extern crate alloc;
+use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 
@@ -119,6 +120,7 @@ construct_runtime!(
         Proxy: pallet_proxy = 4,
         Utility: pallet_utility = 5,
         Multisig: pallet_multisig = 6,
+        WeightReclaim: cumulus_pallet_weight_reclaim = 7,
 
         // Monetary
         Balances: pallet_balances = 10,

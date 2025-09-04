@@ -10,7 +10,7 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
-use sp_std::prelude::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use sp_version::RuntimeVersion;
 
 use crate::{constants::SLOT_DURATION, types::ConsensusHook};
