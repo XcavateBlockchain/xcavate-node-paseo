@@ -72,6 +72,7 @@ pub type UncheckedExtrinsic =
 /// This can be a tuple of types, each implementing `OnRuntimeUpgrade`.
 #[allow(unused_parens)]
 type Migrations = (
+    pallet_collator_selection::migration::v2::MigrationToV2<Runtime>,
  	pallet_assets::migration::next_asset_id::SetNextAssetId<
 		ConstU32<1>,
 		Runtime,
@@ -82,11 +83,12 @@ type Migrations = (
 		Runtime,
 		pallet_assets::Instance2,
 	>,
-	pallet_session::migrations::v1::MigrateV0ToV1<
+ 	pallet_session::migrations::v1::MigrateV0ToV1<
 		Runtime,
 		pallet_session::migrations::v1::InitOffenceSeverity<Runtime>,
 	>,
 	cumulus_pallet_aura_ext::migration::MigrateV0ToV1<Runtime>,
+    cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
 );
 
 /// Executive: handles dispatch to the various modules.
