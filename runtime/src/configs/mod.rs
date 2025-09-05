@@ -340,7 +340,7 @@ impl pallet_transaction_payment::Config for Runtime {
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type RuntimeEvent = RuntimeEvent;
     type WeightToFee = WeightToFee;
-    type WeightInfo = ();
+    type WeightInfo = weights::pallet_transaction_payment::WeightInfo<Runtime>;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -531,5 +531,5 @@ impl pallet_utility::Config for Runtime {
 
 /// Configure the palelt weight reclaim tx.
 impl cumulus_pallet_weight_reclaim::Config for Runtime {
-	type WeightInfo = ();
+	 type WeightInfo = weights::cumulus_pallet_weight_reclaim::WeightInfo<Runtime>;
 }

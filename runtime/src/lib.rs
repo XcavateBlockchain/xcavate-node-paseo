@@ -13,7 +13,6 @@ mod types;
 mod weights;
 
 use frame_support::{
-    construct_runtime,
     weights::{WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
 };
 use smallvec::smallvec;
@@ -107,44 +106,76 @@ pub fn native_version() -> NativeVersion {
     NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
 }
 
-// Create the runtime by composing the FRAME pallets that were previously
-// configured.
-construct_runtime!(
-    pub enum Runtime
-    {
-        // System Support
-        System: frame_system = 0,
-        ParachainSystem: cumulus_pallet_parachain_system = 1,
-        Timestamp: pallet_timestamp = 2,
-        ParachainInfo: parachain_info = 3,
-        Proxy: pallet_proxy = 4,
-        Utility: pallet_utility = 5,
-        Multisig: pallet_multisig = 6,
-        WeightReclaim: cumulus_pallet_weight_reclaim = 7,
+// Create the runtime by composing the FRAME pallets that were previously configured.
+#[frame_support::runtime]
+mod runtime {
+    #[runtime::runtime]
+    #[runtime::derive(
+        RuntimeCall,
+        RuntimeEvent,
+        RuntimeError,
+        RuntimeOrigin,
+        RuntimeFreezeReason,
+        RuntimeHoldReason,
+        RuntimeSlashReason,
+        RuntimeLockId,
+        RuntimeTask
+    )]
+    pub struct Runtime;
 
-        // Monetary
-        Balances: pallet_balances = 10,
-        TransactionPayment: pallet_transaction_payment = 11,
-        RealEstateAssets: pallet_assets::<Instance1> = 12,
-        Assets: pallet_assets::<Instance2> = 13,
+    #[runtime::pallet_index(0)]
+    pub type System = frame_system;
+    #[runtime::pallet_index(1)]
+    pub type ParachainSystem = cumulus_pallet_parachain_system;
+    #[runtime::pallet_index(2)]
+    pub type Timestamp = pallet_timestamp;
+    #[runtime::pallet_index(3)]
+    pub type ParachainInfo = parachain_info;
+    #[runtime::pallet_index(4)]
+    pub type Proxy = pallet_proxy;
+    #[runtime::pallet_index(5)]
+    pub type Utility = pallet_utility;
+    #[runtime::pallet_index(6)]
+    pub type Multisig = pallet_multisig;
+    #[runtime::pallet_index(7)]
+    pub type WeightReclaim = cumulus_pallet_weight_reclaim;
 
-        // Governance
-        Sudo: pallet_sudo = 15,
+    // Monetary
+    #[runtime::pallet_index(10)]
+    pub type Balances = pallet_balances;
+    #[runtime::pallet_index(11)]
+    pub type TransactionPayment = pallet_transaction_payment;
+    #[runtime::pallet_index(12)]
+    pub type RealEstateAssets = pallet_assets::Pallet<Runtime, Instance1>;
+    #[runtime::pallet_index(13)]
+    pub type Assets = pallet_assets::Pallet<Runtime, Instance2>;
 
-        // Collator Support. The order of these 4 are important and shall not change.
-        Authorship: pallet_authorship = 20,
-        CollatorSelection: pallet_collator_selection = 21,
-        Session: pallet_session = 22,
-        Aura: pallet_aura = 23,
-        AuraExt: cumulus_pallet_aura_ext = 24,
+    // Governance
+    #[runtime::pallet_index(15)]
+    pub type Sudo = pallet_sudo;
 
-        // XCM Helpers
-        XcmpQueue: cumulus_pallet_xcmp_queue = 30,
-        PolkadotXcm: pallet_xcm = 31,
-        CumulusXcm: cumulus_pallet_xcm = 32,
-        MessageQueue: pallet_message_queue = 33,
-    }
-);
+    // Collator support. The order of these 4 are important and shall not change.
+    #[runtime::pallet_index(20)]
+    pub type Authorship = pallet_authorship;
+    #[runtime::pallet_index(21)]
+    pub type CollatorSelection = pallet_collator_selection;
+    #[runtime::pallet_index(22)]
+    pub type Session = pallet_session;
+    #[runtime::pallet_index(23)]
+    pub type Aura = pallet_aura;
+    #[runtime::pallet_index(24)]
+    pub type AuraExt = cumulus_pallet_aura_ext;
+
+    // XCM helpers.
+    #[runtime::pallet_index(30)]
+    pub type XcmpQueue = cumulus_pallet_xcmp_queue;
+    #[runtime::pallet_index(31)]
+    pub type PolkadotXcm = pallet_xcm;
+    #[runtime::pallet_index(32)]
+    pub type CumulusXcm = cumulus_pallet_xcm;
+    #[runtime::pallet_index(33)]
+    pub type MessageQueue = pallet_message_queue;
+}
 
 cumulus_pallet_parachain_system::register_validate_block! {
     Runtime = Runtime,
