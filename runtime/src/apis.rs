@@ -10,7 +10,9 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
-use alloc::{boxed::Box, vec::Vec};
+#[cfg(feature = "runtime-benchmarks")]
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use sp_version::RuntimeVersion;
 
 use crate::{constants::SLOT_DURATION, types::ConsensusHook};
@@ -201,7 +203,7 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            use frame_benchmarking::{Benchmarking, BenchmarkList};
+            use frame_benchmarking::BenchmarkList;
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
             use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
@@ -219,8 +221,8 @@ impl_runtime_apis! {
 
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
-        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{BenchmarkError, Benchmarking, BenchmarkBatch};
+        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, alloc::string::String> {
+            use frame_benchmarking::{BenchmarkError, BenchmarkBatch};
             use frame_support::parameter_types;
             use cumulus_primitives_core::ParaId;
             use frame_system_benchmarking::Pallet as SystemBench;

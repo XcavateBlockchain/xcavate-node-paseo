@@ -167,6 +167,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
+	"cumulus-pallet-weight-reclaim/runtime-benchmarks",
 ]
 
 try-runtime = [

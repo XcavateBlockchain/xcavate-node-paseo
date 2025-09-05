@@ -13,6 +13,8 @@ frame_benchmarking::define_benchmarks!(
     [pallet_utility, Utility]
     [pallet_multisig, Multisig]
     [pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>]
+    [cumulus_pallet_weight_reclaim, WeightReclaim]
+    [pallet_transaction_payment, TransactionPayment]
 );
 
 use cumulus_primitives_core::{ChannelStatus, GetChannelInfo};
