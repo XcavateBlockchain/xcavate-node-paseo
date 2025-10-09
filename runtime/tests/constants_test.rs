@@ -35,10 +35,10 @@ mod runtime_tests {
                 spec_name: alloc::borrow::Cow::Borrowed("template-parachain"),
                 impl_name: alloc::borrow::Cow::Borrowed("template-parachain"),
                 authoring_version: 1,
-                spec_version: 2,
+                spec_version: 3,
                 impl_version: 0,
                 apis: xcavate_runtime::apis::RUNTIME_API_VERSIONS,
-                transaction_version: 2,
+                transaction_version: 3,
                 system_version: 1,
             }
         );

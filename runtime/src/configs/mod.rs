@@ -146,10 +146,7 @@ impl frame_system::Config for Runtime {
 }
 
 impl pallet_timestamp::Config for Runtime {
-    #[cfg(feature = "experimental")]
     type MinimumPeriod = ConstU64<0>;
-    #[cfg(not(feature = "experimental"))]
-    type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
     /// A timestamp: milliseconds since the unix epoch.
     type Moment = u64;
     type OnTimestampSet = Aura;
@@ -428,7 +425,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     // Enqueue XCMP messages from siblings for later processing.
     type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
     type MaxActiveOutboundChannels = ConstU32<128>;
-	type MaxPageSize = ConstU32<{ 1 << 16 }>;
+	type MaxPageSize = ConstU32<{ 103 * 1024 }>;
 }
 
 impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
@@ -529,7 +526,7 @@ impl pallet_utility::Config for Runtime {
     type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
 }
 
-/// Configure the palelt weight reclaim tx.
+/// Configure the pallet weight reclaim tx.
 impl cumulus_pallet_weight_reclaim::Config for Runtime {
 	 type WeightInfo = weights::cumulus_pallet_weight_reclaim::WeightInfo<Runtime>;
 }

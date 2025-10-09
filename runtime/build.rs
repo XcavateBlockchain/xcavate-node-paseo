@@ -4,7 +4,7 @@ fn main() {
 		.with_current_project()
 		.export_heap_base()
 		.import_memory()
-		.enable_metadata_hash("UNIT", 12)
+		.enable_metadata_hash("XCAV", 12)
 		.build()
 }
 
