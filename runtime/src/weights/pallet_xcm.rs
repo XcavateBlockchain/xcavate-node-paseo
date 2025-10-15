@@ -47,20 +47,6 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
-	/// Storage: `ParachainSystem::HostConfiguration` (r:1 w:0)
-	/// Proof: `ParachainSystem::HostConfiguration` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-	/// Storage: `ParachainSystem::PendingUpwardMessages` (r:1 w:1)
-	/// Proof: `ParachainSystem::PendingUpwardMessages` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-	fn send_blob() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `6`
-		//  Estimated: `1491`
-		// Minimum execution time: 10_000_000 picoseconds.
-		Weight::from_parts(11_000_000, 0)
-			.saturating_add(Weight::from_parts(0, 1491))
-			.saturating_add(T::DbWeight::get().reads(2))
-			.saturating_add(T::DbWeight::get().writes(1))
-	}
 	/// Storage: `Benchmark::Override` (r:0 w:0)
 	/// Proof: `Benchmark::Override` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	fn teleport_assets() -> Weight {
@@ -94,16 +80,6 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 	/// Storage: `Benchmark::Override` (r:0 w:0)
 	/// Proof: `Benchmark::Override` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	fn execute() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `0`
-		//  Estimated: `0`
-		// Minimum execution time: 18_446_744_073_709_551_000 picoseconds.
-		Weight::from_parts(18_446_744_073_709_551_000, 0)
-			.saturating_add(Weight::from_parts(0, 0))
-	}
-	/// Storage: `Benchmark::Override` (r:0 w:0)
-	/// Proof: `Benchmark::Override` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	fn execute_blob() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -304,6 +280,26 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 		// Minimum execution time: 26_000_000 picoseconds.
 		Weight::from_parts(31_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 3489))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	fn add_authorized_alias() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `498`
+		//  Estimated: `3963`
+		// Minimum execution time: 19_789_000 picoseconds.
+		Weight::from_parts(20_317_000, 3963)
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: `PolkadotXcm::AuthorizedAliases` (r:1 w:1)
+	/// Proof: `PolkadotXcm::AuthorizedAliases` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	fn remove_authorized_alias() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `537`
+		//  Estimated: `4002`
+		// Minimum execution time: 20_805_000 picoseconds.
+		Weight::from_parts(21_481_000, 4002)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}

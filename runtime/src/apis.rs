@@ -1,5 +1,5 @@
 use frame_support::{
-    genesis_builder_helper::{build_config, create_default_config},
+    genesis_builder_helper::{build_state, get_preset},
     weights::Weight,
 };
 use sp_api::impl_runtime_apis;
@@ -10,7 +10,9 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
-use sp_std::prelude::Vec;
+#[cfg(feature = "runtime-benchmarks")]
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use sp_version::RuntimeVersion;
 
 use crate::{constants::SLOT_DURATION, types::ConsensusHook};
@@ -55,7 +57,7 @@ impl_runtime_apis! {
             Runtime::metadata_at_version(version)
         }
 
-        fn metadata_versions() -> sp_std::vec::Vec<u32> {
+        fn metadata_versions() -> Vec<u32> {
             Runtime::metadata_versions()
         }
     }
@@ -201,7 +203,7 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            use frame_benchmarking::{Benchmarking, BenchmarkList};
+            use frame_benchmarking::BenchmarkList;
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
             use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
@@ -219,8 +221,8 @@ impl_runtime_apis! {
 
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
-        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{BenchmarkError, Benchmarking, BenchmarkBatch};
+        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, alloc::string::String> {
+            use frame_benchmarking::{BenchmarkError, BenchmarkBatch};
             use frame_support::parameter_types;
             use cumulus_primitives_core::ParaId;
             use frame_system_benchmarking::Pallet as SystemBench;
@@ -228,7 +230,7 @@ impl_runtime_apis! {
             use super::{*, types::*, configs::*, constants::currency::XCAV};
 
             impl frame_system_benchmarking::Config for Runtime {
-                fn setup_set_code_requirements(code: &sp_std::vec::Vec<u8>) -> Result<(), BenchmarkError> {
+                fn setup_set_code_requirements(code: &Vec<u8>) -> Result<(), BenchmarkError> {
                     ParachainSystem::initialize_for_set_code_benchmark(code.len() as u32);
                     Ok(())
                 }
@@ -309,12 +311,16 @@ impl_runtime_apis! {
     }
 
     impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
-        fn create_default_config() -> Vec<u8> {
-            create_default_config::<RuntimeGenesisConfig>()
+        fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
+            build_state::<RuntimeGenesisConfig>(config)
         }
 
-        fn build_config(config: Vec<u8>) -> sp_genesis_builder::Result {
-            build_config::<RuntimeGenesisConfig>(config)
+        fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+            get_preset::<RuntimeGenesisConfig>(id, |_| None)
+        }
+
+        fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+            Default::default()
         }
     }
 }

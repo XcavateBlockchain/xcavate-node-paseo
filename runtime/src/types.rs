@@ -1,4 +1,4 @@
-use frame_support::traits::EitherOfDiverse;
+use frame_support::traits::{EitherOfDiverse, ConstU32};
 use frame_system::EnsureRoot;
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 use sp_runtime::{
@@ -47,22 +47,49 @@ pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 /// Block type as expected by this runtime.
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
-/// The SignedExtension to the basic transaction logic.
-pub type SignedExtra = (
-    frame_system::CheckNonZeroSender<Runtime>,
-    frame_system::CheckSpecVersion<Runtime>,
-    frame_system::CheckTxVersion<Runtime>,
-    frame_system::CheckGenesis<Runtime>,
-    frame_system::CheckEra<Runtime>,
-    frame_system::CheckNonce<Runtime>,
-    frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
-    cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim<Runtime>,
-);
+/// The extension to the basic transaction logic.
+pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
+	Runtime,
+	(
+		frame_system::CheckNonZeroSender<Runtime>,
+		frame_system::CheckSpecVersion<Runtime>,
+		frame_system::CheckTxVersion<Runtime>,
+		frame_system::CheckGenesis<Runtime>,
+		frame_system::CheckEra<Runtime>,
+		frame_system::CheckNonce<Runtime>,
+		frame_system::CheckWeight<Runtime>,
+		pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+		frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
+	),
+>;
 
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
-    generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+    generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, TxExtension>;
+
+/// All migrations of the runtime, aside from the ones declared in the pallets.
+///
+/// This can be a tuple of types, each implementing `OnRuntimeUpgrade`.
+#[allow(unused_parens)]
+type Migrations = (
+    pallet_collator_selection::migration::v2::MigrationToV2<Runtime>,
+ 	pallet_assets::migration::next_asset_id::SetNextAssetId<
+		ConstU32<1>,
+		Runtime,
+		pallet_assets::Instance1,
+	>,
+    pallet_assets::migration::next_asset_id::SetNextAssetId<
+		ConstU32<1>,
+		Runtime,
+		pallet_assets::Instance2,
+	>,
+ 	pallet_session::migrations::v1::MigrateV0ToV1<
+		Runtime,
+		pallet_session::migrations::v1::InitOffenceSeverity<Runtime>,
+	>,
+	cumulus_pallet_aura_ext::migration::MigrateV0ToV1<Runtime>,
+    cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
+);
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
@@ -71,6 +98,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    Migrations,
 >;
 
 /// Price For Sibling Parachain Delivery

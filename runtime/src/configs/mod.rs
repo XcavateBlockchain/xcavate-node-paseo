@@ -18,7 +18,7 @@ use frame_system::{
     EnsureRoot, EnsureRootWithSuccess,
 };
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use scale_info::TypeInfo;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -146,10 +146,7 @@ impl frame_system::Config for Runtime {
 }
 
 impl pallet_timestamp::Config for Runtime {
-    #[cfg(feature = "experimental")]
     type MinimumPeriod = ConstU64<0>;
-    #[cfg(not(feature = "experimental"))]
-    type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
     /// A timestamp: milliseconds since the unix epoch.
     type Moment = u64;
     type OnTimestampSet = Aura;
@@ -177,6 +174,7 @@ parameter_types! {
     Copy,
     Clone,
     Decode,
+    DecodeWithMemTracking,
     Default,
     Encode,
     Eq,
@@ -230,6 +228,7 @@ impl pallet_proxy::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_proxy::WeightInfo<Runtime>;
+    type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -256,6 +255,7 @@ impl pallet_balances::Config for Runtime {
     type RuntimeHoldReason = RuntimeHoldReason;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
+    type DoneSlashHandler = ();
 }
 
 parameter_types! {
@@ -285,6 +285,7 @@ impl pallet_assets::Config<pallet_assets::Instance1> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountId>;
     type Freezer = ();
+    type Holder = ();
     type MetadataDepositBase = ZeroDeposit;
     type MetadataDepositPerByte = ZeroDeposit;
     type RemoveItemsLimit = RemoveItemsLimit;
@@ -309,6 +310,7 @@ impl pallet_assets::Config<pallet_assets::Instance2> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountId>;
     type Freezer = ();
+    type Holder = ();
     type MetadataDepositBase = MetadataDepositBase;
     type MetadataDepositPerByte = MetadataDepositPerByte;
     type RemoveItemsLimit = RemoveItemsLimit;
@@ -331,10 +333,11 @@ impl pallet_transaction_payment::Config for Runtime {
     /// With fast adjusting fees change rapidly, but fixed for all users at each block (no tipping)
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+    type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<Balances, ()>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type RuntimeEvent = RuntimeEvent;
     type WeightToFee = WeightToFee;
+    type WeightInfo = weights::pallet_transaction_payment::WeightInfo<Runtime>;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -363,6 +366,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
     type XcmpMessageHandler = XcmpQueue;
+    type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -420,6 +424,13 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
     // Enqueue XCMP messages from siblings for later processing.
     type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
+    type MaxActiveOutboundChannels = ConstU32<128>;
+	type MaxPageSize = ConstU32<{ 103 * 1024 }>;
+}
+
+impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
+	// This must be the same as the `ChannelInfo` from the `Config`:
+	type ChannelList = ParachainSystem;
 }
 
 parameter_types! {
@@ -439,6 +450,7 @@ impl pallet_multisig::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
+    type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -461,6 +473,7 @@ impl pallet_session::Config for Runtime {
     type ValidatorId = <Self as frame_system::Config>::AccountId;
     // we don't have stash and controller, thus we don't need the convert as well.
     type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
+    type DisablingStrategy = ();
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_session::WeightInfo<Runtime>;
 }
@@ -511,4 +524,9 @@ impl pallet_utility::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
+}
+
+/// Configure the pallet weight reclaim tx.
+impl cumulus_pallet_weight_reclaim::Config for Runtime {
+	 type WeightInfo = weights::cumulus_pallet_weight_reclaim::WeightInfo<Runtime>;
 }

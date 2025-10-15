@@ -23,23 +23,23 @@ mod runtime_tests {
         constants::{currency::*, *},
         *,
     };
-    use sp_runtime::create_runtime_str;
     use sp_version::RuntimeVersion;
     use xcm::latest::prelude::BodyId;
+    extern crate alloc;
 
     #[test]
     fn check_runtime_api_version() {
         assert_eq!(
             VERSION,
             RuntimeVersion {
-                spec_name: create_runtime_str!("template-parachain"),
-                impl_name: create_runtime_str!("template-parachain"),
+                spec_name: alloc::borrow::Cow::Borrowed("template-parachain"),
+                impl_name: alloc::borrow::Cow::Borrowed("template-parachain"),
                 authoring_version: 1,
-                spec_version: 2,
+                spec_version: 3,
                 impl_version: 0,
                 apis: xcavate_runtime::apis::RUNTIME_API_VERSIONS,
-                transaction_version: 2,
-                state_version: 1,
+                transaction_version: 3,
+                system_version: 1,
             }
         );
     }
