@@ -44,12 +44,42 @@ This document explains how token registration and cross-chain asset transfers wo
          └──────────┬───────────┘
                     │
          ┌──────────▼───────────┐
-         │  Destination Chains  │
-         │  - Ethereum          │
+         │  Other Chains        │
          │  - Polygon           │
          │  - BSC               │
          │  - Other parachains  │
          └──────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                    Ethereum Mainnet                         │
+│                                                             │
+│  User Wallet (EOA)                                          │
+│      │                                                      │
+│      └─► ERC20 Token Contracts                              │
+│            │ (TGBP, DAI, etc.)                              │
+│            │                                                │
+│            ▼                                                │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │         TokenGateway Contract                      │     │
+│  │  - teleport(TeleportParams)                        │     │
+│  │  - Asset custody/burning                           │     │
+│  │  - ERC6160 token management                        │     │
+│  └────────────────┬───────────────────────────────────┘     │
+│                   │                                         │
+│  ┌────────────────▼───────────────────────────────────┐     │
+│  │         IsmpHost Contract                          │     │
+│  │  - dispatch(DispatchRequest)                       │     │
+│  │  - Store message commitments                       │     │
+│  │  - Emit PostRequestEvent                           │     │
+│  └────────────────┬───────────────────────────────────┘     │
+│                   │                                         │
+│  ┌────────────────▼───────────────────────────────────┐     │
+│  │         HandlerV1 Contract                         │     │
+│  │  - handlePostRequests() (receive from Xcavate)     │     │
+│  │  - handlePostRequestTimeouts() (refunds)           │     │
+│  │  - Verify consensus proofs                         │     │
+│  └────────────────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Concepts
@@ -68,6 +98,139 @@ This document explains how token registration and cross-chain asset transfers wo
 - ISMP module for asset bridging
 - Manages custody, minting, and burning of assets
 - Handles precision conversion between chains
+
+### Ethereum Smart Contracts
+
+When interacting with Ethereum, you'll work with three main contracts deployed by the Hyperbridge team:
+
+#### 1. **TokenGateway Contract**
+
+The main entry point for cross-chain asset transfers from Ethereum.
+
+**Mainnet Address:** [`0xFd413e3AFe560182C4471F4d143A96d3e259B6dE`](https://etherscan.io/address/0xFd413e3AFe560182C4471F4d143A96d3e259B6dE) *(Provided by Polytope)*
+**Sepolia Testnet:** [`0xFcDa26cA021d5535C3059547390E6cCd8De7acA6`](https://sepolia.etherscan.io/address/0xFcDa26cA021d5535C3059547390E6cCd8De7acA6) *(Provided by Polytope)*
+
+**Key Functions:**
+- `teleport(TeleportParams memory params)` - Send assets to other chains
+- `erc20(bytes32 assetId)` - Get native ERC20 address for an asset
+- `erc6160(bytes32 assetId)` - Get ERC6160 wrapper address for an asset
+
+**Storage:**
+- Maintains custody of native ERC20 tokens being bridged
+- Manages ERC6160 token deployments for bridged assets
+- Stores asset registrations and mappings
+
+#### 2. **IsmpHost Contract**
+
+The ISMP protocol handler that manages message dispatch and delivery.
+
+**Mainnet Address:** [`0x792A6236AF69787C40cF76b69B4c8c7B28c4cA20`](https://etherscan.io/address/0x792A6236AF69787C40cF76b69B4c8c7B28c4cA20) *(Provided by Polytope)*
+**Sepolia Testnet:** [`0x2EdB74C269948b60ec1000040E104cef0eABaae8`](https://sepolia.etherscan.io/address/0x2EdB74C269948b60ec1000040E104cef0eABaae8) *(Provided by Polytope)*
+
+**Key Functions:**
+- `dispatch(DispatchPost memory request)` - Send cross-chain messages
+- `feeToken()` - Returns the address of the token used for fees
+- `perByteFee(bytes memory destination)` - Get per-byte fee for a destination chain
+
+**Responsibilities:**
+- Store message commitments on-chain
+- Emit events for relayers to observe
+- Verify incoming consensus proofs
+- Route messages to appropriate handlers
+
+#### 3. **HandlerV1 Contract**
+
+Processes incoming messages from other chains and handles timeouts.
+
+**Mainnet Address:** [`0x6C84eDd2A018b1fe2Fc93a56066B5C60dA4E6D64`](https://etherscan.io/address/0x6C84eDd2A018b1fe2Fc93a56066B5C60dA4E6D64) *(Provided by Polytope)*
+**Sepolia Testnet:** [`0x4638945E120846366cB7Abc08DB9c0766E3a663F`](https://sepolia.etherscan.io/address/0x4638945E120846366cB7Abc08DB9c0766E3a663F) *(Provided by Polytope)*
+
+**Key Functions:**
+- `handlePostRequests(PostRequestMessage[] memory messages)` - Process incoming messages from other chains
+- `handlePostRequestTimeouts(PostTimeout[] memory timeouts)` - Handle message timeouts and issue refunds
+
+**Responsibilities:**
+- Verify consensus proofs from Hyperbridge
+- Execute incoming token transfers
+- Process timeout refunds for failed transfers
+
+### Fee Token & Payment
+
+**Fee Token:** Hyperbridge uses a designated ERC20 token for paying cross-chain message fees.
+
+To find the current fee token:
+```javascript
+const ismpHost = new ethers.Contract(ISMP_HOST_ADDRESS, ISMP_HOST_ABI, provider);
+const feeTokenAddress = await ismpHost.feeToken();
+console.log(`Fee token: ${feeTokenAddress}`);
+```
+
+**Fee Calculation:**
+```javascript
+// Get per-byte fee for Xcavate
+const xcavateChainId = ethers.encodeBytes32String('PARA-4683');
+const perByteFee = await ismpHost.perByteFee(xcavateChainId);
+
+// Estimate message size (typically 200-300 bytes for token transfers)
+const estimatedSize = 250;
+const totalFee = perByteFee * BigInt(estimatedSize);
+
+console.log(`Estimated fee: ${ethers.formatEther(totalFee)} tokens`);
+```
+
+**Payment Options:**
+
+1. **Using Fee Token (Recommended):**
+   - Approve the IsmpHost contract to spend fee tokens
+   - Call `teleport()` with appropriate parameters
+   - Fee tokens are automatically deducted
+
+2. **Using Native ETH:**
+   - Pass `value` parameter with ETH amount when calling `teleport()`
+   - Specify `nativeCost` in TeleportParams
+   - Excess ETH is refunded
+
+**Important:** Always approve sufficient fee tokens before calling `teleport()`:
+```javascript
+const feeToken = new ethers.Contract(feeTokenAddress, ERC20_ABI, wallet);
+await feeToken.approve(TOKEN_GATEWAY_ADDRESS, totalFee);
+```
+
+### Required Ethereum Contract Calls
+
+Here's the complete sequence of calls needed to send assets from Ethereum to Xcavate:
+
+#### Step 1: Approve ERC20 Token (if sending native tokens like TGBP)
+```javascript
+const token = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, wallet);
+await token.approve(TOKEN_GATEWAY_ADDRESS, amount);
+```
+
+#### Step 2: Approve Fee Token
+```javascript
+const feeToken = new ethers.Contract(feeTokenAddress, ERC20_ABI, wallet);
+await feeToken.approve(TOKEN_GATEWAY_ADDRESS, estimatedFee);
+```
+
+#### Step 3: Call Teleport
+```javascript
+const tokenGateway = new ethers.Contract(TOKEN_GATEWAY_ADDRESS, TOKEN_GATEWAY_ABI, wallet);
+
+const teleportParams = {
+    amount: amount,              // Amount to send (in token decimals)
+    relayerFee: 0,              // Optional relayer tip
+    assetId: assetId,           // keccak256 of token symbol
+    redeem: false,              // false for Substrate chains
+    to: recipientBytes32,       // 32-byte recipient address
+    dest: destinationChain,     // Encoded chain identifier
+    timeout: 3600,              // Timeout in seconds
+    nativeCost: 0,              // Or ETH amount if paying with ETH
+    data: '0x'                  // Optional calldata
+};
+
+const tx = await tokenGateway.teleport(teleportParams);
+await tx.wait();
+```
 
 ---
 
