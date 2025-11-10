@@ -1,5 +1,6 @@
 [workspace]
 members = ["node", "runtime"]
+exclude = ["integration-tests"]
 resolver = "2"
 
 [workspace.package]

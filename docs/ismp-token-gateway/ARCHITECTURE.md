@@ -108,12 +108,12 @@ This document explains the architecture, components, and smart contracts involve
 
 - ISMP module for asset bridging
 - Manages custody, minting, and burning of assets
-- Handles precision conversion between chains
+- Maintains asset precision as registered on each chain
 
 **Core functionality:**
 - Asset registration with ERC6160 deployment
 - Cross-chain teleport operations
-- Automatic decimal conversion
+- Decimal precision mapping per chain
 - Custody management for native assets
 
 See [Transfer Flows](./TRANSFER_FLOWS.md) for detailed transfer mechanics.

@@ -60,7 +60,7 @@ Assets::create(
     RuntimeOrigin::root(),
     asset_id: 1,
     admin: treasury_account,
-    min_balance: 1_000_000_000, // 0.001 TGBP (12 decimals)
+    min_balance: 1, // Minimum balance in 6 decimals
 )?;
 
 Assets::set_metadata(
@@ -68,13 +68,13 @@ Assets::set_metadata(
     asset_id: 1,
     name: b"Tokenised GBP".to_vec(),
     symbol: b"TGBP".to_vec(),
-    decimals: 12, // Local decimals on Xcavate
+    decimals: 6, // Match Ethereum's decimals (no conversion)
 )?;
 ```
 
 **Important:**
 - Use `native: false` since TGBP originates from Ethereum
-- Choose appropriate decimals for Xcavate (12 is typical for Substrate)
+- Use the same decimals as the source chain (6 for TGBP on Ethereum)
 - The symbol must match exactly what you'll register in the gateway
 
 ---
@@ -100,7 +100,7 @@ let tgbp_registration = AssetRegistration {
             StateMachine::Evm(1), // Ethereum mainnet
         ],
 
-        minimum_balance: 1_000_000_000,
+        minimum_balance: 1, // Minimum balance in asset's native decimals (6 for TGBP)
     },
 
     // Map decimals for each chain

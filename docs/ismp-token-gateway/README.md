@@ -63,8 +63,8 @@ Deep dive into custody models, precision handling, and security.
 
 **Topics:**
 - Asset custody models (native vs bridged)
-- Precision conversion between chains
-- Decimal handling and loss prevention
+- Decimal precision mapping per chain
+- Precision handling and consistency
 - Security considerations
 - Best practices
 
@@ -116,7 +116,7 @@ Protocol for trustless cross-chain communication using consensus proofs to verif
 Provides enhanced security for cross-chain state verification, aggregates and verifies consensus proofs from multiple chains.
 
 ### Token Gateway
-ISMP module for asset bridging that manages custody, minting, and burning of assets with automatic precision conversion.
+ISMP module for asset bridging that manages custody, minting, and burning of assets. Each asset maintains its registered decimal precision per chain.
 
 ### Asset Custody Models
 - **Native assets** (originating from Xcavate): Use custody model (lock/unlock)
