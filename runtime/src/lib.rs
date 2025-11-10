@@ -12,8 +12,8 @@ pub mod constants;
 mod types;
 mod weights;
 
-use frame_support::{
-    weights::{WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
+use frame_support::weights::{
+    WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 };
 use smallvec::smallvec;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -23,18 +23,19 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 extern crate alloc;
 use alloc::vec::Vec;
+
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 
-use crate::{
-    constants::{currency::MILLIXCAV, POLY_DEGREE, P_FACTOR, Q_FACTOR},
-    weights::ExtrinsicBaseWeight,
-};
 pub use crate::{
     configs::RuntimeBlockWeights,
     types::{
         AccountId, Balance, Block, BlockNumber, Executive, Nonce, Signature, UncheckedExtrinsic,
     },
+};
+use crate::{
+    constants::{currency::MILLIXCAV, POLY_DEGREE, P_FACTOR, Q_FACTOR},
+    weights::ExtrinsicBaseWeight,
 };
 
 /// Handles converting a weight scalar to a fee value, based on the scale and
@@ -179,6 +180,16 @@ mod runtime {
     // Others.
     #[runtime::pallet_index(40)]
     pub type Vesting = pallet_vesting;
+
+    // ISMP.
+    #[runtime::pallet_index(50)]
+    pub type Ismp = pallet_ismp;
+    #[runtime::pallet_index(51)]
+    pub type IsmpParachain = ismp_parachain;
+    #[runtime::pallet_index(52)]
+    pub type Hyperbridge = pallet_hyperbridge;
+    #[runtime::pallet_index(53)]
+    pub type TokenGateway = pallet_token_gateway;
 }
 
 cumulus_pallet_parachain_system::register_validate_block! {

@@ -11,11 +11,11 @@ use xcm::latest::prelude::*;
 use xcm_builder::{
     AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowTopLevelPaidExecutionFrom,
     DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin, FixedWeightBounds,
-    FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter,
-    IsConcrete, NativeAsset, NoChecking, ParentIsPreset, RelayChainAsNative,
-    SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-    SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId,
-    UsingComponents, WithComputedOrigin, WithUniqueTopic,
+    FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter, IsConcrete, NativeAsset,
+    NoChecking, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
+    SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+    SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
+    WithComputedOrigin, WithUniqueTopic,
 };
 use xcm_executor::XcmExecutor;
 
@@ -177,9 +177,9 @@ impl xcm_executor::Config for XcmConfig {
     // Teleporting is disabled.
     type UniversalLocation = UniversalLocation;
     type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-    type XcmSender = XcmRouter;
-    type XcmRecorder = PolkadotXcm;
     type XcmEventEmitter = PolkadotXcm;
+    type XcmRecorder = PolkadotXcm;
+    type XcmSender = XcmRouter;
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -203,6 +203,7 @@ impl pallet_xcm::Config for Runtime {
     type AdminOrigin = EnsureRoot<AccountId>;
     // ^ Override for AdvertisedXcmVersion default
     type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+    type AuthorizedAliasConsideration = Disabled;
     type Currency = Balances;
     type CurrencyMatcher = ();
     type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
@@ -228,7 +229,6 @@ impl pallet_xcm::Config for Runtime {
     type XcmTeleportFilter = Nothing;
 
     const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
-    type AuthorizedAliasConsideration = Disabled;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {

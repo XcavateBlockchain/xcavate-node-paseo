@@ -1,3 +1,4 @@
+pub mod ismp;
 pub mod xcm_config;
 
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
@@ -7,8 +8,8 @@ use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
     traits::{
-        AsEnsureOriginWithArg, ConstU32, ConstU64, Contains, InstanceFilter,
-        TransformOrigin, WithdrawReasons,
+        AsEnsureOriginWithArg, ConstU32, ConstU64, Contains, InstanceFilter, TransformOrigin,
+        WithdrawReasons,
     },
     weights::{ConstantMultiplier, Weight},
     PalletId,
@@ -27,28 +28,25 @@ use sp_runtime::{
     Perbill, RuntimeDebug,
 };
 use sp_version::RuntimeVersion;
-use xcm::latest::{
-    prelude::{AssetId, BodyId},
-};
+use xcm::latest::prelude::{AssetId, BodyId};
 #[cfg(not(feature = "runtime-benchmarks"))]
 use xcm_builder::ProcessXcmMessage;
 use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
 
 use crate::{
     constants::{
-        currency::{deposit, XCAV, EXISTENTIAL_DEPOSIT, MICROXCAV},
+        currency::{deposit, EXISTENTIAL_DEPOSIT, MICROXCAV, XCAV},
         AVERAGE_ON_INITIALIZE_RATIO, HOURS, MAXIMUM_BLOCK_WEIGHT, MAX_BLOCK_LENGTH,
         NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
     },
     types::{
-        AccountId, Balance, Block, BlockNumber,
-        CollatorSelectionUpdateOrigin, ConsensusHook, Hash, Nonce,
-        PriceForSiblingParachainDelivery,
+        AccountId, Balance, Block, BlockNumber, CollatorSelectionUpdateOrigin, ConsensusHook, Hash,
+        Nonce, PriceForSiblingParachainDelivery,
     },
     weights::{self, BlockExecutionWeight, ExtrinsicBaseWeight, ParityDbWeight},
     Aura, Balances, CollatorSelection, MessageQueue, OriginCaller, PalletInfo, ParachainSystem,
-    Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
-    RuntimeOrigin, RuntimeTask, Session, SessionKeys, System, WeightToFee, XcmpQueue,
+    Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin,
+    RuntimeTask, Session, SessionKeys, System, WeightToFee, XcmpQueue,
 };
 
 parameter_types! {
@@ -217,6 +215,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 impl pallet_proxy::Config for Runtime {
     type AnnouncementDepositBase = AnnouncementDepositBase;
     type AnnouncementDepositFactor = AnnouncementDepositFactor;
+    type BlockNumberProvider = System;
     type CallHasher = BlakeTwo256;
     type Currency = Balances;
     type MaxPending = MaxPending;
@@ -228,7 +227,6 @@ impl pallet_proxy::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_proxy::WeightInfo<Runtime>;
-    type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -242,6 +240,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     /// The type for recording an account's balance.
     type Balance = Balance;
+    type DoneSlashHandler = ();
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type FreezeIdentifier = ();
@@ -255,7 +254,6 @@ impl pallet_balances::Config for Runtime {
     type RuntimeHoldReason = RuntimeHoldReason;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
-    type DoneSlashHandler = ();
 }
 
 parameter_types! {
@@ -336,8 +334,8 @@ impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<Balances, ()>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type RuntimeEvent = RuntimeEvent;
-    type WeightToFee = WeightToFee;
     type WeightInfo = weights::pallet_transaction_payment::WeightInfo<Runtime>;
+    type WeightToFee = WeightToFee;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -362,11 +360,11 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     type ReservedDmpWeight = ReservedDmpWeight;
     type ReservedXcmpWeight = ReservedXcmpWeight;
     type RuntimeEvent = RuntimeEvent;
+    type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
     type SelfParaId = parachain_info::Pallet<Runtime>;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
     type XcmpMessageHandler = XcmpQueue;
-    type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -415,7 +413,9 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ChannelInfo = ParachainSystem;
     type ControllerOrigin = EnsureRoot<AccountId>;
     type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+    type MaxActiveOutboundChannels = ConstU32<128>;
     type MaxInboundSuspended = MaxInboundSuspended;
+    type MaxPageSize = ConstU32<{ 103 * 1024 }>;
     /// Ensure that this value is not set to null (or NoPriceForMessageDelivery) to prevent spamming
     type PriceForSiblingDelivery = PriceForSiblingParachainDelivery;
     type RuntimeEvent = RuntimeEvent;
@@ -424,8 +424,6 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
     // Enqueue XCMP messages from siblings for later processing.
     type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
-    type MaxActiveOutboundChannels = ConstU32<128>;
-	type MaxPageSize = ConstU32<{ 103 * 1024 }>;
 }
 
 parameter_types! {
@@ -437,6 +435,7 @@ parameter_types! {
 }
 
 impl pallet_multisig::Config for Runtime {
+    type BlockNumberProvider = System;
     type Currency = Balances;
     type DepositBase = DepositBase;
     type DepositFactor = DepositFactor;
@@ -445,7 +444,6 @@ impl pallet_multisig::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
-    type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -458,6 +456,7 @@ parameter_types! {
 }
 
 impl pallet_session::Config for Runtime {
+    type DisablingStrategy = ();
     type Keys = SessionKeys;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
     type RuntimeEvent = RuntimeEvent;
@@ -468,7 +467,6 @@ impl pallet_session::Config for Runtime {
     type ValidatorId = <Self as frame_system::Config>::AccountId;
     // we don't have stash and controller, thus we don't need the convert as well.
     type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-    type DisablingStrategy = ();
     /// Rerun benchmarks if you are making changes to runtime configuration.
     type WeightInfo = weights::pallet_session::WeightInfo<Runtime>;
 }
@@ -523,22 +521,23 @@ impl pallet_utility::Config for Runtime {
 
 /// Configure the pallet weight reclaim tx.
 impl cumulus_pallet_weight_reclaim::Config for Runtime {
-	 type WeightInfo = weights::cumulus_pallet_weight_reclaim::WeightInfo<Runtime>;
+    type WeightInfo = weights::cumulus_pallet_weight_reclaim::WeightInfo<Runtime>;
 }
 
 parameter_types! {
-	pub const MinVestedTransfer: Balance = EXISTENTIAL_DEPOSIT;
-	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
-		WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
+    pub const MinVestedTransfer: Balance = EXISTENTIAL_DEPOSIT;
+    pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
+        WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
 }
 
 impl pallet_vesting::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type BlockNumberToBalance = ConvertInto;
-	type MinVestedTransfer = MinVestedTransfer;
+    type BlockNumberProvider = System;
+    type BlockNumberToBalance = ConvertInto;
+    type Currency = Balances;
+    type MinVestedTransfer = MinVestedTransfer;
+    type RuntimeEvent = RuntimeEvent;
+    type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
     type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
-	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
-	type BlockNumberProvider = System;
-	const MAX_VESTING_SCHEDULES: u32 = 30;
+
+    const MAX_VESTING_SCHEDULES: u32 = 30;
 }
