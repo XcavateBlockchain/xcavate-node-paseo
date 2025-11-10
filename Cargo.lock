@@ -5943,6 +5943,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ismp-parachain-inherent"
+version = "2503.1.0"
+source = "git+https://github.com/polytope-labs/hyperbridge?branch=polkadot-stable2503#05f2e1f8ef30e94a578c67e30db84c9a26e772aa"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "ismp",
+ "ismp-parachain",
+ "ismp-parachain-runtime-api",
+ "log",
+ "pallet-ismp-runtime-api",
+ "parity-scale-codec",
+ "polkadot-sdk 2503.2.0",
+]
+
+[[package]]
 name = "ismp-parachain-runtime-api"
 version = "2503.1.0"
 source = "git+https://github.com/polytope-labs/hyperbridge?branch=polkadot-stable2503#05f2e1f8ef30e94a578c67e30db84c9a26e772aa"
@@ -8691,6 +8707,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-ismp-rpc"
+version = "2503.1.0"
+source = "git+https://github.com/polytope-labs/hyperbridge?branch=polkadot-stable2503#05f2e1f8ef30e94a578c67e30db84c9a26e772aa"
+dependencies = [
+ "anyhow",
+ "hash-db",
+ "hex",
+ "hex-literal",
+ "ismp",
+ "jsonrpsee",
+ "pallet-ismp",
+ "pallet-ismp-runtime-api",
+ "parity-scale-codec",
+ "polkadot-sdk 2503.2.0",
+ "serde",
+ "serde_json",
+ "tower",
+ "trie-db",
+]
+
+[[package]]
 name = "pallet-ismp-runtime-api"
 version = "2503.1.0"
 source = "git+https://github.com/polytope-labs/hyperbridge?branch=polkadot-stable2503#05f2e1f8ef30e94a578c67e30db84c9a26e772aa"
@@ -11157,6 +11194,7 @@ dependencies = [
  "cumulus-primitives-storage-weight-reclaim",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
+ "cumulus-relay-chain-interface",
  "cumulus-test-relay-sproof-builder",
  "frame-benchmarking",
  "frame-benchmarking-cli",
@@ -11289,8 +11327,10 @@ dependencies = [
  "polkadot-runtime-parachains",
  "polkadot-sdk-frame",
  "polkadot-service",
+ "sc-client-api",
  "sc-client-db",
  "sc-executor",
+ "sc-rpc",
  "sc-service",
  "slot-range-helper",
  "sp-api",
@@ -11299,6 +11339,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-authority-discovery",
  "sp-block-builder",
+ "sp-blockchain",
  "sp-consensus-aura",
  "sp-consensus-babe",
  "sp-consensus-beefy",
@@ -18713,8 +18754,12 @@ dependencies = [
  "frame-benchmarking",
  "frame-benchmarking-cli",
  "futures",
+ "ismp-parachain-inherent",
+ "ismp-parachain-runtime-api",
  "jsonrpsee",
  "log",
+ "pallet-ismp-rpc",
+ "pallet-ismp-runtime-api",
  "pallet-transaction-payment-rpc",
  "parity-scale-codec",
  "polkadot-cli",

@@ -1,7 +1,6 @@
 use cumulus_client_service::storage_proof_size::HostFunctions as ReclaimHostFunctions;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use xcavate_runtime::Block;
 use log::info;
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
@@ -9,6 +8,7 @@ use sc_cli::{
 };
 use sc_service::config::{BasePath, PrometheusConfig};
 use sp_runtime::traits::{AccountIdConversion, HashingFor};
+use xcavate_runtime::Block;
 
 use crate::{
     chain_spec,
@@ -38,9 +38,9 @@ impl SubstrateCli for Cli {
 
     fn description() -> String {
         format!(
-            "Xcavate Collator\n\nThe command-line arguments provided first will be \
-             passed to the parachain node, while the arguments provided after -- will be passed \
-             to the relay chain node.\n\n{} <parachain-args> -- <relay-chain-args>",
+            "Xcavate Collator\n\nThe command-line arguments provided first will be passed to the \
+             parachain node, while the arguments provided after -- will be passed to the relay \
+             chain node.\n\n{} <parachain-args> -- <relay-chain-args>",
             Self::executable_name()
         )
     }
@@ -73,9 +73,9 @@ impl SubstrateCli for RelayChainCli {
 
     fn description() -> String {
         format!(
-            "Xcavate Collator\n\nThe command-line arguments provided first will be \
-             passed to the parachain node, while the arguments provided after -- will be passed \
-             to the relay chain node.\n\n{} <parachain-args> -- <relay-chain-args>",
+            "Xcavate Collator\n\nThe command-line arguments provided first will be passed to the \
+             parachain node, while the arguments provided after -- will be passed to the relay \
+             chain node.\n\n{} <parachain-args> -- <relay-chain-args>",
             Self::executable_name()
         )
     }
@@ -110,7 +110,11 @@ macro_rules! construct_async_run {
 
 /// Parse command line arguments into service configuration.
 pub fn run() -> Result<()> {
-    let cli = Cli::from_args();
+    let mut cli = Cli::from_args();
+
+    // All full nodes should store request/responses.
+    // source: https://docs.hyperbridge.network/developers/polkadot/pallet-ismp#offchain-indexing
+    cli.run.base.offchain_worker_params.indexing_enabled = true;
 
     match &cli.subcommand {
         Some(Subcommand::Key(cmd)) => cmd.run(&cli),
