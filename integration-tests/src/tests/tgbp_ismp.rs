@@ -10,9 +10,10 @@
 //! 4. Multiple transfers with unique nonces
 //! 5. Minimum balance edge cases
 
-use crate::mock::{ismp_messages::*, test_accounts::*};
 use ismp::router::Request;
 use sp_core::H256;
+
+use crate::mock::{ismp_messages::*, test_accounts::*};
 
 /// Expected TGBP asset ID (keccak256 of "TGBP")
 fn expected_tgbp_asset_id() -> H256 {
@@ -20,7 +21,7 @@ fn expected_tgbp_asset_id() -> H256 {
 }
 
 #[test]
-fn test_valid_tgbp_transfer_message_structure() {
+fn valid_tgbp_transfer_message_structure() {
     // Create a TGBP transfer: 100 TGBP (100_000_000 in 6 decimals)
     let amount = 100_000_000u128;
     let msg = create_tgbp_transfer_message(ALICE_ETH_ADDRESS, bob_account(), amount);
@@ -49,7 +50,7 @@ fn test_valid_tgbp_transfer_message_structure() {
 }
 
 #[test]
-fn test_precision_conversion_expectations() {
+fn precision_conversion_expectations() {
     // TGBP maintains 6 decimals on both Ethereum and Xcavate (no conversion)
     let test_cases = vec![
         (1_000_000u128, 1_000_000u128),     // 1 TGBP: 6 dec → 6 dec
@@ -75,7 +76,7 @@ fn test_precision_conversion_expectations() {
 }
 
 #[test]
-fn test_asset_id_consistency() {
+fn asset_id_consistency() {
     // Asset ID for TGBP should be consistent
     let msg1 = create_tgbp_transfer_message(ALICE_ETH_ADDRESS, bob_account(), 1_000_000);
     let msg2 = create_tgbp_transfer_message(BOB_ETH_ADDRESS, charlie_account(), 2_000_000);
@@ -90,7 +91,7 @@ fn test_asset_id_consistency() {
 }
 
 #[test]
-fn test_multiple_transfers_unique_nonces() {
+fn multiple_transfers_unique_nonces() {
     // Create multiple transfers and verify nonces are unique
     let msg1 = create_tgbp_transfer_message(ALICE_ETH_ADDRESS, bob_account(), 1_000_000);
     let msg2 = create_tgbp_transfer_message(ALICE_ETH_ADDRESS, bob_account(), 2_000_000);
@@ -119,7 +120,7 @@ fn test_multiple_transfers_unique_nonces() {
 }
 
 #[test]
-fn test_minimum_balance_amounts() {
+fn minimum_balance_amounts() {
     // Test edge cases around minimum balances
     // Minimum balance for TGBP is set to 1 in the asset configuration
     // Testing various amounts in 6 decimals
@@ -140,7 +141,7 @@ fn test_minimum_balance_amounts() {
 }
 
 #[test]
-fn test_different_source_chains() {
+fn different_source_chains() {
     // Test creating messages from different EVM chains
     use ismp::host::StateMachine;
 
@@ -173,11 +174,10 @@ fn test_different_source_chains() {
 }
 
 #[test]
-fn test_recipient_account_encoding() {
+fn recipient_account_encoding() {
     // Test that different recipient accounts are correctly encoded
     let msg_bob = create_tgbp_transfer_message(ALICE_ETH_ADDRESS, bob_account(), 1_000_000);
-    let msg_charlie =
-        create_tgbp_transfer_message(ALICE_ETH_ADDRESS, charlie_account(), 1_000_000);
+    let msg_charlie = create_tgbp_transfer_message(ALICE_ETH_ADDRESS, charlie_account(), 1_000_000);
 
     // Both messages should be valid PostRequests
     assert!(matches!(msg_bob, Request::Post(_)));

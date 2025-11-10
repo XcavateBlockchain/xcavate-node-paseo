@@ -6,11 +6,9 @@
 //! ## Test Modules
 //!
 //! - `mock` - Mock utilities for creating test ISMP messages and accounts
-//! - `tests` - Unit tests for message structure validation
-//! - `runtime_tests` - Integration tests that execute through the actual runtime
+//! - `tests` - Unit tests for message structure validation and integration tests
 
 #![cfg(test)]
 
 pub mod mock;
 pub mod tests;
-pub mod runtime_tests;

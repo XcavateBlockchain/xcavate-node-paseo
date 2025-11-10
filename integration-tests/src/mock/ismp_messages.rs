@@ -9,7 +9,6 @@ use ismp::{
     host::StateMachine,
     router::{PostRequest, Request},
 };
-use parity_scale_codec::{Decode, Encode};
 use sp_core::{crypto::AccountId32, H256};
 
 /// Token Gateway pallet module ID
@@ -18,7 +17,8 @@ pub const PALLET_TOKEN_GATEWAY_ID: [u8; 20] = hex!("a09b1c60e8650245f92518c8a173
 
 /// Ethereum TokenGateway contract address (mock for testing)
 /// In real scenarios, this would be the deployed TokenGateway contract on Ethereum
-pub const ETHEREUM_TOKEN_GATEWAY_ADDRESS: [u8; 20] = hex!("0000000000000000000000000000000000000000");
+pub const ETHEREUM_TOKEN_GATEWAY_ADDRESS: [u8; 20] =
+    hex!("0000000000000000000000000000000000000000");
 
 /// Ethereum Mainnet state machine identifier
 pub const ETHEREUM_MAINNET: StateMachine = StateMachine::Evm(1);

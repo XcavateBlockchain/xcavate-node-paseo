@@ -2,8 +2,8 @@
 //!
 //! Provides predefined Ethereum addresses and Xcavate accounts for testing.
 
-use sp_core::crypto::AccountId32;
 use hex_literal::hex;
+use sp_core::crypto::AccountId32;
 
 /// Mock Ethereum address (20 bytes)
 pub const ALICE_ETH_ADDRESS: [u8; 20] = hex!("70997970C51812dc3A010C7d01b50e0d17dc79C8");

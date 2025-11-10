@@ -3,18 +3,16 @@
 //! These tests execute actual ISMP messages through the Xcavate runtime,
 //! verifying the complete flow from Ethereum → Xcavate.
 
-use crate::{
-    mock::{
-        ismp_messages::*,
-        test_accounts::*,
-    },
-    runtime_tests::test_externalities::*,
-};
 use frame_support::{assert_ok, traits::fungibles::Inspect};
 use ismp::{module::IsmpModule, router::Request};
 use sp_core::H256;
 use sp_runtime::{AccountId32, MultiAddress};
-use xcavate_runtime::{Assets, Runtime, RuntimeOrigin, System, TokenGateway};
+use xcavate_runtime::{Assets, Runtime, RuntimeOrigin, System};
+
+use crate::{
+    mock::{ismp_messages::*, test_accounts::*},
+    tests::test_externalities::*,
+};
 
 /// TGBP asset ID on Xcavate (must be registered before tests)
 const TGBP_LOCAL_ASSET_ID: u32 = 1;
@@ -28,9 +26,9 @@ fn tgbp_asset_id() -> H256 {
 /// This simulates the asset registration that would happen via governance
 /// by directly inserting into storage (acceptable in tests)
 fn register_tgbp_asset() {
+    use frame_support::traits::Get;
     use ismp::host::StateMachine;
     use xcavate_runtime::configs::ismp::AssetAdmin;
-    use frame_support::traits::Get;
 
     let asset_id = tgbp_asset_id();
     let admin = AssetAdmin::get();
@@ -41,8 +39,8 @@ fn register_tgbp_asset() {
         RuntimeOrigin::root(),
         TGBP_LOCAL_ASSET_ID.into(),
         MultiAddress::Id(admin.clone()), // admin/owner
-        true,                             // is_sufficient
-        1,                                // min_balance
+        true,                            // is_sufficient
+        1,                               // min_balance
     ));
 
     // Set asset metadata (name, symbol, decimals)
@@ -52,8 +50,8 @@ fn register_tgbp_asset() {
         TGBP_LOCAL_ASSET_ID.into(),
         b"Token Gateway British Pound".to_vec(),
         b"TGBP".to_vec(),
-        6,    // 6 decimals (same as on Ethereum)
-        false // is_frozen
+        6,     // 6 decimals (same as on Ethereum)
+        false  // is_frozen
     ));
 
     // Insert into token gateway storage
@@ -87,8 +85,23 @@ fn asset_exists(asset_id: u32) -> bool {
     pallet_assets::Asset::<Runtime, pallet_assets::Instance2>::contains_key(asset_id)
 }
 
+/// Test: Asset Registration
+///
+/// **What it does:**
+/// Verifies that TGBP can be successfully registered in the token gateway storage.
+///
+/// **What it showcases:**
+/// - Asset registration creates all necessary storage mappings
+/// - Bidirectional mapping between local asset ID and gateway asset ID
+/// - Non-native asset flag is correctly set (TGBP originates from Ethereum)
+/// - Precision configuration is stored correctly (6 decimals for Ethereum)
+///
+/// **Why it's important:**
+/// Asset registration is a prerequisite for all cross-chain transfers. This test ensures
+/// the registration process correctly populates all required storage items that will be
+/// queried during actual transfers.
 #[test]
-fn test_register_tgbp_asset() {
+fn tgbp_asset_registration_works() {
     new_test_ext().execute_with(|| {
         // Register TGBP
         register_tgbp_asset();
@@ -108,14 +121,38 @@ fn test_register_tgbp_asset() {
 
         // Verify precision mapping (6 decimals on Ethereum)
         use ismp::host::StateMachine;
-        let precision =
-            pallet_token_gateway::Precisions::<Runtime>::get(TGBP_LOCAL_ASSET_ID, StateMachine::Evm(1));
+        let precision = pallet_token_gateway::Precisions::<Runtime>::get(
+            TGBP_LOCAL_ASSET_ID,
+            StateMachine::Evm(1),
+        );
         assert_eq!(precision, Some(6));
     });
 }
 
+/// Test: Basic TGBP Transfer - Asset Creation and Minting
+///
+/// **What it does:**
+/// Simulates a complete TGBP transfer from Ethereum to Xcavate through ISMP.
+///
+/// **What it showcases:**
+/// - ISMP message creation with ABI-encoded body (not SCALE encoding)
+/// - Token Gateway's `on_accept` callback processing incoming transfers
+/// - Asset minting for bridged assets (mint/burn model for non-native assets)
+/// - Decimal precision preservation (6 decimals maintained from Ethereum)
+/// - Balance updates after successful transfer
+///
+/// **Flow:**
+/// 1. Asset is registered in token gateway
+/// 2. ISMP message created simulating Ethereum → Xcavate transfer
+/// 3. Message routed to TokenGateway's on_accept handler
+/// 4. Handler mints TGBP to recipient (bridged asset = mint/burn model)
+/// 5. Recipient balance updated correctly with no precision conversion
+///
+/// **Why it's important:**
+/// This is the happy path test - the most common scenario for receiving bridged assets
+/// from Ethereum. It validates the entire message processing pipeline works correctly.
 #[test]
-fn test_process_tgbp_transfer_creates_asset_and_mints() {
+fn process_tgbp_transfer_creates_asset_and_mints() {
     new_test_ext().execute_with(|| {
         // Setup: Register TGBP
         register_tgbp_asset();
@@ -131,7 +168,8 @@ fn test_process_tgbp_transfer_creates_asset_and_mints() {
 
         // Create ISMP message: Transfer 100 TGBP (100_000_000 in 6 decimals)
         let amount_6_decimals = 100_000_000u128;
-        let msg = create_tgbp_transfer_message(ALICE_ETH_ADDRESS, recipient.clone(), amount_6_decimals);
+        let msg =
+            create_tgbp_transfer_message(ALICE_ETH_ADDRESS, recipient.clone(), amount_6_decimals);
 
         // Extract the PostRequest from the message
         let post_request = match msg {
@@ -160,8 +198,27 @@ fn test_process_tgbp_transfer_creates_asset_and_mints() {
     });
 }
 
+/// Test: Multiple Transfers to Same Recipient - Balance Accumulation
+///
+/// **What it does:**
+/// Tests that multiple incoming transfers to the same recipient accumulate correctly.
+///
+/// **What it showcases:**
+/// - Sequential transfer processing
+/// - Balance accumulation across multiple messages
+/// - Idempotent minting (each transfer adds to existing balance)
+/// - Different source addresses can send to same recipient
+///
+/// **Scenario:**
+/// - Transfer 1: Alice (Ethereum) sends 50 TGBP to Bob (Xcavate)
+/// - Transfer 2: Different sender sends 30 TGBP to same Bob
+/// - Final balance: 80 TGBP (50 + 30)
+///
+/// **Why it's important:**
+/// In production, the same user will receive multiple transfers over time.
+/// This verifies that balances accumulate correctly and don't get overwritten.
 #[test]
-fn test_multiple_tgbp_transfers_accumulate() {
+fn multiple_tgbp_transfers_accumulate() {
     new_test_ext().execute_with(|| {
         // Setup
         register_tgbp_asset();
@@ -198,8 +255,26 @@ fn test_multiple_tgbp_transfers_accumulate() {
     });
 }
 
+/// Test: Transfers to Multiple Different Recipients
+///
+/// **What it does:**
+/// Tests that transfers to different recipients maintain independent balances.
+///
+/// **What it showcases:**
+/// - Independent balance tracking for different accounts
+/// - No cross-contamination between recipient balances
+/// - Multiple recipients can receive from the same source
+///
+/// **Scenario:**
+/// - Transfer 1: 100 TGBP to Bob
+/// - Transfer 2: 200 TGBP to Charlie
+/// - Verify: Bob has 100, Charlie has 200, balances are independent
+///
+/// **Why it's important:**
+/// Ensures the token gateway correctly isolates balances per account and doesn't
+/// accidentally update the wrong recipient or share state between transfers.
 #[test]
-fn test_transfer_to_multiple_recipients() {
+fn transfer_to_multiple_recipients() {
     new_test_ext().execute_with(|| {
         // Setup
         register_tgbp_asset();
@@ -233,16 +308,39 @@ fn test_transfer_to_multiple_recipients() {
         assert_eq!(get_balance(TGBP_LOCAL_ASSET_ID, &charlie), 200_000_000);
 
         // Verify balances are independent
-        assert_ne!(get_balance(TGBP_LOCAL_ASSET_ID, &bob), get_balance(TGBP_LOCAL_ASSET_ID, &charlie));
+        assert_ne!(
+            get_balance(TGBP_LOCAL_ASSET_ID, &bob),
+            get_balance(TGBP_LOCAL_ASSET_ID, &charlie)
+        );
     });
 }
 
+/// Test: Decimal Precision Preservation - Various Amounts
+///
+/// **What it does:**
+/// Tests that TGBP maintains 6 decimal precision across various transfer amounts.
+///
+/// **What it showcases:**
+/// - No precision conversion happens (6 decimals → 6 decimals)
+/// - Small amounts (0.000001 TGBP) are preserved exactly
+/// - Large amounts (1234.56789 TGBP) are preserved exactly
+/// - Fractional amounts don't lose precision
+///
+/// **Test Cases:**
+/// - 1 TGBP, 0.5 TGBP, 1.5 TGBP (common amounts)
+/// - 0.000001 TGBP (minimum unit)
+/// - 100 TGBP (round number)
+/// - 1234.56789 TGBP (arbitrary fractional amount)
+///
+/// **Why it's important:**
+/// TGBP uses 6 decimals on Ethereum and we maintain 6 decimals on Xcavate.
+/// This is different from converting to 12 decimals (which would scale amounts).
+/// This test validates that our precision mapping strategy works correctly.
 #[test]
-fn test_precision_conversion_various_amounts() {
+fn precision_conversion_various_amounts() {
     new_test_ext().execute_with(|| {
         // Setup
         register_tgbp_asset();
-        let recipient = bob_account();
 
         // Test cases: (input_amount, expected_balance)
         // No precision conversion - 6 decimals maintained
@@ -259,7 +357,11 @@ fn test_precision_conversion_various_amounts() {
             // Create new recipient for each test to avoid accumulation
             let test_recipient = AccountId32::new([amount_6_dec as u8; 32]);
 
-            let msg = create_tgbp_transfer_message(ALICE_ETH_ADDRESS, test_recipient.clone(), amount_6_dec);
+            let msg = create_tgbp_transfer_message(
+                ALICE_ETH_ADDRESS,
+                test_recipient.clone(),
+                amount_6_dec,
+            );
             let req = match msg {
                 Request::Post(req) => req,
                 _ => panic!("Expected Request::Post"),
@@ -278,8 +380,26 @@ fn test_precision_conversion_various_amounts() {
     });
 }
 
+/// Test: Event Emission on Successful Transfer
+///
+/// **What it does:**
+/// Verifies that appropriate events are emitted when a transfer is processed.
+///
+/// **What it showcases:**
+/// - Event-driven architecture for monitoring transfers
+/// - `Assets::Issued` event is emitted when tokens are minted
+/// - Events contain relevant transfer information
+/// - Event system integration with FRAME
+///
+/// **Expected Events:**
+/// - `pallet_assets::Event::Issued` - when TGBP is minted to recipient
+/// - (Future) `pallet_token_gateway::Event::AssetReceived` - when transfer completes
+///
+/// **Why it's important:**
+/// Events allow off-chain systems (indexers, UIs, monitoring) to track cross-chain
+/// transfers in real-time. This test ensures events are emitted for observability.
 #[test]
-fn test_events_emitted_on_transfer() {
+fn events_emitted_on_transfer() {
     new_test_ext().execute_with(|| {
         // Setup
         register_tgbp_asset();
@@ -318,9 +438,30 @@ fn test_events_emitted_on_transfer() {
     });
 }
 
+/// Test: Error Handling - Unregistered Asset
+///
+/// **What it does:**
+/// Tests that transfers fail gracefully when the asset is not registered.
+///
+/// **What it showcases:**
+/// - Input validation before processing transfers
+/// - Protection against receiving unknown/unwhitelisted assets
+/// - Proper error propagation from token gateway
+///
+/// **Scenario:**
+/// - Attempt to process TGBP transfer WITHOUT registering TGBP first
+/// - Expected: Transfer fails with "Asset not found" or similar error
+///
+/// **Why it's important:**
+/// In production, only explicitly registered assets should be accepted. This prevents:
+/// - Spam tokens from being minted
+/// - Unknown assets cluttering storage
+/// - Potential attack vectors from malicious asset deployments
+///
+/// This test ensures the gateway rejects unregistered assets as a security measure.
 #[test]
 #[should_panic(expected = "Asset not found")]
-fn test_unregistered_asset_fails() {
+fn unregistered_asset_fails() {
     new_test_ext().execute_with(|| {
         // Do NOT register TGBP
 
@@ -342,8 +483,31 @@ fn test_unregistered_asset_fails() {
     });
 }
 
+/// Test: Minimum Balance Enforcement
+///
+/// **What it does:**
+/// Tests how the system handles transfers below the minimum balance threshold.
+///
+/// **What it showcases:**
+/// - Minimum balance (existential deposit) enforcement from pallet_assets
+/// - Edge case handling for very small amounts
+/// - Graceful handling whether transfer succeeds or fails
+///
+/// **Scenario:**
+/// - Transfer amount: 999 (0.000999 TGBP)
+/// - Minimum balance configured: 1
+/// - Expected: Transfer may succeed or fail depending on pallet_assets config
+///
+/// **Why it's important:**
+/// Minimum balances prevent dust spam and storage bloat. This test validates:
+/// - Small amounts are handled correctly if they meet minimums
+/// - Transfers below minimums are rejected appropriately
+/// - No unexpected behavior with edge case amounts
+///
+/// **Note:** This test accepts both success and failure as valid outcomes,
+/// documenting the behavior rather than enforcing specific logic.
 #[test]
-fn test_minimum_balance_enforcement() {
+fn minimum_balance_enforcement() {
     new_test_ext().execute_with(|| {
         // Setup
         register_tgbp_asset();
@@ -373,8 +537,33 @@ fn test_minimum_balance_enforcement() {
     });
 }
 
+/// Test: Error Handling - Missing Precision Configuration
+///
+/// **What it does:**
+/// Tests that transfers fail when precision mapping is missing for the source chain.
+///
+/// **What it showcases:**
+/// - Validation of precision configuration before processing
+/// - Protection against incorrect decimal conversions
+/// - Per-chain precision mapping requirement
+///
+/// **Scenario:**
+/// - Register TGBP with precision for Ethereum (chain ID 1)
+/// - Attempt transfer from BSC (chain ID 56) WITHOUT precision configured
+/// - Expected: Transfer fails with precision/decimals error
+///
+/// **Why it's important:**
+/// Without precision mapping, the gateway cannot correctly convert amounts between
+/// chains. This test ensures:
+/// - Transfers are rejected if precision is unknown
+/// - Clear error messages guide operators to fix configuration
+/// - No silent failures or incorrect amounts due to missing config
+///
+/// **Production impact:**
+/// Before accepting assets from a new chain, operators MUST configure precision
+/// via `update_asset_precision` extrinsic. This test validates that safeguard.
 #[test]
-fn test_invalid_precision_mapping() {
+fn invalid_precision_mapping() {
     new_test_ext().execute_with(|| {
         use ismp::host::StateMachine;
 
@@ -429,8 +618,32 @@ fn test_invalid_precision_mapping() {
     });
 }
 
+/// Test: Asset Metadata Verification
+///
+/// **What it does:**
+/// Verifies that asset metadata (name, symbol, decimals) is correctly set after creation.
+///
+/// **What it showcases:**
+/// - Asset metadata is preserved through the registration process
+/// - Decimal precision matches the configured value (6 for TGBP)
+/// - Symbol and name are properly stored and retrievable
+/// - Metadata inspection via pallet_assets traits
+///
+/// **Verification Points:**
+/// - Symbol: Should be "TGBP"
+/// - Name: Should be "Token Gateway British Pound" (or similar)
+/// - Decimals: Should be 6 (matching Ethereum precision)
+///
+/// **Why it's important:**
+/// Correct metadata is essential for:
+/// - UIs displaying token information correctly
+/// - Wallets showing proper decimal places
+/// - Explorers identifying assets
+/// - APIs returning accurate asset details
+///
+/// This test ensures metadata flows correctly from registration through to storage.
 #[test]
-fn test_asset_metadata_after_creation() {
+fn asset_metadata_after_creation() {
     new_test_ext().execute_with(|| {
         // Setup
         register_tgbp_asset();
@@ -470,8 +683,32 @@ fn test_asset_metadata_after_creation() {
     });
 }
 
+/// Test: Total Supply Tracking Across Multiple Mints
+///
+/// **What it does:**
+/// Tests that total supply increases correctly as multiple transfers are processed.
+///
+/// **What it showcases:**
+/// - Total issuance tracking in pallet_assets
+/// - Supply increments with each mint (bridged asset behavior)
+/// - Individual balances sum to total supply (accounting invariant)
+/// - No tokens lost or created unexpectedly
+///
+/// **Scenario:**
+/// - Transfer 1: Mint 100 TGBP to Bob → Total supply: 100
+/// - Transfer 2: Mint 50 TGBP to Charlie → Total supply: 150
+/// - Verify: Bob (100) + Charlie (50) = Total (150)
+///
+/// **Why it's important:**
+/// Total supply tracking is critical for:
+/// - Auditing bridged asset amounts
+/// - Ensuring 1:1 backing with assets locked on source chain
+/// - Detecting minting errors or exploits
+/// - Maintaining accounting invariants
+///
+/// This test validates the accounting integrity of the mint/burn model for bridged assets.
 #[test]
-fn test_asset_total_supply_tracking() {
+fn asset_total_supply_tracking() {
     new_test_ext().execute_with(|| {
         // Setup
         register_tgbp_asset();
@@ -490,7 +727,8 @@ fn test_asset_total_supply_tracking() {
         if token_gateway1.on_accept(req1).is_ok() {
             // Check total supply after first mint
             use frame_support::traits::fungibles::Inspect;
-            let supply_after_first = <Assets as Inspect<AccountId32>>::total_issuance(TGBP_LOCAL_ASSET_ID);
+            let supply_after_first =
+                <Assets as Inspect<AccountId32>>::total_issuance(TGBP_LOCAL_ASSET_ID);
             assert_eq!(supply_after_first, 100_000_000, "Total supply should be 100 TGBP");
 
             // Process second transfer: 50 TGBP to Charlie
@@ -503,20 +741,51 @@ fn test_asset_total_supply_tracking() {
 
             if token_gateway2.on_accept(req2).is_ok() {
                 // Check total supply after second mint (should accumulate)
-                let supply_after_second = <Assets as Inspect<AccountId32>>::total_issuance(TGBP_LOCAL_ASSET_ID);
+                let supply_after_second =
+                    <Assets as Inspect<AccountId32>>::total_issuance(TGBP_LOCAL_ASSET_ID);
                 assert_eq!(supply_after_second, 150_000_000, "Total supply should be 150 TGBP");
 
                 // Verify individual balances sum to total supply
                 let bob_balance = get_balance(TGBP_LOCAL_ASSET_ID, &bob);
                 let charlie_balance = get_balance(TGBP_LOCAL_ASSET_ID, &charlie);
-                assert_eq!(bob_balance + charlie_balance, supply_after_second, "Balances should sum to total supply");
+                assert_eq!(
+                    bob_balance + charlie_balance,
+                    supply_after_second,
+                    "Balances should sum to total supply"
+                );
             }
         }
     });
 }
 
+/// Test: Edge Case - Zero Amount Transfer
+///
+/// **What it does:**
+/// Tests how the system handles transfer messages with zero amount.
+///
+/// **What it showcases:**
+/// - Edge case validation for zero-value transfers
+/// - Graceful handling of unusual but valid input
+/// - No state corruption from edge case values
+///
+/// **Scenario:**
+/// - Attempt to transfer 0 TGBP
+/// - Expected: Either rejection (error) or no-op (balance stays 0)
+///
+/// **Why it's important:**
+/// Zero-amount transfers could occur due to:
+/// - User error on source chain
+/// - Rounding issues in precision conversion
+/// - Malicious attempts to spam the network
+///
+/// This test ensures:
+/// - No panics or unexpected behavior
+/// - System remains in valid state
+/// - Resources aren't wasted on meaningless transfers
+///
+/// **Note:** Both success and failure are acceptable - test documents behavior.
 #[test]
-fn test_zero_amount_transfer() {
+fn zero_amount_transfer() {
     new_test_ext().execute_with(|| {
         // Setup
         register_tgbp_asset();
@@ -541,8 +810,35 @@ fn test_zero_amount_transfer() {
     });
 }
 
+/// Test: Multiple Senders to Same Recipient
+///
+/// **What it does:**
+/// Tests that a single recipient can receive transfers from multiple different senders.
+///
+/// **What it showcases:**
+/// - Proper accumulation from different sources
+/// - No sender-specific balance isolation (all go to same account)
+/// - Message ordering independence (each transfer is atomic)
+///
+/// **Scenario:**
+/// - Sender 1 (Alice on Ethereum): Sends 50 TGBP to Bob
+/// - Sender 2 (Bob on Ethereum): Sends 30 TGBP to same Bob (different sender, same recipient)
+/// - Final balance: 80 TGBP (50 + 30)
+///
+/// **Why it's important:**
+/// In real-world usage, users will receive tokens from multiple sources:
+/// - Different exchanges
+/// - Multiple friends/counterparties
+/// - Various DeFi protocols on Ethereum
+///
+/// This test validates that:
+/// - All transfers to the same recipient accumulate correctly
+/// - No confusion between sender and recipient addressing
+/// - Balance tracking is per-recipient, not per-sender-recipient pair
+///
+/// **Real-world scenario:** Bob has one TGBP balance that increases regardless of who sends.
 #[test]
-fn test_same_recipient_multiple_senders() {
+fn same_recipient_multiple_senders() {
     new_test_ext().execute_with(|| {
         // Setup
         register_tgbp_asset();

@@ -3,9 +3,9 @@
 use frame_support::traits::Get;
 use sp_io::TestExternalities;
 use sp_runtime::BuildStorage;
-use xcavate_runtime::{Runtime, RuntimeOrigin, System};
-use xcavate_runtime::constants::currency::XCAV;
-use xcavate_runtime::configs::ismp::AssetAdmin;
+use xcavate_runtime::{
+    configs::ismp::AssetAdmin, constants::currency::XCAV, Runtime, RuntimeOrigin, System,
+};
 
 /// Creates a new test externalities with default genesis configuration
 pub fn new_test_ext() -> TestExternalities {
