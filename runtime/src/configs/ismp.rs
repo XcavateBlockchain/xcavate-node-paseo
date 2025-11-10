@@ -1,3 +1,12 @@
+//! ISMP (Interoperable State Machine Protocol) configuration for Xcavate runtime.
+//!
+//! This module configures the ISMP stack for cross-chain communication via Hyperbridge,
+//! including:
+//! - Core ISMP protocol configuration
+//! - Parachain consensus client for relay chain integration
+//! - Hyperbridge coprocessor for cross-chain state verification
+//! - Token Gateway for bridging assets across ecosystems
+
 use alloc::{boxed::Box, vec::Vec};
 
 use frame_support::{parameter_types, traits::Get, PalletId};
@@ -13,7 +22,10 @@ use crate::{
 /// Decimals of the native currency XCAV.
 pub const NATIVE_DECIMALS: u8 = 12;
 
-// Temporary definition of treasury `PalletId` until `pallet_treasury` is present in the runtime.
+/// Temporary definition of treasury `PalletId` until `pallet_treasury` is present in the runtime.
+///
+/// This account is used as the asset admin for token gateway operations and covers fees
+/// for asset creation on remote chains.
 const TREASURY_PALLET_ID: PalletId = PalletId(*b"py/trsry");
 
 parameter_types! {
@@ -23,38 +35,60 @@ parameter_types! {
     // /// The host state machine of this pallet on Polkadot
     // pub const HostStateMachine: StateMachine = StateMachine::Polkadot(3413);
 
-    /// Hyperbridge parachain on Paseo.
+    /// Hyperbridge coprocessor parachain on Paseo testnet.
+    ///
+    /// Hyperbridge acts as a coprocessor for verifying cross-chain state proofs,
+    /// enabling trustless communication with other blockchains.
     pub const Coprocessor: Option<StateMachine> = Some(StateMachine::Kusama(4009));
 
-    /// The host state machine of this pallet on Paseo.
+    /// The state machine identifier for the Xcavate parachain on Paseo testnet.
+    ///
+    /// This identifies the parachain in ISMP messages and routing.
     pub const HostStateMachine: StateMachine = StateMachine::Kusama(4683);
 }
 
 impl pallet_ismp::Config for Runtime {
-    // Modify the consensus client's permissions
+    /// Origin that can modify consensus client permissions.
+    ///
+    /// Root access required for security-critical operations like adding/removing consensus clients.
     type AdminOrigin = EnsureRoot<AccountId>;
+    /// Balance type used for ISMP fees.
     type Balance = Balance;
-    // A tuple of types implementing the ConsensusClient interface,
-    // which defines all consensus algorithms supported by this protocol deployment
+    /// Tuple of consensus client implementations.
+    ///
+    /// Currently supports parachain consensus for verifying relay chain state proofs.
     type ConsensusClients = (ismp_parachain::ParachainConsensusClient<Runtime, IsmpParachain>,);
-    // Co-processor
+    /// Optional coprocessor for enhanced cross-chain verification.
+    ///
+    /// Hyperbridge provides additional security guarantees for cross-chain state proofs.
     type Coprocessor = Coprocessor;
-    // The token used to collect fees, only XCAV is supported
+    /// Currency used to collect ISMP message processing fees.
+    ///
+    /// Only XCAV (native token) is supported for fee payment.
     type Currency = Balances;
-    /// Fee handling implementation for ISMP message processing.
+    /// Handler for calculating and collecting ISMP message fees based on weight.
     type FeeHandler = pallet_ismp::fee_handler::WeightFeeHandler<()>;
-    // The state machine identifier of the chain. Its parachain id.
+    /// State machine identifier for this parachain.
+    ///
+    /// Used to identify this chain in cross-chain messages.
     type HostStateMachine = HostStateMachine;
-    /// Offchain database implementation. Outgoing requests and responses are inserted in this database,
-    /// while their commitments are stored onchain.
+    /// Offchain database for storing full request/response data.
+    ///
+    /// Currently not used; only commitment hashes are stored on-chain.
     type OffchainDB = ();
-    // The router provides the implementation for the IsmpModule as the module id.
+    /// Router for dispatching ISMP messages to appropriate pallet modules.
     type Router = IsmpModuleRouter;
     /// The overarching event type.
     type RuntimeEvent = RuntimeEvent;
+    /// Provider for block timestamps used in ISMP message validation.
     type TimestampProvider = Timestamp;
 }
-/// Implementation for routing requests & responses to their appropriate modules.
+
+/// Router implementation for dispatching ISMP messages to their appropriate handler modules.
+///
+/// Routes messages based on module identifiers:
+/// - Hyperbridge core functionality
+/// - Token Gateway for asset transfers
 #[derive(Default)]
 pub struct IsmpModuleRouter;
 
@@ -71,52 +105,82 @@ impl IsmpRouter for IsmpModuleRouter {
 }
 
 impl ismp_parachain::Config for Runtime {
-    // `pallet-ismp` implements `IsmpHost`.
+    /// ISMP host implementation.
+    ///
+    /// `pallet_ismp` provides the core ISMP protocol implementation.
     type IsmpHost = Ismp;
-    /// Origin for privileged actions.
+    /// Origin for privileged parachain operations.
     type RootOrigin = EnsureRoot<AccountId>;
     /// The overarching event type.
     type RuntimeEvent = RuntimeEvent;
+    /// Weight calculation for parachain consensus operations.
     type WeightInfo = weights::ismp_parachain::WeightInfo<Runtime>;
 }
 
 impl pallet_hyperbridge::Config for Runtime {
-    // `IsmpHost` implementation provided by `pallet_ismp`.
+    /// ISMP host implementation.
+    ///
+    /// Provided by `pallet_ismp`.
     type IsmpHost = Ismp;
     /// The overarching event type.
     type RuntimeEvent = RuntimeEvent;
 }
 
 parameter_types! {
+    /// Decimals for native XCAV token used in token gateway operations.
     pub const NativeTokenDecimals: u8 = NATIVE_DECIMALS;
-    /// Id for the local asset in `Assets` corresponding to Xcavate's native token.
-    // Token Id `0` should be reserved for the native token representation.
+
+    /// Asset ID reserved for the native XCAV token in `pallet_assets`.
+    ///
+    /// Token ID `0` is reserved and should not be used for other assets.
+    /// This allows the token gateway to identify when operations involve the native token
+    /// vs. other fungible assets.
     pub const NativeAssetId: u32 = 0;
 }
 
-/// Provides an account that would be set as asset admin and also cover fees for asset creation.
+/// Account provider for token gateway administrative operations.
+///
+/// Returns the treasury account which:
+/// - Acts as the asset admin for cross-chain assets
+/// - Pays fees for creating assets on remote chains via Hyperbridge
 pub struct AssetAdmin;
+
 impl Get<AccountId> for AssetAdmin {
     fn get() -> AccountId {
         // TODO: Once `pallet_treasury` is present in the runtime this can be substituted by
-        // `Treasury::account_id()`
+        // `Treasury::account_id()`.
         TREASURY_PALLET_ID.into_account_truncating()
     }
 }
+
 impl pallet_token_gateway::Config for Runtime {
+    /// Account that administers cross-chain assets and pays creation fees.
     type AssetAdmin = AssetAdmin;
+    /// Fungible assets pallet for managing bridged tokens.
     type Assets = Assets;
+    /// Origin authorized to create and update cross-chain asset registrations.
+    ///
+    /// Requires root in production; relaxed to signed for benchmarking.
     #[cfg(not(feature = "runtime-benchmarks"))]
     type CreateOrigin = EnsureRoot<AccountId>;
+    /// Origin for benchmarking mode.
     #[cfg(feature = "runtime-benchmarks")]
     type CreateOrigin = frame_system::EnsureSigned<AccountId>;
+    /// Decimals of the native XCAV token.
     type Decimals = NativeTokenDecimals;
+    /// Dispatcher for sending cross-chain asset transfer requests.
     type Dispatcher = Hyperbridge;
+    /// Converter for EVM addresses to Substrate accounts.
+    ///
+    /// Uses default implementation which maps EVM addresses to 32-byte Substrate accounts.
     type EvmToSubstrate = ();
+    /// Asset ID representing the native token in the Assets pallet.
     type NativeAssetId = NativeAssetId;
+    /// Native currency for balance operations.
     type NativeCurrency = Balances;
     /// The overarching event type.
     type RuntimeEvent = RuntimeEvent;
+    /// Weight calculation for token gateway operations.
     type WeightInfo = weights::pallet_token_gateway::WeightInfo<Runtime>;
 }
 
