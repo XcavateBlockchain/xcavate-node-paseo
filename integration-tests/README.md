@@ -12,7 +12,7 @@ These tests validate that Xcavate can correctly receive and process bridged asse
 4. **Balance Tracking** - Balances accumulate correctly across multiple transfers
 5. **Error Handling** - Invalid messages are rejected (unregistered assets, missing precision configs, etc.)
 
-**Current Test Asset:** TGBP (Token Gateway British Pound) - 6 decimals on both Ethereum and Xcavate
+**Current Test Asset:** TGBP (Tokenised GBP) - 6 decimals on both Ethereum and Xcavate
 
 ## Design Philosophy
 

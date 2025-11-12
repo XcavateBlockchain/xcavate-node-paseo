@@ -48,7 +48,7 @@ fn register_tgbp_asset() {
     assert_ok!(Assets::force_set_metadata(
         RuntimeOrigin::root(),
         TGBP_LOCAL_ASSET_ID.into(),
-        b"Token Gateway British Pound".to_vec(),
+        b"Tokenised GBP".to_vec(),
         b"TGBP".to_vec(),
         6,     // 6 decimals (same as on Ethereum)
         false  // is_frozen
@@ -631,7 +631,7 @@ fn invalid_precision_mapping() {
 ///
 /// **Verification Points:**
 /// - Symbol: Should be "TGBP"
-/// - Name: Should be "Token Gateway British Pound" (or similar)
+/// - Name: Should be "Tokenised GBP" (or similar)
 /// - Decimals: Should be 6 (matching Ethereum precision)
 ///
 /// **Why it's important:**
