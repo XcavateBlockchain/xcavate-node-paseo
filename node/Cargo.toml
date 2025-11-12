@@ -71,6 +71,12 @@ cumulus-primitives-core = { workspace = true }
 cumulus-primitives-parachain-inherent = { workspace = true }
 cumulus-relay-chain-interface = { workspace = true }
 
+#ISMP
+ismp-parachain-inherent = { workspace = true }
+ismp-parachain-runtime-api = { workspace = true }
+pallet-ismp-rpc = { workspace = true }
+pallet-ismp-runtime-api = { workspace = true }
+
 [build-dependencies]
 substrate-build-script-utils = { workspace = true }
 

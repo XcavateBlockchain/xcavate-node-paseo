@@ -16,14 +16,18 @@ frame_benchmarking::define_benchmarks!(
     [cumulus_pallet_weight_reclaim, WeightReclaim]
     [pallet_transaction_payment, TransactionPayment]
     [pallet_vesting, Vesting]
+    // ISMP.
+    [ismp_parachain, IsmpParachain]
+    [pallet_token_gateway, TokenGateway]
 );
+
+use core::marker::PhantomData;
 
 use cumulus_primitives_core::{ChannelStatus, GetChannelInfo};
 use frame_support::traits::{
     tokens::{Pay, PaymentStatus},
     Get,
 };
-use core::marker::PhantomData;
 
 use crate::ParachainSystem;
 

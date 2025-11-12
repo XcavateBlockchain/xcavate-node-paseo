@@ -13,15 +13,13 @@ use cumulus_client_service::{
     BuildNetworkParams, CollatorSybilResistance, DARecoveryProfile, ParachainHostFunctions,
     StartRelayChainTasksParams,
 };
-use cumulus_primitives_core::{relay_chain::{CollatorPair, ValidationCode}, ParaId};
+use cumulus_primitives_core::{
+    relay_chain::{CollatorPair, ValidationCode},
+    ParaId,
+};
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
 // Substrate Imports
 use frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
-// Local Runtime Types
-use xcavate_runtime::{
-    apis::RuntimeApi,
-    opaque::{Block, Hash},
-};
 use sc_client_api::Backend;
 use sc_consensus::ImportQueue;
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
@@ -31,6 +29,11 @@ use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerH
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_keystore::KeystorePtr;
 use substrate_prometheus_endpoint::Registry;
+// Local Runtime Types
+use xcavate_runtime::{
+    apis::RuntimeApi,
+    opaque::{Block, Hash},
+};
 
 type ParachainExecutor = WasmExecutor<ParachainHostFunctions>;
 
@@ -76,7 +79,7 @@ pub fn new_partial(config: &Configuration) -> Result<Service, sc_service::Error>
         .with_onchain_heap_alloc_strategy(heap_pages)
         .with_offchain_heap_alloc_strategy(heap_pages)
         .with_max_runtime_instances(config.executor.max_runtime_instances)
-		.with_runtime_cache_size(config.executor.runtime_cache_size)
+        .with_runtime_cache_size(config.executor.runtime_cache_size)
         .build();
 
     let (client, backend, keystore_container, task_manager) =
@@ -144,7 +147,7 @@ async fn start_node_impl(
     let params = new_partial(&parachain_config)?;
     let (block_import, mut telemetry, telemetry_worker_handle) = params.other;
 
-     let prometheus_registry = parachain_config.prometheus_registry().cloned();
+    let prometheus_registry = parachain_config.prometheus_registry().cloned();
     let net_config = sc_network::config::FullNetworkConfiguration::<
         _,
         _,
@@ -203,20 +206,20 @@ async fn start_node_impl(
         task_manager.spawn_handle().spawn(
             "offchain-workers-runner",
             "offchain-work",
-            offchain_workers
-                .run(client.clone(), task_manager.spawn_handle())
-                .boxed(),
+            offchain_workers.run(client.clone(), task_manager.spawn_handle()).boxed(),
         );
     }
 
     let rpc_builder = {
         let client = client.clone();
+        let backend = backend.clone();
         let transaction_pool = transaction_pool.clone();
 
         Box::new(move |_| {
             let deps = crate::rpc::FullDeps {
                 client: client.clone(),
                 pool: transaction_pool.clone(),
+                backend: backend.clone(),
             };
 
             crate::rpc::create_full(deps).map_err(Into::into)
@@ -376,8 +379,24 @@ fn start_consensus(
         client.clone(),
     );
 
+    let (client_clone, relay_chain_interface_clone) =
+        (client.clone(), relay_chain_interface.clone());
+
     let params = Params {
-        create_inherent_data_providers: move |_, ()| async move { Ok(()) },
+        create_inherent_data_providers: move |parent, ()| {
+            let client = client_clone.clone();
+            let relay_chain_interface = relay_chain_interface_clone.clone();
+            async move {
+                let inherent = ismp_parachain_inherent::ConsensusInherentProvider::create(
+                    parent,
+                    client,
+                    relay_chain_interface,
+                )
+                .await?;
+
+                Ok(inherent)
+            }
+        },
         block_import,
         para_client: client.clone(),
         para_backend: backend,

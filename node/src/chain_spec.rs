@@ -1,12 +1,14 @@
 use cumulus_primitives_core::ParaId;
-use xcavate_runtime::{
-    constants::currency::{EXISTENTIAL_DEPOSIT, XCAV}, AccountId, AuraId, Balance,
-};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::crypto::Ss58Codec;
 use sp_keyring::Sr25519Keyring;
+use xcavate_runtime::{
+    constants::currency::{EXISTENTIAL_DEPOSIT, XCAV},
+    AccountId, AuraId, Balance,
+};
+
 use crate::constant::xcavate;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
@@ -137,7 +139,6 @@ pub fn live_xcavate_config() -> ChainSpec {
     .build()
 }
 
-
 pub fn development_config() -> ChainSpec {
     let mut properties = sc_chain_spec::Properties::new();
     properties.insert("tokenSymbol".into(), "XCAV".into());
@@ -161,7 +162,7 @@ pub fn development_config() -> ChainSpec {
         // initial collators.
         vec![
             (Sr25519Keyring::Alice.to_account_id(), Sr25519Keyring::Alice.public().into()),
-			(Sr25519Keyring::Bob.to_account_id(), Sr25519Keyring::Bob.public().into()),
+            (Sr25519Keyring::Bob.to_account_id(), Sr25519Keyring::Bob.public().into()),
         ],
         get_endowed_accounts(),
         get_root_account(),
@@ -192,7 +193,7 @@ pub fn local_testnet_config() -> ChainSpec {
         // initial collators.
         vec![
             (Sr25519Keyring::Alice.to_account_id(), Sr25519Keyring::Alice.public().into()),
-			(Sr25519Keyring::Bob.to_account_id(), Sr25519Keyring::Bob.public().into()),
+            (Sr25519Keyring::Bob.to_account_id(), Sr25519Keyring::Bob.public().into()),
         ],
         get_endowed_accounts(),
         get_root_account(),
@@ -247,7 +248,6 @@ fn live_genesis(
     root: AccountId,
     id: ParaId,
 ) -> serde_json::Value {
-
     serde_json::json!({
         "balances": {
             "balances": endowed_accounts.iter().cloned().map(|k| (k, xcavate::ENDOWMENT)).collect::<Vec<_>>(),
