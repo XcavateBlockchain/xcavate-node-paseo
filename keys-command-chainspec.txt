@@ -1,0 +1,70 @@
+./target/release/xcavate-node \
+--disable-log-color \
+--unsafe-force-node-key-generation \
+--collator \
+--force-authoring \
+--chain raw-parachain-chainspec.json \
+--base-path ./tmp/collator1 \
+--port 40333 \
+--rpc-port 8844 \
+-- \
+--execution wasm \
+--chain new-rococo-local-raw.json \
+--port 30343 \
+--rpc-port 9977
+
+(base) ganesh@Mac paseo-node % ./target/release/xcavate-node key generate --scheme Sr25519
+Secret phrase:       tunnel ribbon inquiry install brief volcano squirrel raw square game knock good
+  Network ID:        substrate
+  Secret seed:       0xabbac483d6036d8902f7cdda288642bc254575171a11b5667878f9ae30fd20e8
+  Public key (hex):  0x2afe841c3c83cb765fb06b3c8caa17893810d0252ad2cb8fc8814f4df63d2323
+  Account ID:        0x2afe841c3c83cb765fb06b3c8caa17893810d0252ad2cb8fc8814f4df63d2323
+  Public key (SS58): 5D35UXRqoYT9NrD8yu2bpy1LGi1YTneacmW3qVDLkEVG8rNY
+  SS58 Address:      5D35UXRqoYT9NrD8yu2bpy1LGi1YTneacmW3qVDLkEVG8rNY
+(base) ganesh@Mac paseo-node % 
+
+./target/release/xcavate-node \
+key insert   \
+--base-path ./tmp/collator1   \
+--chain raw-parachain-chainspec.json   \
+--scheme Sr25519   \
+--suri "tunnel ribbon inquiry install brief volcano squirrel raw square game knock good"   \
+--key-type aura
+
+
+./target/release/xcavate-node \
+--disable-log-color \
+--unsafe-force-node-key-generation \
+--collator \
+--force-authoring \
+--chain raw-parachain-chainspec.json \
+--base-path ./tmp/collator2 \
+--port 40334 \
+--rpc-port 8845 \
+--bootnodes /ip4/127.0.0.1/tcp/40333/p2p/12D3KooWKHgTtQ8xJdJgPabLF72LyePvQCE5VSrmCBw1e2UPuXH2 \
+-- \
+--execution wasm \
+--chain new-rococo-local-raw.json \
+--port 30344 \
+--rpc-port 9978
+
+
+
+(base) ganesh@Mac paseo-node % ./target/release/xcavate-node key generate --scheme Sr25519
+Secret phrase:       live ancient forum crane unusual ball general keep cable hair jealous young
+  Network ID:        substrate
+  Secret seed:       0x5ec6b5ad53d867010604f25a61f83f92003bf6eb740af76b94868b1d19aa4b48
+  Public key (hex):  0xbe605200b378fe42ad6b7460808a6a9b086b554bd83ecf9604ee09c1d9985853
+  Account ID:        0xbe605200b378fe42ad6b7460808a6a9b086b554bd83ecf9604ee09c1d9985853
+  Public key (SS58): 5GNKZvErffZwhw1qRxjCbaeN7xmxkc64dziffWz5s8HqZnjS
+  SS58 Address:      5GNKZvErffZwhw1qRxjCbaeN7xmxkc64dziffWz5s8HqZnjS
+(base) ganesh@Mac paseo-node % 
+
+
+./target/release/xcavate-node \
+key insert   \
+--base-path ./tmp/collator2   \
+--chain raw-parachain-chainspec.json   \
+--scheme Sr25519   \
+--suri "live ancient forum crane unusual ball general keep cable hair jealous young"   \
+--key-type aura
