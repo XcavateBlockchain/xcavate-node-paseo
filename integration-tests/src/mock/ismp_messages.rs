@@ -23,6 +23,9 @@ pub const ETHEREUM_TOKEN_GATEWAY_ADDRESS: [u8; 20] =
 /// Ethereum Mainnet state machine identifier
 pub const ETHEREUM_MAINNET: StateMachine = StateMachine::Evm(1);
 
+/// Ethereum Sepolia testnet state machine identifier
+pub const ETHEREUM_SEPOLIA: StateMachine = StateMachine::Evm(11155111);
+
 /// Xcavate parachain state machine identifier (Kusama parachain 4683)
 pub const XCAVATE_PARACHAIN: StateMachine = StateMachine::Kusama(4683);
 
@@ -81,12 +84,12 @@ fn encode_token_transfer_body(
     result
 }
 
-/// Create a mock PostRequest for a TGBP transfer from Ethereum to Xcavate
+/// Create a mock PostRequest for a tGBP transfer from Ethereum to Xcavate
 ///
 /// # Parameters
 /// - `from`: User's Ethereum address (used in body, not request.from)
 /// - `to`: Xcavate account (32 bytes)
-/// - `amount_6_decimals`: Amount in TGBP's native precision (6 decimals)
+/// - `amount`: Amount in tGBP's native precision (18 decimals)
 ///
 /// # Note
 /// The PostRequest.from field contains the Ethereum TokenGateway contract address,
@@ -94,19 +97,19 @@ fn encode_token_transfer_body(
 ///
 /// # Example
 /// ```ignore
-/// // Transfer 100 TGBP (100_000_000 in 6 decimal precision)
+/// // Transfer 100 tGBP (100 * 10^18 in 18 decimal precision)
 /// let msg = create_tgbp_transfer_message(
 ///     ALICE_ETH_ADDRESS,
 ///     bob_account(),
-///     100_000_000,
+///     100_000_000_000_000_000_000,  // 100 tGBP
 /// );
 /// ```
 pub fn create_tgbp_transfer_message(
     user_address: [u8; 20], // User's Ethereum address (goes in body.from)
     to: AccountId32,
-    amount_6_decimals: u128,
+    amount: u128,
 ) -> Request {
-    let asset_id = calculate_asset_id(b"TGBP");
+    let asset_id = calculate_asset_id(b"tGBP");
 
     // Convert addresses to 32 bytes
     let mut from_32 = [0u8; 32];
@@ -116,7 +119,7 @@ pub fn create_tgbp_transfer_message(
 
     // Encode the body using ABI encoding
     let body = encode_token_transfer_body(
-        amount_6_decimals,
+        amount,
         asset_id.0,
         from_32,
         to_32,
@@ -140,7 +143,7 @@ pub fn create_tgbp_transfer_message(
 /// Create a generic mock PostRequest for any ERC20 token
 ///
 /// # Parameters
-/// - `token_symbol`: Token symbol (e.g., "USDT", "TGBP")
+/// - `token_symbol`: Token symbol (e.g., "USDT", "tGBP")
 /// - `from`: User's Ethereum address (not used in request.from)
 /// - `to`: Xcavate account (32 bytes)
 /// - `amount`: Amount in source chain decimals
@@ -184,14 +187,14 @@ mod tests {
 
     #[test]
     fn test_calculate_asset_id() {
-        let tgbp_asset_id = calculate_asset_id(b"TGBP");
+        let tgbp_asset_id = calculate_asset_id(b"tGBP");
         let usdt_asset_id = calculate_asset_id(b"USDT");
 
         // Asset IDs should be different for different symbols
         assert_ne!(tgbp_asset_id, usdt_asset_id);
 
         // Same symbol should produce same asset ID
-        let tgbp_asset_id_2 = calculate_asset_id(b"TGBP");
+        let tgbp_asset_id_2 = calculate_asset_id(b"tGBP");
         assert_eq!(tgbp_asset_id, tgbp_asset_id_2);
     }
 
@@ -200,7 +203,7 @@ mod tests {
         let msg = create_tgbp_transfer_message(
             ALICE_ETH_ADDRESS,
             bob_account(),
-            100_000_000, // 100 TGBP in 6 decimals
+            100_000_000_000_000_000_000, // 100 tGBP in 18 decimals
         );
 
         match msg {
@@ -230,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_body_encoding() {
-        let asset_id = calculate_asset_id(b"TGBP");
+        let asset_id = calculate_asset_id(b"tGBP");
         let recipient = AccountId32::new([42u8; 32]);
         let sender = [1u8; 20];
 
@@ -238,7 +241,7 @@ mod tests {
         from_32[12..].copy_from_slice(&sender);
 
         let encoded = encode_token_transfer_body(
-            1_000_000, // 1 TGBP in 6 decimals
+            1_000_000_000_000_000_000, // 1 tGBP in 18 decimals
             asset_id.0,
             from_32,
             recipient.into(),

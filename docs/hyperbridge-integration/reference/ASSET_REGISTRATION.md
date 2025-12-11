@@ -6,7 +6,7 @@ Complete guide to registering assets for cross-chain transfers via the Token Gat
 - [← Back to Index](./README.md)
 - [Architecture Overview](./ARCHITECTURE.md)
 - [Transfer Flows →](./TRANSFER_FLOWS.md)
-- [Technical Reference](./TECHNICAL_REFERENCE.md)
+- [Custody & Precision](./CUSTODY_AND_PRECISION.md)
 
 ---
 
@@ -183,7 +183,7 @@ AssetRegistration {
 **Definition:** Assets that originate from other chains
 
 **Examples:**
-- TGBP from Ethereum
+- tGBP from Ethereum
 - DAI from Ethereum
 - Tokens from Polygon, BSC, etc.
 
@@ -209,7 +209,7 @@ AssetRegistration {
 ### Symbol and Name
 
 ```rust
-symbol: "TGBP".as_bytes().to_vec(),  // Max 20 chars
+symbol: "tGBP".as_bytes().to_vec(),  // Max 20 chars
 name: "Tokenised GBP".as_bytes().to_vec(),  // Max 20 chars
 ```
 
@@ -234,31 +234,31 @@ Specify all chains where this asset should be deployable.
 
 ```rust
 precision: BTreeMap::from([
-    (StateMachine::Evm(1), 6),  // Ethereum: 6 decimals (TGBP native)
-    (StateMachine::Evm(137), 6), // Polygon: 6 decimals
+    (StateMachine::Evm(1), 18),  // Ethereum: 18 decimals (tGBP native)
+    (StateMachine::Evm(137), 18), // Polygon: 18 decimals
 ]),
 ```
 
-**Critical:** This tells the Token Gateway what decimal precision the asset has on each chain. For TGBP:
-- Native precision on Ethereum: 6 decimals
-- Xcavate maintains: 6 decimals (no conversion)
-- All chains use: 6 decimals
+**Critical:** This tells the Token Gateway what decimal precision the asset has on each chain. For tGBP:
+- Native precision on Ethereum: 18 decimals
+- Xcavate maintains: 18 decimals (no conversion)
+- All chains use: 18 decimals
 
 ---
 
-## Example: Registering TGBP (Bridged Asset)
+## Example: Registering tGBP (Bridged Asset)
 
-Complete registration flow for TGBP from Ethereum:
+Complete registration flow for tGBP from Ethereum:
 
 ### Step 1: Create Asset on Xcavate
 
 ```rust
-// Create TGBP asset
+// Create tGBP asset
 Assets::create(
     RuntimeOrigin::root(),
     1, // Asset ID 1
     treasury_account(),
-    1, // Minimum balance in 6 decimals
+    1, // Minimum balance in 18 decimals
 )?;
 
 // Set metadata - use same decimals as source chain
@@ -266,8 +266,8 @@ Assets::set_metadata(
     RuntimeOrigin::signed(admin),
     1,
     b"Tokenised GBP".to_vec(),
-    b"TGBP".to_vec(),
-    6, // Same as Ethereum (no conversion)
+    b"tGBP".to_vec(),
+    18, // Same as Ethereum (no conversion)
 )?;
 ```
 
@@ -276,17 +276,17 @@ Assets::set_metadata(
 ```rust
 let tgbp_registration = AssetRegistration {
     local_id: 1,
-    native: false, // TGBP originates from Ethereum
+    native: false, // tGBP originates from Ethereum
 
     reg: GatewayAssetRegistration {
-        symbol: "TGBP".as_bytes().to_vec(),
+        symbol: "tGBP".as_bytes().to_vec(),
         name: "Tokenised GBP".as_bytes().to_vec(),
         chains: vec![StateMachine::Evm(1)], // Ethereum mainnet
         minimum_balance: 1,
     },
 
     precision: BTreeMap::from([
-        (StateMachine::Evm(1), 6), // 6 decimals on Ethereum
+        (StateMachine::Evm(1), 18), // 18 decimals on Ethereum
     ]),
 };
 
@@ -300,13 +300,13 @@ TokenGateway::create_erc6160_asset(
 
 ```rust
 // Check storage
-let asset_id = keccak256(b"TGBP");
+let asset_id = keccak256(b"tGBP");
 let local_id = LocalAssets::<Runtime>::get(asset_id);
 assert_eq!(local_id, Some(1));
 
 // Check precision
 let precision = Precisions::<Runtime>::get(1, StateMachine::Evm(1));
-assert_eq!(precision, Some(6));
+assert_eq!(precision, Some(18));
 
 // Check native flag
 let is_native = NativeAssets::<Runtime>::get(1);
@@ -392,7 +392,7 @@ TokenGateway::update_asset_precision(
     RuntimeOrigin::root(),
     local_id: 1,
     StateMachine::Evm(1),
-    6, // decimals
+    18, // decimals
 )?;
 ```
 
@@ -452,7 +452,7 @@ Incorrect configuration can lead to:
 ## Next Steps
 
 - **Understand transfer flows:** [Transfer Flows](./TRANSFER_FLOWS.md)
-- **Learn about custody models:** [Technical Reference](./TECHNICAL_REFERENCE.md)
+- **Learn about custody models:** [Custody & Precision](./CUSTODY_AND_PRECISION.md)
 - **See working examples:** [Examples & Troubleshooting](./EXAMPLES.md)
 
 [← Back to Index](./README.md)

@@ -2,182 +2,217 @@
 
 This crate contains integration tests for Xcavate's token gateway functionality, verifying cross-chain asset transfers via Hyperbridge/ISMP.
 
-## What These Tests Do
+## Overview
 
-These tests validate that Xcavate can correctly receive and process bridged assets from Ethereum through ISMP messages:
+The integration tests are split into two parts:
 
-1. **Message Creation** - Mock ISMP messages are created with ABI-encoded bodies simulating Ethereum TokenGateway transfers
-2. **Message Processing** - Messages are routed through the runtime's `pallet-token-gateway`
-3. **Token Minting** - Bridged assets (like TGBP) are minted to recipient accounts using a mint/burn model
-4. **Balance Tracking** - Balances accumulate correctly across multiple transfers
-5. **Error Handling** - Invalid messages are rejected (unregistered assets, missing precision configs, etc.)
+| Type | Language | Purpose |
+|------|----------|---------|
+| **Rust Tests** | Rust | Runtime logic validation with mocked ISMP messages |
+| **Sepolia Scripts** | JavaScript | Live testnet interaction with Ethereum Sepolia |
 
-**Current Test Asset:** TGBP (Tokenised GBP) - 6 decimals on both Ethereum and Xcavate
+## Quick Start
 
-## Design Philosophy
-
-This crate is **intentionally NOT part of the workspace** to avoid introducing build delays for the node and runtime during development.
-
-## Test Architecture
-
-The tests are organized in two layers:
-
-### Layer 1: Message Structure Tests (`tgbp_ismp.rs`)
-Low-level tests that validate mock ISMP message creation without involving the runtime:
-- Message structure correctness (source, destination, addresses)
-- ABI encoding format validation
-- Asset ID calculation (keccak256 hashing)
-- Nonce uniqueness and sequencing
-- Support for multiple source chains (Ethereum, BSC, etc.)
-- Recipient account encoding (Substrate AccountId32 format)
-
-### Layer 2: Runtime Integration Tests (`tgbp_integration_tests.rs`)
-Full-stack tests that execute ISMP messages through the Xcavate runtime:
-- Asset registration in token gateway storage
-- Message routing to `pallet-token-gateway`
-- ABI body decoding and processing
-- Token minting (mint/burn model for bridged assets)
-- Balance tracking and accumulation
-- Event emission verification
-- Error handling and validation
-- Edge case coverage
-
-## Test Results
-
-**Test Status:** ✅ All 26 tests passing
-
-### What's Working ✅
-
-**Layer 1: Message Structure Tests (7 tests)**
-- ✅ **Message structure validation** - Verifies ISMP PostRequest format (source, destination, addresses, body)
-- ✅ **ABI encoding** - Validates body starts with 0x00 prefix and contains ABI-encoded data
-- ✅ **Precision preservation** - Confirms TGBP maintains 6 decimals (no conversion needed)
-- ✅ **Asset ID consistency** - keccak256 hashing produces consistent asset IDs
-- ✅ **Unique nonces** - Sequential, monotonically increasing nonce generation
-- ✅ **Multiple source chains** - Creates messages from different EVM chains (Ethereum, BSC)
-- ✅ **Recipient encoding** - Correctly encodes Substrate AccountId32 as 32-byte format
-
-**Layer 2: Runtime Integration Tests (19 tests passing)**
-- ✅ **Asset registration** - Creates assets in pallet_assets and registers in token gateway storage
-- ✅ **Storage mappings** - Bidirectional mapping between local asset ID and gateway asset ID
-- ✅ **Basic transfer processing** - Full ISMP message flow: routing → decoding → minting
-- ✅ **Balance accumulation** - Multiple transfers to same recipient add up correctly
-- ✅ **Multiple recipients** - Independent balance tracking for different accounts
-- ✅ **Decimal precision** - TGBP maintains 6 decimals throughout (1 TGBP = 1,000,000 units)
-- ✅ **Event emission** - `Assets::Issued` events emitted on successful mints
-- ✅ **Asset metadata** - Name, symbol, and decimals correctly stored and retrievable
-- ✅ **Total supply tracking** - Issuance increases correctly with each mint
-- ✅ **Multiple senders** - Same recipient can receive from different Ethereum addresses
-- ✅ **Error: Unregistered assets** - Rejects transfers for assets not in token gateway
-- ✅ **Error: Missing precision** - Fails gracefully when source chain precision not configured
-- ✅ **Edge case: Minimum balance** - Handles small amounts correctly
-- ✅ **Edge case: Zero amount** - Handles zero-value transfers without panicking
-
-### Edge Cases Covered 🧪
-
-1. **Missing precision configuration** - BSC transfer fails gracefully when precision not configured for that chain
-2. **Unregistered assets** - Rejects transfers for assets not registered in token gateway
-3. **Below minimum balance** - Handles dust amounts (e.g., 0.000999 TGBP) according to pallet_assets rules
-4. **Zero amount transfers** - Validates zero-value transfers don't cause panics or state corruption
-5. **Maximum amount** - Tests extreme values (u128::MAX) for message creation
-6. **Multiple senders to same recipient** - Ensures no cross-contamination between sender contexts
-7. **Minimum unit precision** - Tests smallest possible amount (1 in 6 decimals = 0.000001 TGBP)
-
-## Testing Approach
-
-### Phase 1: Mocked ISMP Messages (Current)
-
-We test the Xcavate side with **mocked ISMP messages** that simulate what would be received from Ethereum via Hyperbridge. This is implemented in two complementary layers:
-
-**Layer 1: Message Structure Tests** (`tgbp_ismp.rs`)
-- Fast, lightweight tests that validate message creation utilities
-- Verify ABI encoding, nonce generation, and asset ID calculation
-- No runtime involvement - pure message validation
-- Ideal for catching encoding bugs early
-
-**Layer 2: Runtime Integration Tests** (`tgbp_integration_tests.rs`)
-- Execute actual ISMP messages through the Xcavate runtime
-- Test complete flow: message routing → body decoding → token minting
-- Verify storage updates, balance changes, and event emission
-- Validate error handling and edge cases with real runtime behavior
-
-**Benefits of this approach:**
-- Test token gateway logic without requiring live chain connections
-- Validate precision preservation (TGBP maintains 6 decimals throughout)
-- Rapid iteration on edge cases and error conditions
-- Deterministic, reproducible test environment
-
-### Phase 2: Full Integration (Future)
-
-Later, we can add end-to-end tests similar to the [Hyperbridge SDK tests](https://github.com/polytope-labs/hyperbridge-sdk/blob/main/packages/sdk/src/tests/tokenGateway.test.ts):
-
-- Connect to live testnets (Ethereum Sepolia, Xcavate testnet)
-- Send actual transactions from Ethereum and wait for cross-chain delivery
-- Use the Hyperbridge indexer to track message status and finality
-- Verify round-trip flows: Ethereum → Xcavate → Ethereum
-
-## File Structure
-
-```
-integration-tests/
-├── src/
-│   ├── lib.rs                           # Test setup and runtime configuration
-│   ├── mock/
-│   │   ├── mod.rs                       # Mock module exports
-│   │   ├── ismp_messages.rs             # ISMP PostRequest message builders
-│   │   └── test_accounts.rs             # Test Ethereum addresses & Substrate accounts
-│   └── tests/
-│       ├── mod.rs                       # Test module exports
-│       ├── test_externalities.rs        # Runtime externalities setup
-│       ├── tgbp_ismp.rs                 # Layer 1: Message structure tests
-│       └── tgbp_integration_tests.rs    # Layer 2: Runtime integration tests
-└── Cargo.toml                           # Not in workspace (intentional)
-```
-
-## Running Tests
-
-Since this crate is not in the workspace:
-
+### Rust Tests
 ```bash
 cd integration-tests
 cargo test
 ```
 
-Or from the repository root:
+### Sepolia Scripts
+```bash
+cd integration-tests
+npm install
+npm run teleport          # Dry run
+npm run verify-registration
+```
+
+## Test Tokens
+
+| Network | Token | Address | Asset ID |
+|---------|-------|---------|----------|
+| **Ethereum Mainnet** | tGBP | [`0x27f6c8289550fCE67f6B50BeD1F519966aFE5287`](https://etherscan.io/address/0x27f6c8289550fCE67f6B50BeD1F519966aFE5287) | `0x99bb6e8574d7a5293a476638667ca3492c7e3f9ae2f5a47457f96c3c5c7fc843` |
+| **Sepolia Testnet** | WETH | [`0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14`](https://sepolia.etherscan.io/address/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14) | `0x0f8a193ff464434486c0daf7db2a895884365d2bc84ba47a68fcf89c1b14b5b8` |
+
+Asset IDs are computed as `keccak256(symbol)` and are deterministic across all chains.
+
+---
+
+## Rust Tests
+
+### Test Status: 27 tests passing
+
+**Layer 1: Message Structure Tests** (`tgbp_ismp.rs`) - 8 tests
+- Message structure validation (source, destination, addresses)
+- ABI encoding format (0x00 prefix for Body)
+- Asset ID calculation via keccak256
+- Nonce uniqueness and sequencing
+- Multiple source chains (Ethereum Mainnet, Sepolia, BSC)
+- Recipient account encoding (AccountId32)
+- Sepolia testnet message structure (WETH)
+
+**Layer 2: Runtime Integration Tests** (`tgbp_integration_tests.rs`) - 13 tests
+- Asset registration in token gateway storage
+- Message routing to `pallet-token-gateway`
+- ABI body decoding and processing
+- Token minting (mint/burn model)
+- Balance tracking and accumulation
+- Event emission verification
+- Error handling (unregistered assets, invalid precision)
+
+**Mock Module Tests** - 6 tests
+- Body encoding validation
+- Asset ID calculation
+- Nonce generation
+- Test account uniqueness
+
+### Chain Coverage
+
+The Rust tests cover both mainnet and testnet scenarios:
+
+```rust
+// From src/mock/ismp_messages.rs
+pub const ETHEREUM_MAINNET: StateMachine = StateMachine::Evm(1);
+pub const ETHEREUM_SEPOLIA: StateMachine = StateMachine::Evm(11155111);
+pub const XCAVATE_PARACHAIN: StateMachine = StateMachine::Kusama(4683);
+```
+
+### Key Design Decision
+
+tGBP maintains **18 decimal precision** on both Ethereum and Xcavate. There is NO precision conversion - amounts are preserved exactly as they appear on the source chain.
+
+---
+
+## Sepolia Scripts
+
+JavaScript scripts for live testnet interaction. See [`src/sepolia/README.md`](src/sepolia/README.md) for detailed documentation.
+
+### Available Scripts
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `teleport-erc20.js` | `npm run teleport` | Bridge WETH from Sepolia to Xcavate (dry run) |
+| `teleport-erc20.js --execute` | `npm run teleport:execute` | Execute actual bridge transaction |
+| `verify-registration.js` | `npm run verify-registration` | Check if token is registered on TokenGateway |
+| `calculate-asset-id.js` | `npm run calc-asset-id` | Calculate keccak256 asset ID for a symbol |
+
+### Contract Addresses (Sepolia - Gargantua V3)
+
+| Contract | Address |
+|----------|---------|
+| TokenGateway | [`0xFcDa26cA021d5535C3059547390E6cCd8De7acA6`](https://sepolia.etherscan.io/address/0xFcDa26cA021d5535C3059547390E6cCd8De7acA6) |
+| IsmpHost | [`0x2EdB74C269948b60ec1000040E104cef0eABaae8`](https://sepolia.etherscan.io/address/0x2EdB74C269948b60ec1000040E104cef0eABaae8) |
+
+### Example: Dry Run
+```bash
+$ npm run teleport
+
+TELEPORT ERC-20 TOKENS: Ethereum -> Xcavate
+================================================================================
+
+Transfer Configuration:
+  Token:       WETH (0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14)
+  Amount:      0.001 WETH
+  Destination: PASEO-4683
+  Mode:        DRY RUN (simulation only)
+```
+
+---
+
+## File Structure
+
+```
+integration-tests/
+├── Cargo.toml                           # Rust crate (NOT in workspace)
+├── package.json                         # Node.js scripts
+├── README.md                            # This file
+└── src/
+    ├── lib.rs                           # Test entry point
+    ├── mock/
+    │   ├── mod.rs                       # Mock module exports
+    │   ├── ismp_messages.rs             # ISMP PostRequest builders
+    │   └── test_accounts.rs             # Test accounts (Ethereum & Substrate)
+    ├── tests/
+    │   ├── mod.rs                       # Test module exports
+    │   ├── test_externalities.rs        # Runtime externalities setup
+    │   ├── tgbp_ismp.rs                 # Message structure tests
+    │   └── tgbp_integration_tests.rs    # Runtime integration tests
+    └── sepolia/
+        ├── README.md                    # Sepolia scripts documentation
+        ├── teleport-erc20.js            # Bridge tokens to Xcavate
+        ├── verify-registration.js       # Check token registration
+        ├── calculate-asset-id.js        # Calculate asset IDs
+        ├── tokenGateway.address         # Contract address
+        ├── tokenGateway.abi             # Contract ABI
+        └── endpoints                    # RPC endpoint list
+```
+
+---
+
+## Running Tests
+
+### Rust Tests
+
+Since this crate is intentionally NOT part of the workspace:
 
 ```bash
+# From integration-tests directory
+cd integration-tests
+cargo test
+
+# From repository root
 cargo test --manifest-path integration-tests/Cargo.toml
+
+# Run specific test
+cargo test --manifest-path integration-tests/Cargo.toml sepolia_testnet_messages
 ```
+
+### JavaScript Scripts
+
+```bash
+cd integration-tests
+npm install
+
+# Dry run (no transaction)
+npm run teleport
+
+# Execute with private key
+PRIVATE_KEY=0x... npm run teleport:execute
+
+# Verify token registration
+npm run verify-registration
+
+# Calculate asset ID
+npm run calc-asset-id WETH
+```
+
+---
 
 ## Test Coverage
 
-### Current Focus: TGBP (Ethereum → Xcavate)
+### Currently Tested
 
-**What's Tested:**
-- ✅ Asset registration with precision mapping (6 decimals on both Ethereum and Xcavate)
-- ✅ Creating mock ISMP PostRequest messages with ABI encoding
-- ✅ Processing messages through token gateway's `on_accept` callback
-- ✅ Decimal precision preservation: 1,000,000 (6 dec) → 1,000,000 (6 dec) - no conversion
-- ✅ Token minting to recipient accounts (mint/burn model for bridged assets)
-- ✅ Balance accumulation across multiple transfers
-- ✅ Event emission verification (`Assets::Issued`)
-- ✅ Minimum balance enforcement via pallet_assets
-- ✅ Invalid source chain precision rejection
-- ✅ Unregistered asset rejection
-- ✅ Total supply tracking for auditing
-
-**Key Design Decision:**
-TGBP maintains its native 6 decimal precision on both Ethereum and Xcavate. There is NO precision conversion - amounts are preserved exactly as they appear on the source chain. This simplifies accounting and reduces rounding errors.
+| Feature | Mainnet (tGBP) | Testnet (WETH) |
+|---------|----------------|----------------|
+| Asset registration | ✅ Rust tests | ✅ Rust tests |
+| ISMP message creation | ✅ Rust tests | ✅ Rust tests |
+| Message routing | ✅ Rust tests | ✅ Rust tests |
+| Token minting | ✅ Rust tests | ✅ Rust tests |
+| Balance accumulation | ✅ Rust tests | ✅ Rust tests |
+| Live teleport | - | ✅ JS scripts |
+| Registration verification | - | ✅ JS scripts |
 
 ### Future Test Scenarios
 
-- 🔜 Outbound transfers: Xcavate → Ethereum (burn on Xcavate, unlock on Ethereum)
-- 🔜 Timeout handling and message expiry
-- 🔜 Native asset teleportation (lock/unlock model)
-- 🔜 Full end-to-end tests with live testnet connections (Phase 2)
+- Outbound transfers: Xcavate → Ethereum (burn on Xcavate, unlock on Ethereum)
+- Timeout handling and message expiry
+- Full end-to-end tests with live mainnet
+
+---
 
 ## References
 
-- [Token Gateway Documentation](../docs/token-gateway/)
-- [Integration Test Plan](../docs/token-gateway/INTEGRATION_TESTS_PLAN.md)
+- [Token Gateway Documentation](../docs/ismp-token-gateway/)
+- [Sepolia Scripts Documentation](src/sepolia/README.md)
 - [Hyperbridge SDK Tests](https://github.com/polytope-labs/hyperbridge-sdk/blob/main/packages/sdk/src/tests/tokenGateway.test.ts)
+- [Hyperbridge Contracts](https://docs.hyperbridge.network/developers/evm/contracts)

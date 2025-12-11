@@ -6,7 +6,7 @@ This document explains the architecture, components, and smart contracts involve
 - [← Back to Index](./README.md)
 - [Asset Registration →](./ASSET_REGISTRATION.md)
 - [Transfer Flows →](./TRANSFER_FLOWS.md)
-- [Bridging ERC20 Guide →](./BRIDGING_ERC20_GUIDE.md)
+- [Main Bridging Guide →](../BRIDGING_ERC20.md)
 
 ---
 
@@ -51,7 +51,7 @@ This document explains the architecture, components, and smart contracts involve
 │  User Wallet (EOA)                                          │
 │      │                                                      │
 │      └─► ERC20 Token Contracts                              │
-│            │ (TGBP, DAI, etc.)                              │
+│            │ (tGBP, DAI, etc.)                              │
 │            │                                                │
 │            ▼                                                │
 │  ┌────────────────────────────────────────────────────┐     │
@@ -153,7 +153,7 @@ Get the ERC6160 wrapper address for an asset. Returns the wrapped token contract
 
 Asset IDs are deterministic:
 ```javascript
-const assetId = ethers.keccak256(ethers.toUtf8Bytes('TGBP'));
+const assetId = ethers.keccak256(ethers.toUtf8Bytes('tGBP'));
 // Result: 0x... (32-byte hash)
 ```
 
@@ -271,7 +271,7 @@ Complete sequence for sending assets from Ethereum to Xcavate:
 
 ### Step 1: Approve ERC20 Token
 
-If sending native ERC20 tokens like TGBP:
+If sending native ERC20 tokens like tGBP:
 
 ```javascript
 const token = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, wallet);
@@ -306,7 +306,7 @@ const tx = await tokenGateway.teleport(teleportParams);
 await tx.wait();
 ```
 
-**See [Bridging ERC20 Guide](./BRIDGING_ERC20_GUIDE.md) for a complete example.**
+**See [Main Bridging Guide](../BRIDGING_ERC20.md) for a complete example.**
 
 ---
 
@@ -351,8 +351,8 @@ The ISMP protocol implementation for Substrate.
 ## Next Steps
 
 - **Register an asset:** See [Asset Registration](./ASSET_REGISTRATION.md)
-- **Bridge an ERC20:** See [Bridging ERC20 Guide](./BRIDGING_ERC20_GUIDE.md)
+- **Bridge an ERC20:** See [Main Bridging Guide](../BRIDGING_ERC20.md)
 - **Understand transfers:** See [Transfer Flows](./TRANSFER_FLOWS.md)
-- **Technical details:** See [Technical Reference](./TECHNICAL_REFERENCE.md)
+- **Technical details:** See [Custody & Precision](./CUSTODY_AND_PRECISION.md)
 
 [← Back to Index](./README.md)
