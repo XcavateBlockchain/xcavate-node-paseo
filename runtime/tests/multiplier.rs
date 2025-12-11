@@ -2,10 +2,10 @@
 mod common;
 use common::*;
 use frame_support::pallet_prelude::*;
-use xcavate_runtime::{Runtime, RuntimeBlockWeights};
 use pallet_transaction_payment::Multiplier;
 use polkadot_runtime_common::MinimumMultiplier;
 use sp_runtime::{traits::Convert, Perquintill};
+use xcavate_runtime::{Runtime, RuntimeBlockWeights};
 
 fn min_multiplier() -> Multiplier {
     MinimumMultiplier::get()

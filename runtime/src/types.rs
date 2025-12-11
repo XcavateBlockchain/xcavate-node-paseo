@@ -67,6 +67,12 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 pub type UncheckedExtrinsic =
     generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, TxExtension>;
 
+/// All migrations that run on runtime upgrade.
+///
+/// This tuple contains migrations that will execute during the `on_runtime_upgrade` hook.
+/// Migrations should be idempotent and check for pre-existing state before making changes.
+pub type Migrations = (crate::migrations::CreateReservedAssets,);
+
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
     Runtime,
@@ -74,6 +80,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    Migrations,
 >;
 
 /// Price For Sibling Parachain Delivery

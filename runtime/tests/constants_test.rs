@@ -18,12 +18,12 @@ mod constant_tests {
 
 mod runtime_tests {
     use frame_support::{pallet_prelude::Weight, traits::TypedGet, PalletId};
+    use sp_version::RuntimeVersion;
     use xcavate_runtime::{
         configs::*,
         constants::{currency::*, *},
         *,
     };
-    use sp_version::RuntimeVersion;
     use xcm::latest::prelude::BodyId;
     extern crate alloc;
 
@@ -35,7 +35,7 @@ mod runtime_tests {
                 spec_name: alloc::borrow::Cow::Borrowed("template-parachain"),
                 impl_name: alloc::borrow::Cow::Borrowed("template-parachain"),
                 authoring_version: 1,
-                spec_version: 8,
+                spec_version: 9,
                 impl_version: 0,
                 apis: xcavate_runtime::apis::RUNTIME_API_VERSIONS,
                 transaction_version: 7,
@@ -66,7 +66,7 @@ mod runtime_tests {
         assert_eq!(AVERAGE_ON_INITIALIZE_RATIO, Perbill::from_percent(5));
 
         assert_eq!(NORMAL_DISPATCH_RATIO, Perbill::from_percent(75));
- 
+
         assert_eq!(UNINCLUDED_SEGMENT_CAPACITY, 3);
 
         assert_eq!(BLOCK_PROCESSING_VELOCITY, 1);

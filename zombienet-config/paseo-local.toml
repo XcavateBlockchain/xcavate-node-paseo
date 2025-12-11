@@ -1,0 +1,30 @@
+[relaychain]
+chain = "paseo-local"
+
+[[relaychain.nodes]]
+name = "alice"
+validator = true
+rpc_port = 9900
+
+[[relaychain.nodes]]
+name = "bob"
+validator = true
+
+#[[parachains]]
+#id = 1000
+#chain = "asset-hub-paseo-local"
+#
+#[[parachains.collators]]
+#name = "asset-hub-collator01"
+#rpc_port = 9910
+#args = ["-lxcm=trace,pallet-assets=trace"]
+
+[[parachains]]
+id = 2000
+default_command = "./target/debug/xcavate-node"
+chain = "dev"
+
+[[parachains.collators]]
+name = "xcav-collator01"
+rpc_port = 9920
+args = ["-lxcm=trace,pallet-assets=trace"]

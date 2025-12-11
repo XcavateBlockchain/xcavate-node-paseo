@@ -9,8 +9,10 @@
 
 use alloc::{boxed::Box, vec::Vec};
 
-use frame_support::{parameter_types, traits::Get};
-use frame_support::traits::fungible::ItemOf;
+use frame_support::{
+    parameter_types,
+    traits::{fungible::ItemOf, Get},
+};
 use frame_system::EnsureRoot;
 use ismp::{host::StateMachine, module::IsmpModule, router::IsmpRouter};
 use sp_runtime::traits::AccountIdConversion;
