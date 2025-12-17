@@ -23,7 +23,7 @@ cargo test
 ```bash
 cd integration-tests
 npm install
-npm run teleport          # Dry run
+npm run teleport          # Prepare (no transaction)
 npm run verify-registration
 ```
 
@@ -91,7 +91,7 @@ JavaScript scripts for live testnet interaction. See [`src/sepolia/README.md`](s
 
 | Script | Command | Description |
 |--------|---------|-------------|
-| `teleport-erc20.js` | `npm run teleport` | Bridge WETH from Sepolia to Xcavate (dry run) |
+| `teleport-erc20.js` | `npm run teleport` | Prepare WETH bridge from Sepolia to Xcavate |
 | `teleport-erc20.js --execute` | `npm run teleport:execute` | Execute actual bridge transaction |
 | `verify-registration.js` | `npm run verify-registration` | Check if token is registered on TokenGateway |
 | `calculate-asset-id.js` | `npm run calc-asset-id` | Calculate keccak256 asset ID for a symbol |
@@ -103,7 +103,7 @@ JavaScript scripts for live testnet interaction. See [`src/sepolia/README.md`](s
 | TokenGateway | [`0xFcDa26cA021d5535C3059547390E6cCd8De7acA6`](https://sepolia.etherscan.io/address/0xFcDa26cA021d5535C3059547390E6cCd8De7acA6) |
 | IsmpHost | [`0x2EdB74C269948b60ec1000040E104cef0eABaae8`](https://sepolia.etherscan.io/address/0x2EdB74C269948b60ec1000040E104cef0eABaae8) |
 
-### Example: Dry Run
+### Example: Prepare Mode
 ```bash
 $ npm run teleport
 
@@ -114,7 +114,7 @@ Transfer Configuration:
   Token:       WETH (0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14)
   Amount:      0.001 WETH
   Destination: PASEO-4683
-  Mode:        DRY RUN (simulation only)
+  Mode:        PREPARE (no transaction)
 ```
 
 ---
@@ -173,7 +173,7 @@ cargo test --manifest-path integration-tests/Cargo.toml sepolia_testnet_messages
 cd integration-tests
 npm install
 
-# Dry run (no transaction)
+# Prepare (no transaction)
 npm run teleport
 
 # Execute with private key
@@ -185,6 +185,27 @@ npm run verify-registration
 # Calculate asset ID
 npm run calc-asset-id WETH
 ```
+
+### Gas Estimation
+
+Use [Foundry's `cast`](https://book.getfoundry.sh/cast/) to estimate gas costs before executing:
+
+```bash
+# Estimate gas for a teleport call
+cast estimate 0xFcDa26cA021d5535C3059547390E6cCd8De7acA6 \
+  "teleport((uint256,uint256,bytes32,bool,bytes32,bytes,uint64,uint256,bytes))" \
+  "(1000000000000000,0,0x0f8a193ff464434486c0daf7db2a895884365d2bc84ba47a68fcf89c1b14b5b8,false,0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d,0x504153454f2d34363833,3600,0,0x)" \
+  --rpc-url https://ethereum-sepolia-rpc.publicnode.com
+
+# Simulate full transaction (requires private key)
+cast send --simulate 0xFcDa26cA021d5535C3059547390E6cCd8De7acA6 \
+  "teleport((uint256,uint256,bytes32,bool,bytes32,bytes,uint64,uint256,bytes))" \
+  "(1000000000000000,0,0x0f8a193ff464434486c0daf7db2a895884365d2bc84ba47a68fcf89c1b14b5b8,false,0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d,0x504153454f2d34363833,3600,0,0x)" \
+  --private-key $PRIVATE_KEY \
+  --rpc-url https://ethereum-sepolia-rpc.publicnode.com
+```
+
+The tuple fields are: `(amount, relayerFee, assetId, redeem, to, dest, timeout, nativeCost, data)`
 
 ---
 

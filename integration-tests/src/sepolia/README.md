@@ -51,10 +51,10 @@ The Asset ID is `keccak256("WETH")` and is used to identify the token on the Tok
 # From the integration-tests directory
 cd integration-tests
 
-# Dry run - shows what would happen without executing
+# Prepare - validates and shows parameters without executing
 npm run teleport
 
-# Execute actual teleport (requires wallet)
+# Execute teleport (requires wallet)
 PRIVATE_KEY=0x... npm run teleport:execute
 ```
 
