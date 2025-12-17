@@ -10,11 +10,11 @@
  * 3. User must have ETH for gas fees
  *
  * Usage:
- *   # Dry run (shows what would happen, no transaction)
- *   node teleport-erc20.js
+ *   # Prepare (validates and shows parameters, no transaction)
+ *   npm run teleport
  *
- *   # Execute actual teleport (requires PRIVATE_KEY env var)
- *   PRIVATE_KEY=0x... node teleport-erc20.js --execute
+ *   # Execute teleport (requires PRIVATE_KEY env var)
+ *   PRIVATE_KEY=0x... npm run teleport:execute
  */
 
 const { ethers } = require('ethers');
@@ -133,7 +133,7 @@ async function teleportERC20() {
     console.log(`  Recipient:   ${CONFIG.recipient}`);
     console.log(`  Destination: ${CONFIG.destination}`);
     console.log(`  Timeout:     ${CONFIG.timeout} seconds`);
-    console.log(`  Mode:        ${executeMode ? 'EXECUTE (real transaction)' : 'DRY RUN (simulation only)'}`);
+    console.log(`  Mode:        ${executeMode ? 'EXECUTE' : 'PREPARE (no transaction)'}`);
     console.log();
 
     // Connect to RPC
@@ -289,7 +289,7 @@ async function teleportERC20() {
     console.log(`    assetId:    ${teleportParams.assetId}`);
     console.log(`    redeem:     ${teleportParams.redeem}`);
     console.log(`    to:         ${teleportParams.to}`);
-    console.log(`    dest:       ${CONFIG.destination}`);
+    console.log(`    dest:       ${ethers.hexlify(destBytes)}`);
     console.log(`    timeout:    ${teleportParams.timeout}`);
     console.log(`    nativeCost: ${teleportParams.nativeCost}`);
     console.log(`    data:       ${teleportParams.data}`);
@@ -358,12 +358,9 @@ async function teleportERC20() {
         }
     } else {
         console.log('-'.repeat(80));
-        console.log('DRY RUN COMPLETE');
+        console.log('To execute the teleport:');
+        console.log('  PRIVATE_KEY=0x... npm run teleport:execute');
         console.log('-'.repeat(80));
-        console.log();
-        console.log('To execute the actual teleport:');
-        console.log('  PRIVATE_KEY=0x... node teleport-erc20.js --execute');
-        console.log();
     }
 }
 
