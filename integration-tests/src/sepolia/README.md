@@ -48,11 +48,14 @@ The Asset ID is `keccak256("WETH")` and is used to identify the token on the Tok
 
 **Usage:**
 ```bash
+# From the integration-tests directory
+cd integration-tests
+
 # Dry run - shows what would happen without executing
-node teleport-erc20.js
+npm run teleport
 
 # Execute actual teleport (requires wallet)
-PRIVATE_KEY=0x... node teleport-erc20.js --execute
+PRIVATE_KEY=0x... npm run teleport:execute
 ```
 
 **Default Configuration (WETH):**
@@ -88,7 +91,8 @@ Verifies that WETH (or other token) is properly registered on the TokenGateway c
 
 **Usage:**
 ```bash
-node verify-registration.js
+# From the integration-tests directory
+npm run verify-registration
 ```
 
 **Expected Output:**
@@ -104,12 +108,14 @@ Helper script to calculate the asset ID (keccak256 hash) from a token symbol.
 
 **Usage:**
 ```bash
+# From the integration-tests directory
+
 # Calculate for tGBP
-node calculate-asset-id.js tGBP
+npm run calc-asset-id -- tGBP
 
 # Calculate for any symbol
-node calculate-asset-id.js USDC
-node calculate-asset-id.js WETH
+npm run calc-asset-id -- USDC
+npm run calc-asset-id -- WETH
 ```
 
 ## Network Information
