@@ -9,24 +9,20 @@
 
 use alloc::{boxed::Box, vec::Vec};
 
-use frame_support::{parameter_types, traits::Get, PalletId};
+use frame_support::{parameter_types, traits::Get};
+use frame_support::traits::fungible::ItemOf;
 use frame_system::EnsureRoot;
 use ismp::{host::StateMachine, module::IsmpModule, router::IsmpRouter};
 use sp_runtime::traits::AccountIdConversion;
 
 use crate::{
+    constants::{
+        known_assets::{NATIVE_ASSET_ID, NATIVE_DECIMALS, TGBP_ASSET_ID},
+        pallet_ids::TREASURY,
+    },
     weights, AccountId, Assets, Balance, Balances, Hyperbridge, Ismp, IsmpParachain, Runtime,
     RuntimeEvent, Timestamp, TokenGateway,
 };
-
-/// Decimals of the native currency XCAV.
-pub const NATIVE_DECIMALS: u8 = 12;
-
-/// Temporary definition of treasury `PalletId` until `pallet_treasury` is present in the runtime.
-///
-/// This account is used as the asset admin for token gateway operations and covers fees
-/// for asset creation on remote chains.
-const TREASURY_PALLET_ID: PalletId = PalletId(*b"py/trsry");
 
 parameter_types! {
     // /// Hyperbridge parachain on Polkadot
@@ -45,6 +41,9 @@ parameter_types! {
     ///
     /// This identifies the parachain in ISMP messages and routing.
     pub const HostStateMachine: StateMachine = StateMachine::Kusama(4683);
+
+    /// AssetId corresponding to the tGBP asset registered locally.
+    pub const TGBPAssetId: u32 = TGBP_ASSET_ID;
 }
 
 impl pallet_ismp::Config for Runtime {
@@ -64,8 +63,8 @@ impl pallet_ismp::Config for Runtime {
     type Coprocessor = Coprocessor;
     /// Currency used to collect ISMP message processing fees.
     ///
-    /// Only XCAV (native token) is supported for fee payment.
-    type Currency = Balances;
+    /// Only tGBP is supported for fee payment.
+    type Currency = ItemOf<Assets, TGBPAssetId, AccountId>;
     /// Handler for calculating and collecting ISMP message fees based on weight.
     type FeeHandler = pallet_ismp::fee_handler::WeightFeeHandler<()>;
     /// State machine identifier for this parachain.
@@ -135,10 +134,12 @@ parameter_types! {
     /// Token ID `0` is reserved and should not be used for other assets.
     /// This allows the token gateway to identify when operations involve the native token
     /// vs. other fungible assets.
-    pub const NativeAssetId: u32 = 0;
+    pub const NativeAssetId: u32 = NATIVE_ASSET_ID;
 }
 
 /// Account provider for token gateway administrative operations.
+/// This account is used as the asset admin for token gateway operations and covers fees
+/// for asset creation.
 ///
 /// Returns the treasury account which:
 /// - Acts as the asset admin for cross-chain assets
@@ -149,7 +150,7 @@ impl Get<AccountId> for AssetAdmin {
     fn get() -> AccountId {
         // TODO: Once `pallet_treasury` is present in the runtime this can be substituted by
         // `Treasury::account_id()`.
-        TREASURY_PALLET_ID.into_account_truncating()
+        TREASURY.into_account_truncating()
     }
 }
 
@@ -228,10 +229,12 @@ mod tests {
         }
 
         #[test]
-        fn ensure_currency_type() {
+        fn ensure_currency_is_tgbp_stablecoin() {
+            // ISMP fees (including relayer fees) are paid in TGBP stablecoin (Asset ID 1)
+            // This ensures predictable and stable revenue for relayers
             assert_eq!(
                 TypeId::of::<<Runtime as pallet_ismp::Config>::Currency>(),
-                TypeId::of::<Balances>(),
+                TypeId::of::<ItemOf<Assets, TGBPAssetId, AccountId>>(),
             );
         }
 
@@ -353,7 +356,7 @@ mod tests {
             );
             // Verify AssetAdmin returns treasury account
             let admin_account = AssetAdmin::get();
-            let expected_account = TREASURY_PALLET_ID.into_account_truncating();
+            let expected_account = TREASURY.into_account_truncating();
             assert_eq!(admin_account, expected_account);
         }
 

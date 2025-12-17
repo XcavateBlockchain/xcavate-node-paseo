@@ -1,6 +1,6 @@
-# Technical Reference
+# Custody Models and Precision Handling
 
-Deep dive into custody models, precision handling, and security considerations.
+Deep dive into custody models, decimal precision handling, and security considerations for cross-chain asset transfers.
 
 **Navigation:**
 - [← Back to Index](./README.md)
@@ -34,13 +34,13 @@ Deep dive into custody models, precision handling, and security considerations.
 
 **Sending (Teleport):**
 ```rust
-// Lock assets in pallet account
+// pallet-token-gateway: Lock assets in pallet account
 transfer(sender → pallet_account, amount)
 ```
 
 **Receiving:**
 ```rust
-// Unlock assets from pallet account
+// pallet-token-gateway: Unlock assets from pallet account
 transfer(pallet_account → recipient, amount)
 ```
 
@@ -56,7 +56,7 @@ transfer(pallet_account → recipient, amount)
 **Definition:** Assets that originate from other chains
 
 **Examples:**
-- TGBP from Ethereum
+- tGBP from Ethereum
 - DAI from Ethereum
 - Tokens from Polygon, BSC, etc.
 
@@ -64,13 +64,13 @@ transfer(pallet_account → recipient, amount)
 
 **Receiving (from origin chain):**
 ```rust
-// Mint new tokens
+// pallet-token-gateway: Mint new tokens
 Assets::mint_into(asset_id, recipient, amount)
 ```
 
 **Sending (back to origin):**
 ```rust
-// Burn tokens
+// pallet-token-gateway: Burn tokens
 Assets::burn_from(asset_id, sender, amount)
 ```
 
@@ -86,6 +86,7 @@ Assets::burn_from(asset_id, sender, amount)
 The custody model is determined during asset registration:
 
 ```rust
+// pallet-token-gateway: create_erc6160_asset extrinsic
 AssetRegistration {
     local_id: 1,
     native: true,  // ← This determines the model
@@ -112,9 +113,9 @@ Different blockchains use different decimal precisions:
 
 The Token Gateway maintains **consistent decimal precision** across chains for each asset:
 
-**Example: TGBP**
-- Native precision on Ethereum: **6 decimals**
-- Precision on Xcavate: **6 decimals** (maintained)
+**Example: tGBP**
+- Native precision on Ethereum: **18 decimals**
+- Precision on Xcavate: **18 decimals** (maintained)
 - No conversion needed
 
 **Example: XCAV**
@@ -127,10 +128,11 @@ The Token Gateway maintains **consistent decimal precision** across chains for e
 When registering an asset, specify its precision on each chain:
 
 ```rust
+// pallet-token-gateway: AssetRegistration
 precision: BTreeMap::from([
-    (StateMachine::Evm(1), 6),      // Ethereum: 6 decimals (TGBP)
-    (StateMachine::Evm(137), 6),    // Polygon: 6 decimals
-    (StateMachine::Kusama(4683), 6), // Xcavate: 6 decimals
+    (StateMachine::Evm(1), 18),      // Ethereum: 18 decimals (tGBP)
+    (StateMachine::Evm(137), 18),    // Polygon: 18 decimals
+    (StateMachine::Kusama(4683), 18), // Xcavate: 18 decimals
 ]),
 ```
 
@@ -138,6 +140,7 @@ precision: BTreeMap::from([
 
 **Sending (Local → Remote):**
 ```rust
+// pallet-token-gateway: convert_to_erc20
 fn convert_to_erc20(
     amount: u128,           // Local amount
     remote_decimals: u8,    // Destination precision
@@ -158,6 +161,7 @@ fn convert_to_erc20(
 
 **Receiving (Remote → Local):**
 ```rust
+// pallet-token-gateway: convert_to_balance
 fn convert_to_balance(
     amount: U256,           // Remote amount
     remote_decimals: u8,    // Source precision
@@ -176,20 +180,20 @@ fn convert_to_balance(
 }
 ```
 
-### Example: TGBP (6 decimals on all chains)
+### Example: tGBP (18 decimals on all chains)
 
-**Sending 100 TGBP from Ethereum to Xcavate:**
+**Sending 100 tGBP from Ethereum to Xcavate:**
 ```
-Input:  100_000_000 (100 TGBP, 6 decimals)
-Scale:  No conversion (6 decimals = 6 decimals)
-Output: 100_000_000 (100 TGBP, 6 decimals)
+Input:  100_000_000_000_000_000_000 (100 tGBP, 18 decimals)
+Scale:  No conversion (18 decimals = 18 decimals)
+Output: 100_000_000_000_000_000_000 (100 tGBP, 18 decimals)
 ```
 
-**Receiving 50 TGBP from Ethereum:**
+**Receiving 50 tGBP from Ethereum:**
 ```
-Input:  50_000_000 (50 TGBP, 6 decimals)
-Scale:  No conversion (6 decimals = 6 decimals)
-Output: 50_000_000 (50 TGBP, 6 decimals)
+Input:  50_000_000_000_000_000_000 (50 tGBP, 18 decimals)
+Scale:  No conversion (18 decimals = 18 decimals)
+Output: 50_000_000_000_000_000_000 (50 tGBP, 18 decimals)
 ```
 
 ### Example: XCAV (12 → 18 decimals)
@@ -210,7 +214,7 @@ Output: 50_000_000_000_000 (50 XCAV, 12 decimals)
 
 ### Precision Loss Warning
 
-⚠️ **Critical:** When converting from higher to lower precision, fractional amounts are lost!
+**Critical:** When converting from higher to lower precision, fractional amounts are lost!
 
 **Example: Hypothetical token with conversion 18 → 6**
 
@@ -218,7 +222,7 @@ Output: 50_000_000_000_000 (50 XCAV, 12 decimals)
 Input:  1_000_001_500_000_000_000 (1.000001500000 TOKEN, 18 decimals)
 Scale:  / 10^(18-6) = / 10^12
 Output: 1_000_001 (1.000001 TOKEN, 6 decimals)
-⚠️ Lost 0.000000500000 TOKEN due to precision truncation!
+Lost 0.000000500000 TOKEN due to precision truncation!
 ```
 
 **Best Practice:** Maintain consistent decimals across chains to avoid conversion and potential precision loss.
@@ -281,6 +285,7 @@ Choose timeout values considering:
 Only register trusted gateway contracts:
 
 ```rust
+// pallet-token-gateway: set_token_gateway_addresses
 // Verify contract addresses before registration
 let verified_addresses = vec![
     // Ethereum mainnet TokenGateway (verified by Hyperbridge team)
@@ -336,7 +341,7 @@ ensure!(converted_amount >= dest_min?, "Below destination minimum");
 Token Gateway uses FRAME's built-in reentrancy protection, but be aware:
 
 ```rust
-// Calls are protected by FRAME
+// pallet-token-gateway: Calls are protected by FRAME
 #[pallet::call]
 impl<T: Config> Pallet<T> {
     #[pallet::weight(...)]
@@ -352,7 +357,7 @@ impl<T: Config> Pallet<T> {
 Monitor events for anomalies:
 
 ```rust
-// Watch for unexpected patterns
+// pallet-token-gateway events
 match event {
     Event::AssetTeleported { amount, .. } if amount > threshold => {
         // Alert: Large transfer detected
@@ -390,19 +395,19 @@ match event {
    ```rust
    // Good
    const TGBP_ASSET_ID: u32 = 1;
-   const TGBP_DECIMALS: u8 = 6;
+   const TGBP_DECIMALS: u8 = 18;
 
    // Bad
    const A1: u32 = 1;
-   const D: u8 = 6;
+   const D: u8 = 18;
    ```
 
 4. **Document Precision Decisions**
    ```rust
-   /// TGBP precision mapping:
-   /// - Ethereum (native): 6 decimals
-   /// - Xcavate: 6 decimals (matches native)
-   /// - Polygon: 6 decimals (matches native)
+   /// tGBP precision mapping:
+   /// - Ethereum (native): 18 decimals
+   /// - Xcavate: 18 decimals (matches native)
+   /// - Polygon: 18 decimals (matches native)
    /// No conversion needed between chains
    ```
 

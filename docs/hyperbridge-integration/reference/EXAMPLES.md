@@ -4,7 +4,7 @@ Practical examples and solutions to common issues.
 
 **Navigation:**
 - [← Back to Index](./README.md)
-- [← Technical Reference](./TECHNICAL_REFERENCE.md)
+- [← Custody & Precision](./CUSTODY_AND_PRECISION.md)
 - [Asset Registration](./ASSET_REGISTRATION.md)
 - [Transfer Flows](./TRANSFER_FLOWS.md)
 
@@ -12,23 +12,251 @@ Practical examples and solutions to common issues.
 
 ## Table of Contents
 
-1. [Example 1: Registering XCAV for Ethereum Bridge](#example-1-registering-xcav-for-ethereum-bridge)
-2. [Example 2: Sending XCAV to Ethereum](#example-2-sending-xcav-to-ethereum)
-3. [Example 3: Receiving TGBP from Ethereum](#example-3-receiving-tgbp-from-ethereum)
-4. [Example 4: Cross-Chain Contract Call](#example-4-cross-chain-contract-call)
-5. [Common Issues & Solutions](#common-issues--solutions)
-6. [Debugging Checklist](#debugging-checklist)
+1. [Example 1: Registering tGBP on Xcavate (One-Time Setup)](#example-1-registering-tgbp-on-xcavate-one-time-setup)
+2. [Example 2: Sending tGBP from Ethereum to Xcavate](#example-2-sending-tgbp-from-ethereum-to-xcavate)
+3. [Example 3: Sending tGBP from Xcavate back to Ethereum](#example-3-sending-tgbp-from-xcavate-back-to-ethereum)
+4. [Example 4: Registering XCAV for Ethereum Bridge](#example-4-registering-xcav-for-ethereum-bridge)
+5. [Example 5: Cross-Chain Contract Call](#example-5-cross-chain-contract-call)
+6. [Common Issues & Solutions](#common-issues--solutions)
+7. [Debugging Checklist](#debugging-checklist)
 
 ---
 
-## Example 1: Registering XCAV for Ethereum Bridge
+## Example 1: Registering tGBP on Xcavate (One-Time Setup)
 
-Complete step-by-step guide to enable XCAV bridging to Ethereum.
+Before tGBP can be received from Ethereum, it must be registered on Xcavate. This is a one-time governance operation.
+
+### Step 1: Register Ethereum Gateway Address
+
+```rust
+// pallet_token_gateway extrinsic (requires Root origin)
+let ethereum_gateway = hex!("Fd413e3AFe560182C4471F4d143A96d3e259B6dE");
+
+TokenGateway::set_token_gateway_addresses(
+    RuntimeOrigin::root(),
+    BTreeMap::from([
+        (StateMachine::Evm(1), ethereum_gateway.to_vec()),
+    ])
+)?;
+```
+
+### Step 2: Create tGBP Asset
+
+```rust
+// pallet_assets extrinsic
+Assets::create(
+    RuntimeOrigin::root(),
+    1,                    // Asset ID
+    treasury_account(),   // Admin account
+    1,                    // Minimum balance (1 unit in 18 decimals)
+)?;
+
+Assets::set_metadata(
+    RuntimeOrigin::signed(admin()),
+    1,
+    b"Tokenised GBP".to_vec(),
+    b"tGBP".to_vec(),
+    18,  // Same decimals as Ethereum
+)?;
+```
+
+### Step 3: Register with Token Gateway
+
+```rust
+// pallet_token_gateway extrinsic
+let tgbp_registration = AssetRegistration {
+    local_id: 1,
+    native: false,  // tGBP originates from Ethereum, not Xcavate
+
+    reg: GatewayAssetRegistration {
+        symbol: "tGBP".as_bytes().to_vec(),
+        name: "Tokenised GBP".as_bytes().to_vec(),
+        chains: vec![StateMachine::Evm(1)],  // Ethereum mainnet
+        minimum_balance: Some(1),
+    },
+
+    precision: BTreeMap::from([
+        (StateMachine::Evm(1), 18),  // 18 decimals on Ethereum
+    ]),
+};
+
+TokenGateway::create_erc6160_asset(
+    RuntimeOrigin::root(),
+    tgbp_registration
+)?;
+```
+
+### Verify Registration
+
+```rust
+// Check storage mappings
+let asset_id = keccak256(b"tGBP");
+let local_id = LocalAssets::<Runtime>::get(asset_id);
+assert_eq!(local_id, Some(1));
+
+let precision = Precisions::<Runtime>::get(1, StateMachine::Evm(1));
+assert_eq!(precision, Some(18));
+
+let is_native = NativeAssets::<Runtime>::get(1);
+assert_eq!(is_native, Some(false));  // false = bridged asset (mint/burn model)
+```
+
+---
+
+## Example 2: Sending tGBP from Ethereum to Xcavate
+
+This is the primary use case: bridging tGBP tokens from Ethereum to Xcavate.
+
+> **Prerequisites:** tGBP must be registered on Xcavate first. See [Example 1](#example-1-registering-tgbp-on-xcavate-one-time-setup).
+
+### Step 1: Approve TokenGateway to Spend tGBP
+
+```javascript
+const { ethers } = require('ethers');
+
+// Connect to Ethereum
+const provider = new ethers.JsonRpcProvider(process.env.ETHEREUM_RPC);
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+
+// tGBP contract on Ethereum Mainnet
+const TGBP_ADDRESS = '0x27f6c8289550fCE67f6B50BeD1F519966aFE5287';
+const TOKEN_GATEWAY = '0xFd413e3AFe560182C4471F4d143A96d3e259B6dE';
+
+const tgbp = new ethers.Contract(TGBP_ADDRESS, [
+    'function approve(address spender, uint256 amount) returns (bool)',
+    'function allowance(address owner, address spender) view returns (uint256)'
+], wallet);
+
+// Approve 100 tGBP (18 decimals)
+const amount = ethers.parseUnits('100', 18);
+const approveTx = await tgbp.approve(TOKEN_GATEWAY, amount);
+await approveTx.wait();
+console.log('Approved TokenGateway to spend tGBP');
+```
+
+### Step 2: Call teleport() on TokenGateway
+
+```javascript
+const TOKEN_GATEWAY_ABI = [
+    'function teleport((uint256 amount, uint256 relayerFee, bytes32 assetId, bool redeem, bytes32 to, bytes dest, uint64 timeout, uint256 nativeCost, bytes data) params) payable'
+];
+
+const tokenGateway = new ethers.Contract(TOKEN_GATEWAY, TOKEN_GATEWAY_ABI, wallet);
+
+// Xcavate recipient (32-byte Substrate account)
+const recipientAccountId = '0x...'; // Your Xcavate account in hex
+
+// Asset ID = keccak256("tGBP")
+const assetId = ethers.keccak256(ethers.toUtf8Bytes('tGBP'));
+
+const teleportParams = {
+    amount: ethers.parseUnits('100', 18),  // 100 tGBP
+    relayerFee: 0,                          // Hyperbridge relays for free
+    assetId: assetId,
+    redeem: false,                          // false = mint wrapped tokens on destination
+    to: recipientAccountId,                 // 32-byte Xcavate account
+    dest: ethers.toUtf8Bytes('POLKADOT-4683'), // Xcavate parachain ID
+    timeout: 3600,                          // 1 hour timeout
+    nativeCost: 0,
+    data: '0x'
+};
+
+const tx = await tokenGateway.teleport(teleportParams);
+const receipt = await tx.wait();
+console.log('Teleport initiated:', receipt.hash);
+```
+
+### What Happens
+
+**On Ethereum:**
+1. 100 tGBP locked in TokenGateway contract
+2. ISMP message dispatched with commitment hash
+3. Event emitted: `AssetTeleported`
+
+**Via Hyperbridge (~20-30 minutes):**
+1. Waits for Ethereum finalization (~15 minutes)
+2. Generates consensus proof
+3. Relayers deliver message to Xcavate
+
+**On Xcavate:**
+1. `pallet_token_gateway::on_accept()` processes the message
+2. 100 tGBP minted to recipient (18 decimals)
+3. Event emitted: `AssetReceived`
+
+### Verify Receipt on Xcavate
+
+```javascript
+// Using Polkadot API
+const balance = await api.query.assets.account(1, recipientAddress);
+console.log(`tGBP balance: ${balance.unwrap().balance.toString()}`);
+// Expected: 100_000_000_000_000_000_000 (100 tGBP with 18 decimals)
+```
+
+---
+
+## Example 3: Sending tGBP from Xcavate back to Ethereum
+
+Send tGBP tokens from Xcavate back to Ethereum (burn on Xcavate, unlock on Ethereum).
+
+### Prepare Parameters
+
+```rust
+// Ethereum recipient address (20 bytes, left-padded to 32 bytes)
+let eth_recipient = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 12 zero bytes padding
+    0xd8, 0xda, 0x6b, 0xf2, 0x69, 0x64,  // Ethereum address bytes
+    0xaf, 0x9d, 0x7e, 0xed, 0x9e, 0x03,
+    0xe5, 0x34, 0x15, 0xd3, 0x7a, 0xa9,
+    0x60, 0x45,
+];
+
+let params = TeleportParams {
+    asset_id: 1,  // tGBP local asset ID
+    destination: StateMachine::Evm(1),  // Ethereum mainnet
+    recepient: H256::from(eth_recipient),
+    amount: 50_000_000_000_000_000_000,  // 50 tGBP (18 decimals)
+    timeout: 3600,  // 1 hour
+    token_gateway: hex!("Fd413e3AFe560182C4471F4d143A96d3e259B6dE").to_vec(),
+    relayer_fee: 0,
+    call_data: None,
+    redeem: true,  // true = unlock native ERC20 on Ethereum
+};
+```
+
+### Execute Transfer
+
+```rust
+// pallet_token_gateway extrinsic
+TokenGateway::teleport(
+    RuntimeOrigin::signed(alice()),
+    params
+)?;
+```
+
+### What Happens
+
+**On Xcavate:**
+1. 50 tGBP burned from sender's account (mint/burn model for bridged assets)
+2. ISMP message dispatched to Ethereum
+3. Event emitted: `AssetTeleported`
+
+**On Ethereum:**
+1. TokenGateway contract receives verified message
+2. 50 tGBP unlocked from custody and transferred to recipient
+3. Event emitted: `AssetReceived`
+
+> **Note:** `redeem: true` is used because we want to receive the native ERC20 token on Ethereum, not a wrapped version.
+
+---
+
+## Example 4: Registering XCAV for Ethereum Bridge
+
+Enable XCAV (Xcavate's native token) to be bridged to Ethereum.
 
 ### Step 1: Set Up Ethereum Gateway Address
 
 ```rust
-// Ethereum mainnet TokenGateway contract (deployed by Hyperbridge)
+// pallet_token_gateway extrinsic
 let ethereum_gateway = hex!("Fd413e3AFe560182C4471F4d143A96d3e259B6dE");
 
 let addresses = BTreeMap::from([
@@ -44,19 +272,20 @@ TokenGateway::set_token_gateway_addresses(
 ### Step 2: Register XCAV
 
 ```rust
+// pallet_token_gateway extrinsic
 let xcav_registration = AssetRegistration {
-    local_id: 0, // NativeAssetId for XCAV
-    native: true, // XCAV originates from Xcavate
+    local_id: 0,     // NativeAssetId for XCAV
+    native: true,    // XCAV originates from Xcavate
 
     reg: GatewayAssetRegistration {
         symbol: "XCAV".as_bytes().to_vec(),
         name: "Xcavate".as_bytes().to_vec(),
-        chains: vec![StateMachine::Evm(1)], // Ethereum mainnet
-        minimum_balance: 1_000_000_000, // 0.001 XCAV (12 decimals)
+        chains: vec![StateMachine::Evm(1)],
+        minimum_balance: Some(1_000_000_000),  // 0.001 XCAV (12 decimals)
     },
 
     precision: BTreeMap::from([
-        (StateMachine::Evm(1), 18), // ERC20 standard on Ethereum
+        (StateMachine::Evm(1), 18),  // ERC20 standard on Ethereum
     ]),
 };
 
@@ -69,171 +298,27 @@ TokenGateway::create_erc6160_asset(
 ### Step 3: Verify Registration
 
 ```rust
-// Verify storage
 let asset_id = keccak256(b"XCAV");
 let local_id = LocalAssets::<Runtime>::get(asset_id);
 assert_eq!(local_id, Some(0), "XCAV should map to asset ID 0");
 
-// Verify precision
 let precision = Precisions::<Runtime>::get(0, StateMachine::Evm(1));
 assert_eq!(precision, Some(18), "XCAV should have 18 decimals on Ethereum");
 
-// Verify custody model
 let is_native = NativeAssets::<Runtime>::get(0);
 assert_eq!(is_native, Some(true), "XCAV should be marked as native");
 ```
 
 ### Result
 
-- ✅ XCAV can now be bridged to Ethereum
-- ✅ ERC6160 contract deployed on Ethereum by Hyperbridge
-- ✅ Gateway asset ID: `keccak256("XCAV")`
-- ✅ Uses custody model (locks XCAV on Xcavate)
+- XCAV can now be bridged to Ethereum
+- ERC6160 contract deployed on Ethereum by Hyperbridge
+- Uses **custody model** (locks XCAV on Xcavate, mints wrapped on Ethereum)
+- Precision conversion: 12 decimals (Xcavate) → 18 decimals (Ethereum)
 
 ---
 
-## Example 2: Sending XCAV to Ethereum
-
-Send 1000 XCAV from Xcavate to an Ethereum address.
-
-### Prepare Parameters
-
-```rust
-// Ethereum recipient address (20 bytes, left-padded to 32 bytes)
-let eth_recipient = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 12 zero bytes padding
-    0xd8, 0xda, 0x6b, 0xf2, 0x69, 0x64, // Ethereum address
-    0xaf, 0x9d, 0x7e, 0xed, 0x9e, 0x03,
-    0xe5, 0x34, 0x15, 0xd3, 0x7a, 0xa9,
-    0x60, 0x45,
-];
-
-let params = TeleportParams {
-    asset_id: 0, // XCAV
-    destination: StateMachine::Evm(1), // Ethereum mainnet
-    recepient: H256::from(eth_recipient),
-    amount: 1_000_000_000_000_000, // 1000 XCAV (12 decimals)
-    timeout: 7200, // 2 hours
-    token_gateway: hex!("Fd413e3AFe560182C4471F4d143A96d3e259B6dE").to_vec(),
-    relayer_fee: 0, // Hyperbridge will relay
-    call_data: None,
-    redeem: false,
-};
-```
-
-### Execute Transfer
-
-```rust
-// Call from Alice's account
-TokenGateway::teleport(
-    RuntimeOrigin::signed(alice()),
-    params
-)?;
-```
-
-### What Happens
-
-**On Xcavate:**
-1. 1000 XCAV locked in `TokenGateway::pallet_account()`
-2. Amount converted: `1_000_000_000_000_000 * 10^6 = 1_000_000_000_000_000_000_000` (18 decimals)
-3. Request dispatched to Hyperbridge
-4. Event emitted: `AssetTeleported`
-
-**Via Hyperbridge:**
-1. Observes Xcavate state commitment
-2. Generates consensus proof
-3. Relayers pick up message
-
-**On Ethereum:**
-1. Token Gateway contract receives message
-2. Verifies proof via Hyperbridge
-3. Mints 1000 XCAV (18 decimals) to recipient
-4. Event emitted: `AssetReceived`
-
----
-
-## Example 3: Receiving TGBP from Ethereum
-
-Receive TGBP tokens sent from Ethereum.
-
-### One-Time Setup
-
-#### Create TGBP Asset on Xcavate
-
-```rust
-// Create asset with 6 decimals (same as Ethereum)
-Assets::create(
-    RuntimeOrigin::root(),
-    1, // Asset ID
-    treasury_account(),
-    1, // Min balance in 6 decimals
-)?;
-
-Assets::set_metadata(
-    RuntimeOrigin::signed(admin()),
-    1,
-    b"Tokenised GBP".to_vec(),
-    b"TGBP".to_vec(),
-    6, // Same decimals as Ethereum
-)?;
-```
-
-#### Register with Token Gateway
-
-```rust
-let tgbp_registration = AssetRegistration {
-    local_id: 1,
-    native: false, // TGBP originates from Ethereum
-
-    reg: GatewayAssetRegistration {
-        symbol: "TGBP".as_bytes().to_vec(),
-        name: "Tokenised GBP".as_bytes().to_vec(),
-        chains: vec![StateMachine::Evm(1)],
-        minimum_balance: 1, // Minimum in 6 decimals
-    },
-
-    precision: BTreeMap::from([
-        (StateMachine::Evm(1), 6), // 6 decimals on Ethereum
-    ]),
-};
-
-TokenGateway::create_erc6160_asset(
-    RuntimeOrigin::root(),
-    tgbp_registration
-)?;
-```
-
-### Receiving Transfer
-
-When a user sends TGBP from Ethereum:
-
-**Ethereum Side:**
-```javascript
-// User calls TokenGateway.teleport() on Ethereum
-// Locks 500 TGBP (500_000_000 with 6 decimals)
-// Message sent through Hyperbridge
-```
-
-**Xcavate Side:**
-```rust
-// Automatic processing via on_accept handler
-// 1. Message decoded: 500_000_000 (6 decimals)
-// 2. No conversion needed (6 decimals = 6 decimals)
-// 3. 500 TGBP minted to recipient
-// 4. Event emitted: AssetReceived
-```
-
-### Verify Receipt
-
-```rust
-// Check balance
-let balance = Assets::balance(1, &alice()); // Asset 1 = TGBP
-assert_eq!(balance, 500_000_000); // 500 TGBP in 6 decimals
-```
-
----
-
-## Example 4: Cross-Chain Contract Call
+## Example 5: Cross-Chain Contract Call
 
 Execute arbitrary logic on destination chain along with asset transfer.
 
@@ -248,20 +333,20 @@ Send 1000 XCAV to another parachain AND automatically transfer 100 XCAV to Bob.
 let call = RuntimeCall::Balances(
     pallet_balances::Call::transfer_keep_alive {
         dest: bob().into(),
-        value: 100_000_000_000_000, // 100 XCAV
+        value: 100_000_000_000_000,  // 100 XCAV (12 decimals)
     }
 );
 
 let substrate_calldata = SubstrateCalldata {
-    signature: None, // Or include signature for verification
+    signature: None,  // Or include signature for verification
     runtime_call: call.encode(),
 };
 
 let params = TeleportParams {
     asset_id: 0,
-    destination: StateMachine::Kusama(4683), // Another parachain
+    destination: StateMachine::Polkadot(1000),  // Another parachain
     recepient: alice_h256(),
-    amount: 1_000_000_000_000_000, // 1000 XCAV
+    amount: 1_000_000_000_000_000,  // 1000 XCAV (12 decimals)
     timeout: 3600,
     token_gateway: dest_gateway_address,
     relayer_fee: 0,
@@ -367,7 +452,7 @@ Update precision configuration to match actual decimals on each chain.
 **Debug:**
 ```rust
 // Check if asset is registered
-let gateway_asset_id = keccak256(b"SYMBOL");
+let gateway_asset_id = keccak256(b"tGBP");
 let local_id = LocalAssets::<Runtime>::get(gateway_asset_id);
 
 match local_id {
@@ -425,13 +510,13 @@ TokenGateway::set_token_gateway_addresses(
 ```rust
 // Asset registration requires Root origin
 TokenGateway::create_erc6160_asset(
-    RuntimeOrigin::root(), // ← Must be root
+    RuntimeOrigin::root(),  // Must be root
     registration
 )?;
 
 // Regular transfers use Signed origin
 TokenGateway::teleport(
-    RuntimeOrigin::signed(alice()), // ← Use signed origin
+    RuntimeOrigin::signed(alice()),  // Use signed origin
     params
 )?;
 ```
@@ -450,7 +535,7 @@ TokenGateway::teleport(
 Balances::transfer(
     RuntimeOrigin::signed(treasury()),
     alice().into(),
-    1_000_000_000_000_000, // 1000 XCAV
+    1_000_000_000_000_000,  // 1000 XCAV (12 decimals)
 )?;
 
 // Or use faucet (testnet only)
@@ -587,9 +672,9 @@ api.query.system.events((events) => {
 
 ## Next Steps
 
-- **Understand custody models:** [Technical Reference](./TECHNICAL_REFERENCE.md)
+- **Understand custody models:** [Custody & Precision](./CUSTODY_AND_PRECISION.md)
 - **Learn about registration:** [Asset Registration](./ASSET_REGISTRATION.md)
 - **See transfer mechanics:** [Transfer Flows](./TRANSFER_FLOWS.md)
-- **Complete guide for ERC20:** [Bridging ERC20 Guide](./BRIDGING_ERC20_GUIDE.md)
+- **Complete guide for ERC20:** [Main Bridging Guide](../BRIDGING_ERC20.md)
 
 [← Back to Index](./README.md)

@@ -23,6 +23,28 @@ pub mod currency {
     }
 }
 
+/// Well-known asset identifiers from Assets used across the runtime.
+pub mod known_assets {
+    /// Decimals of the native currency XCAV.
+    pub const NATIVE_DECIMALS: u8 = 12;
+
+    /// AssetId in `pallet-assets` reserved to represent the native currency.
+    /// Defined as u32 to match Assets::AssetId.
+    pub const NATIVE_ASSET_ID: u32 = 0;
+
+    /// AssetId in `pallet-assets` reserved to represent the bridged tGBP asset.
+    /// Defined as u32 to match Assets::AssetId.
+    pub const TGBP_ASSET_ID: u32 = 1;
+}
+
+/// Well-known pallet identifiers used across the runtime.
+pub mod pallet_ids {
+    use frame_support::PalletId;
+
+    /// Temporary definition of treasury `PalletId` until `pallet_treasury` is present in the runtime.
+    pub const TREASURY: PalletId = PalletId(*b"py/trsry");
+}
+
 pub const P_FACTOR: u128 = 10;
 pub const Q_FACTOR: u128 = 100;
 pub const POLY_DEGREE: u8 = 1;
