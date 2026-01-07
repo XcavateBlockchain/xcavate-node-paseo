@@ -2,7 +2,9 @@
   "name": "Xcavate",
   "id": "xcavate",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+    "/ip4/54.217.236.182/tcp/30333/p2p/12D3KooWJuUcNLbwCDxgJUnYHV4wDEpGkEz28b1EmaF3VwRs3MKs"
+  ],
   "telemetryEndpoints": null,
   "protocolId": "xcavate-chain",
   "properties": {
