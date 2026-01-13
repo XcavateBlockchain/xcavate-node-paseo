@@ -1,8 +1,12 @@
 /**
  * Verify Token Registration on Ethereum TokenGateway (Sepolia)
  *
- * This script checks if WETH (or other token) is properly registered
+ * This script checks if USD.h (or other token) is properly registered
  * on the TokenGateway contract on Sepolia.
+ *
+ * Note: A token can be registered under either the erc20() or erc6160() mapping:
+ * - erc20: Native ERC-20 tokens
+ * - erc6160: ERC6160 tokens or ERC-20/ERC6160 dual-standard tokens
  *
  * Usage: node verify-registration.js
  */
@@ -12,11 +16,11 @@ const fs = require('fs');
 const path = require('path');
 
 // ============================================================================
-// CONSTANTS - Token Information (WETH for Sepolia testing)
+// CONSTANTS - Token Information (USD.h for Sepolia testing)
 // ============================================================================
 const TOKEN_INFO = {
-    name: 'Wrapped Ether',
-    symbol: 'WETH',
+    name: 'USD.h',
+    symbol: 'USD.h',
     decimals: 18
 };
 
@@ -127,36 +131,26 @@ async function verifyRegistration() {
 
         // Summary
         console.log('='.repeat(80));
-        console.log('VERIFICATION SUMMARY');
+        console.log('TOKEN GATEWAY STATE');
         console.log('='.repeat(80));
         console.log();
+        console.log('Registration State:');
+        console.log(`  - ERC20:   ${erc20Address}`);
+        console.log(`  - ERC6160: ${erc6160Address}`);
+        console.log();
+        console.log('Please verify this state matches your expectations.');
+        console.log();
 
-        const fullyRegistered = isERC20Registered && isERC6160Deployed;
+        // Token is registered if EITHER erc20 OR erc6160 has an address
+        const isRegistered = isERC20Registered || isERC6160Deployed;
 
-        if (fullyRegistered) {
-            console.log('✓ SUCCESS: Token is fully registered and ready for bridging!');
-            console.log();
-            console.log('Details:');
-            console.log(`  - Native ERC20: ${erc20Address}`);
-            console.log(`  - ERC6160 Wrapper: ${erc6160Address}`);
-            console.log();
-            console.log('Next Steps:');
-            console.log('  - Users can now approve and teleport tokens from Ethereum to Xcavate');
-            console.log('  - Verify the ERC20 contract has correct decimals (should be 18)');
-            console.log('  - Test with a small amount first');
+        if (isRegistered) {
+            console.log('The token has at least one address registered on the TokenGateway.');
+            console.log('If this is the expected state, the token is ready for bridging.');
         } else {
-            console.log('✗ INCOMPLETE: Token registration is not complete');
+            console.log('Neither ERC20 nor ERC6160 address is registered for this token.');
             console.log();
-            console.log('Status:');
-            console.log(`  - ERC20 Registered: ${isERC20Registered ? 'YES' : 'NO'}`);
-            console.log(`  - ERC6160 Wrapper: ${isERC6160Deployed ? 'YES' : 'NO'}`);
-            console.log();
-            console.log('Possible Reasons:');
-            console.log('  1. Cross-chain message from Xcavate is still pending (~15-20 minutes)');
-            console.log('  2. create_erc6160_asset was not called on Xcavate yet');
-            console.log('  3. The registration failed - check Hyperbridge explorer');
-            console.log();
-            console.log('What to do:');
+            console.log('If registration is pending:');
             console.log('  - Wait 15-20 minutes after calling create_erc6160_asset on Xcavate');
             console.log('  - Run this script again to check status');
             console.log('  - Check Hyperbridge explorer for message status');

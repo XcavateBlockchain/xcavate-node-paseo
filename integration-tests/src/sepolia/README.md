@@ -15,17 +15,17 @@ npm install ethers @polkadot/util-crypto
 - `tokenGateway.abi` - TokenGateway contract ABI
 - `endpoints` - List of Sepolia RPC endpoints
 
-## Test Token: WETH
+## Test Token: USD.h
 
-For Sepolia testing, we use **WETH (Wrapped Ether)** which is readily available on the testnet.
+For Sepolia testing, we use **USD.h** which has been successfully tested for bridging to Xcavate.
 
 | Token | Address | Decimals | Asset ID |
 |-------|---------|----------|----------|
-| WETH | [`0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14`](https://sepolia.etherscan.io/address/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14) | 18 | `0x0f8a193ff464434486c0daf7db2a895884365d2bc84ba47a68fcf89c1b14b5b8` |
+| USD.h | [`0xa801da100bf16d07f668f4a49e1f71fc54d05177`](https://sepolia.etherscan.io/address/0xa801da100bf16d07f668f4a49e1f71fc54d05177) | 18 | `0x829f01563df2ff9752a529f62c33a4b03b805da1e1dfc748127d6d37795d7257` |
 
-The Asset ID is `keccak256("WETH")` and is used to identify the token on the TokenGateway contract.
+The Asset ID is `keccak256("USD.h")` and is used to identify the token on the TokenGateway contract.
 
-**Note:** On Ethereum Mainnet, tGBP (Tokenised GBP) is the primary bridged asset with Asset ID `0x99bb6e8574d7a5293a476638667ca3492c7e3f9ae2f5a47457f96c3c5c7fc843`. See the main documentation at `/docs/ismp-token-gateway/` for mainnet examples.
+**Alternative:** WETH (Wrapped Ether) at `0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14` can also be used for testing if registered.
 
 ## Contract Addresses (Sepolia - Gargantua V3)
 
@@ -58,17 +58,17 @@ npm run teleport
 PRIVATE_KEY=0x... npm run teleport:execute
 ```
 
-**Default Configuration (WETH):**
+**Default Configuration (USD.h):**
 ```javascript
 const CONFIG = {
     token: {
-        symbol: 'WETH',
-        address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14',
+        symbol: 'USD.h',
+        address: '0xa801da100bf16d07f668f4a49e1f71fc54d05177',
         decimals: 18,
     },
-    amount: '0.001',           // Amount to bridge (0.001 WETH)
+    amount: '10',              // Amount to bridge (10 USD.h)
     recipient: '5Grwva...',    // Xcavate SS58 address
-    destination: 'PASEO-4683', // Xcavate on Paseo
+    destination: 'KUSAMA-4683', // Xcavate testnet (para ID 4683)
     timeout: 3600,             // 1 hour
 };
 ```
@@ -80,14 +80,16 @@ const CONFIG = {
 
 ### verify-registration.js
 
-Verifies that WETH (or other token) is properly registered on the TokenGateway contract.
+Verifies that USD.h (or other token) is properly registered on the TokenGateway contract.
 
-**Default Token:** WETH (Wrapped Ether) - 18 decimals
+**Default Token:** USD.h - 18 decimals
 
 **What it checks:**
-1. ERC20 token registration
-2. ERC6160 wrapper deployment
+1. ERC20 token registration (via `erc20()` mapping)
+2. ERC6160 token registration (via `erc6160()` mapping)
 3. Overall registration status
+
+A token is considered registered if it appears in either the `erc20()` or `erc6160()` mapping.
 
 **Usage:**
 ```bash
@@ -125,7 +127,7 @@ npm run calc-asset-id -- WETH
 | Network | Sepolia Testnet |
 | Chain ID | 11155111 |
 | Block Explorer | https://sepolia.etherscan.io |
-| Destination | `PASEO-4683` |
+| Destination | `KUSAMA-4683` |
 
 ## Troubleshooting
 
