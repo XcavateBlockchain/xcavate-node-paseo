@@ -24,8 +24,9 @@ Complete guide for bridging existing ERC-20 tokens from Ethereum to the Xcavate 
    - [Xcavate → Ethereum](#xcavate--ethereum)
    - [Timeline](#timeline)
 5. [Working Example: tGBP](#working-example-tgbp)
-6. [Troubleshooting](#troubleshooting)
-7. [Reference](#reference)
+6. [Working Example: USD.h (Sepolia Testnet)](#working-example-usdh-sepolia-testnet)
+7. [Troubleshooting](#troubleshooting)
+8. [Reference](#reference)
 
 ---
 
@@ -250,7 +251,7 @@ TokenGateway::create_erc6160_asset(
             symbol: b"tGBP".to_vec(),  // Must match ERC-20 exactly
             name: b"Tokenised GBP".to_vec(),
             chains: vec![StateMachine::Evm(1)],  // Ethereum Mainnet
-            minimum_balance: Some(1),
+            minimum_balance: None,
         },
 
         // ERC-20 decimals on each source chain
@@ -299,9 +300,11 @@ tokenGateway.precisions(1, Evm(1)) → Some(18)  // 18 decimals on Mainnet
 **On Ethereum:**
 ```javascript
 const assetId = ethers.keccak256(ethers.toUtf8Bytes('tGBP'));
-const erc20 = await tokenGateway.erc20(assetId);    // Original tGBP address
-const erc6160 = await tokenGateway.erc6160(assetId); // Wrapper address
+const erc20 = await tokenGateway.erc20(assetId);    // ERC-20 address (if registered)
+const erc6160 = await tokenGateway.erc6160(assetId); // ERC6160 address (if registered)
 ```
+
+A token is considered registered on the TokenGateway if it has an address in either the `erc20()` or `erc6160()` mapping. The specific mapping used depends on the token type and how it was registered.
 
 ---
 
@@ -324,7 +327,7 @@ await tokenGateway.teleport({
     assetId: ethers.keccak256(ethers.toUtf8Bytes('tGBP')),
     redeem: false,
     to: recipientAccountId,  // 32-byte Substrate account
-    dest: ethers.toUtf8Bytes('PASEO-4683'),
+    dest: ethers.toUtf8Bytes('KUSAMA-4683'),
     timeout: 3600,
     nativeCost: 0,
     data: '0x'
@@ -373,6 +376,78 @@ TokenGateway::teleport(
 | Relay | ~1-2 min | Relayer delivers to Xcavate |
 | Processing | ~12 sec | Xcavate mints tokens |
 | **Total** | **~20-30 min** | |
+
+---
+
+## Working Example: USD.h (Sepolia Testnet)
+
+This example demonstrates a successful bridge transfer of 10 USD.h from Ethereum Sepolia to Xcavate testnet.
+
+### Token Info
+
+| Property | Sepolia Testnet |
+|----------|-----------------|
+| Contract | [`0xa801da100bf16d07f668f4a49e1f71fc54d05177`](https://sepolia.etherscan.io/address/0xa801da100bf16d07f668f4a49e1f71fc54d05177) |
+| Symbol | USD.h |
+| Decimals | 18 |
+| Asset ID | `0x829f01563df2ff9752a529f62c33a4b03b805da1e1dfc748127d6d37795d7257` |
+
+The Asset ID is computed as `keccak256("USD.h")`.
+
+### Reference Transaction
+
+A successful teleport transaction can be found here:
+[`0x68b6f0e6850550fcc5100b50f01b83aa93d898609e749e08a2d4635c12752134`](https://sepolia.etherscan.io/tx/0x68b6f0e6850550fcc5100b50f01b83aa93d898609e749e08a2d4635c12752134)
+
+### Teleport Parameters Used
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `amount` | `10000000000000000000` | 10 USD.h (18 decimals) |
+| `relayerFee` | `0` | No relayer fee |
+| `assetId` | `0x829f01563df2ff9752a529f62c33a4b03b805da1e1dfc748127d6d37795d7257` | keccak256("USD.h") |
+| `redeem` | `false` | Mint on destination |
+| `to` | `0x36185119e347676ff4eb6041ae90d638f6213cd471c53ced8a52ccb8fa84bc32` | Recipient (bytes32) |
+| `dest` | `0x4b5553414d412d34363833` | "KUSAMA-4683" encoded |
+| `timeout` | `3600` | 1 hour |
+| `nativeCost` | `0` | No native cost |
+| `data` | `0x` | Empty |
+
+### Reproducing This Transfer
+
+The transfer involves two operations:
+
+1. **Approve** - Allow the TokenGateway contract to spend your USD.h tokens
+2. **Teleport** - Call the TokenGateway to initiate the cross-chain transfer
+
+```javascript
+// 1. Approve TokenGateway to spend USD.h
+const usdh = new ethers.Contract('0xa801da100bf16d07f668f4a49e1f71fc54d05177', ERC20_ABI, wallet);
+await usdh.approve('0xFcDa26cA021d5535C3059547390E6cCd8De7acA6', ethers.parseUnits('10', 18));
+
+// 2. Teleport tokens to Xcavate
+const gateway = new ethers.Contract('0xFcDa26cA021d5535C3059547390E6cCd8De7acA6', GATEWAY_ABI, wallet);
+await gateway.teleport({
+    amount: ethers.parseUnits('10', 18),
+    relayerFee: 0n,
+    assetId: '0x829f01563df2ff9752a529f62c33a4b03b805da1e1dfc748127d6d37795d7257',
+    redeem: false,
+    to: recipientBytes32,
+    dest: ethers.toUtf8Bytes('KUSAMA-4683'),
+    timeout: 3600n,
+    nativeCost: 0n,
+    data: '0x'
+});
+```
+
+> **Note:** The integration test script handles both operations automatically. To use it:
+> ```bash
+> cd integration-tests
+> npm install
+> npm run teleport              # Preview (no transaction)
+> PRIVATE_KEY=0x... npm run teleport:execute  # Execute
+> ```
+> Edit the `CONFIG` object in `src/sepolia/teleport-erc20.js` to customize the amount or recipient.
 
 ---
 
@@ -448,7 +523,7 @@ async function bridge(wallet, amount, recipient) {
         assetId: ethers.keccak256(ethers.toUtf8Bytes('tGBP')),
         redeem: false,
         to: recipient,  // 32-byte account ID
-        dest: ethers.toUtf8Bytes('PASEO-4683'),
+        dest: ethers.toUtf8Bytes('KUSAMA-4683'),
         timeout: 3600n,
         nativeCost: 0n,
         data: '0x'

@@ -114,7 +114,7 @@ Transfers take approximately **20-30 minutes** due to Ethereum finalization time
 | Network | Token | Address | Decimals | Asset ID |
 |---------|-------|---------|----------|----------|
 | Ethereum Mainnet | tGBP | [`0x27f6c8289550fCE67f6B50BeD1F519966aFE5287`](https://etherscan.io/address/0x27f6c8289550fCE67f6B50BeD1F519966aFE5287) | 18 | `0x99bb...c843` |
-| Sepolia Testnet | WETH | [`0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14`](https://sepolia.etherscan.io/address/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14) | 18 | `0x0f8a...b5b8` |
+| Sepolia Testnet | USD.h | [`0xa801da100bf16d07f668f4a49e1f71fc54d05177`](https://sepolia.etherscan.io/address/0xa801da100bf16d07f668f4a49e1f71fc54d05177) | 18 | `0x829f...7257` |
 
 ---
 
@@ -161,7 +161,7 @@ await tokenGateway.teleport({
     amount: amount,
     assetId: ethers.keccak256(ethers.toUtf8Bytes('tGBP')),
     to: recipientAccountId,  // 32-byte Substrate account
-    dest: ethers.toUtf8Bytes('PASEO-4683'),
+    dest: ethers.toUtf8Bytes('KUSAMA-4683'),
     timeout: 3600,
     relayerFee: 0,
     redeem: false,

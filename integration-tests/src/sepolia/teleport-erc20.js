@@ -1,7 +1,7 @@
 /**
  * Teleport ERC-20 Tokens from Ethereum to Xcavate
  *
- * This script demonstrates how a user bridges ERC-20 tokens (e.g., WETH, USDC)
+ * This script demonstrates how a user bridges ERC-20 tokens (e.g., USD.h, WETH)
  * from Ethereum to Xcavate via the Hyperbridge TokenGateway.
  *
  * Prerequisites:
@@ -27,22 +27,28 @@ const path = require('path');
 // ============================================================================
 
 const CONFIG = {
-    // Token to bridge - WETH (Wrapped Ether) on Sepolia
-    // WETH is readily available on Sepolia for testing
+    // Token to bridge - USD.h on Sepolia.
+    // This token has been successfully tested for bridging to Xcavate
     token: {
-        symbol: 'WETH',
-        address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14', // WETH on Sepolia
+        symbol: 'USD.h',
+        address: '0xa801da100bf16d07f668f4a49e1f71fc54d05177',
         decimals: 18,
     },
+    // Alternative: WETH (Wrapped Ether) on Sepolia
+    // token: {
+    //     symbol: 'WETH',
+    //     address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14',
+    //     decimals: 18,
+    // },
 
     // Amount to bridge (in human-readable format)
-    amount: '0.001', // 0.001 WETH (small amount for testing)
+    amount: '10', // 10 USD.h for testing
 
     // Recipient on Xcavate (SS58 address)
-    recipient: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY', // Alice
+    recipient: '5DHdfcUJ1ms94Qn3F5RED4YKKHa2ewJpMTNr1J6JZzk4Xrpn', // Alice
 
     // Destination chain identifier for Xcavate on Paseo
-    destination: 'PASEO-4683',
+    destination: 'KUSAMA-4683',
 
     // Timeout in seconds (1 hour default)
     timeout: 3600,
@@ -209,13 +215,13 @@ async function teleportERC20() {
     console.log(`  ERC20 Address:  ${erc20Address}`);
     console.log(`  ERC6160 Address: ${erc6160Address}`);
 
-    if (erc20Address === ethers.ZeroAddress) {
+    if (erc20Address === ethers.ZeroAddress && erc6160Address === ethers.ZeroAddress) {
         console.error('\nERROR: Token is not registered on TokenGateway!');
         console.error('The token must be registered via create_erc6160_asset on Xcavate first.');
-        console.error('See: docs/ismp-token-gateway/BRIDGING_ERC20.md');
+        console.error('See: docs/hyperbridge-integration/BRIDGING_ERC20.md');
         process.exit(1);
     }
-    console.log('  Status: Token is registered');
+    console.log('  Please verify this state matches your expectations.');
     console.log();
 
     // Check balances (if we have a wallet)
