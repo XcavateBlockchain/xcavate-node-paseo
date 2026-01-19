@@ -3,7 +3,9 @@
   "id": "xcavate",
   "chainType": "Live",
   "bootNodes": [
-    "/ip4/54.217.236.182/tcp/30333/p2p/12D3KooWJuUcNLbwCDxgJUnYHV4wDEpGkEz28b1EmaF3VwRs3MKs"
+    "/ip4/54.217.236.182/tcp/30333/p2p/12D3KooWJuUcNLbwCDxgJUnYHV4wDEpGkEz28b1EmaF3VwRs3MKs",
+    "/dns4/node-7417463790969765888-0.p2p.onfinality.io/tcp/23449/ws/p2p/12D3KooWKNFhASqdGgxfGj6zevZJw8QCGfFjLuGrUcwsuW5fdvu7",
+    "/dns4/node-7417815516620468224-0.p2p.onfinality.io/tcp/24597/ws/p2p/12D3KooWPkREebrA7sisWEjvKeBKtPTvyHnYT3BvJqD8HBXfGd5X"
   ],
   "telemetryEndpoints": null,
   "protocolId": "xcavate-chain",
