@@ -116,7 +116,7 @@ impl OnRuntimeUpgrade for CreateReservedAssets {
 
         // Create Asset 1: tGBP
         if !pallet_assets::Asset::<Runtime, Instance2>::contains_key(TGBP_ASSET_ID) {
-            create_asset(TGBP_ASSET_ID, &sudo_key, TGBP_MIN_BALANCE, b"Tokenised GBP", b"tGBP", 18);
+            create_asset(TGBP_ASSET_ID, &sudo_key, TGBP_MIN_BALANCE, b"tGBP", b"tGBP", 18);
             writes += 2; // Asset + Metadata
             log::info!(
                 target: LOG_TARGET,

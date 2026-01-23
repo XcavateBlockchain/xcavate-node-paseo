@@ -54,7 +54,7 @@ Assets::create(
 Assets::set_metadata(
     RuntimeOrigin::signed(admin()),
     1,
-    b"Tokenised GBP".to_vec(),
+    b"tGBP".to_vec(),
     b"tGBP".to_vec(),
     18,  // Same decimals as Ethereum
 )?;
@@ -70,7 +70,7 @@ let tgbp_registration = AssetRegistration {
 
     reg: GatewayAssetRegistration {
         symbol: "tGBP".as_bytes().to_vec(),
-        name: "Tokenised GBP".as_bytes().to_vec(),
+        name: "tGBP".as_bytes().to_vec(),
         chains: vec![StateMachine::Evm(1)],  // Ethereum mainnet
         minimum_balance: Some(1),
     },

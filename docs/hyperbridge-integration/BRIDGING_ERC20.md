@@ -225,7 +225,7 @@ Assets::create(
 Assets::set_metadata(
     RuntimeOrigin::signed(admin),
     1,
-    b"Tokenised GBP".to_vec(),
+    b"tGBP".to_vec(),
     b"tGBP".to_vec(),
     18,  // USE SAME DECIMALS AS ETHEREUM
 )?;
@@ -249,7 +249,7 @@ TokenGateway::create_erc6160_asset(
 
         reg: GatewayAssetRegistration {
             symbol: b"tGBP".to_vec(),  // Must match ERC-20 exactly
-            name: b"Tokenised GBP".to_vec(),
+            name: b"tGBP".to_vec(),
             chains: vec![StateMachine::Evm(1)],  // Ethereum Mainnet
             minimum_balance: None,
         },
@@ -477,7 +477,7 @@ TokenGateway::set_token_gateway_addresses(
 // 2. Create asset
 Assets::create(RuntimeOrigin::root(), 1, treasury(), 1)?;
 Assets::set_metadata(RuntimeOrigin::signed(admin()), 1,
-    b"Tokenised GBP".to_vec(), b"tGBP".to_vec(), 18)?;
+    b"tGBP".to_vec(), b"tGBP".to_vec(), 18)?;
 
 // 3. Register
 TokenGateway::create_erc6160_asset(RuntimeOrigin::root(), AssetRegistration {
@@ -485,7 +485,7 @@ TokenGateway::create_erc6160_asset(RuntimeOrigin::root(), AssetRegistration {
     native: false,
     reg: GatewayAssetRegistration {
         symbol: b"tGBP".to_vec(),
-        name: b"Tokenised GBP".to_vec(),
+        name: b"tGBP".to_vec(),
         chains: vec![StateMachine::Evm(1)],  // Ethereum Mainnet
         minimum_balance: Some(1),
     },
