@@ -125,7 +125,7 @@ Transfers take approximately **20-30 minutes** due to Ethereum finalization time
 ```rust
 // 1. Create asset on Xcavate
 Assets::create(RuntimeOrigin::root(), 1, admin, 1)?;
-Assets::set_metadata(origin, 1, b"Tokenised GBP".to_vec(), b"tGBP".to_vec(), 18)?;
+Assets::set_metadata(origin, 1, b"tGBP".to_vec(), b"tGBP".to_vec(), 18)?;
 
 // 2. Register with Token Gateway
 TokenGateway::create_erc6160_asset(
@@ -135,7 +135,7 @@ TokenGateway::create_erc6160_asset(
         native: false,  // Bridged from Ethereum
         reg: GatewayAssetRegistration {
             symbol: b"tGBP".to_vec(),
-            name: b"Tokenised GBP".to_vec(),
+            name: b"tGBP".to_vec(),
             chains: vec![StateMachine::Evm(1)],  // Ethereum Mainnet
             minimum_balance: Some(1),
         },

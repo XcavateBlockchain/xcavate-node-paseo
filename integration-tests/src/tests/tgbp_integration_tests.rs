@@ -48,7 +48,7 @@ fn register_tgbp_asset() {
     assert_ok!(Assets::force_set_metadata(
         RuntimeOrigin::root(),
         TGBP_LOCAL_ASSET_ID.into(),
-        b"Tokenised GBP".to_vec(),
+        b"tGBP".to_vec(),
         b"tGBP".to_vec(),
         18,    // 18 decimals (same as on Ethereum)
         false  // is_frozen
@@ -634,7 +634,7 @@ fn invalid_precision_mapping() {
 ///
 /// **Verification Points:**
 /// - Symbol: Should be "tGBP"
-/// - Name: Should be "Tokenised GBP" (or similar)
+/// - Name: Should be "tGBP" (or similar)
 /// - Decimals: Should be 18 (matching Ethereum precision)
 ///
 /// **Why it's important:**
@@ -677,7 +677,7 @@ fn asset_metadata_after_creation() {
             // Symbol should be "tGBP"
             assert!(!symbol.is_empty(), "Symbol should be set");
 
-            // Name should be something like "Tokenised GBP"
+            // Name should be something like "tGBP"
             assert!(!name.is_empty(), "Name should be set");
 
             // Decimals should be 18 (maintains native precision)

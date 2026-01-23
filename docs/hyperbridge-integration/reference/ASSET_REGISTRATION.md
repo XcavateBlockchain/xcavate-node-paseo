@@ -210,7 +210,7 @@ AssetRegistration {
 
 ```rust
 symbol: "tGBP".as_bytes().to_vec(),  // Max 20 chars
-name: "Tokenised GBP".as_bytes().to_vec(),  // Max 20 chars
+name: "tGBP".as_bytes().to_vec(),  // Max 20 chars
 ```
 
 - Symbol is used to generate the asset ID: `keccak256(symbol)`
@@ -265,7 +265,7 @@ Assets::create(
 Assets::set_metadata(
     RuntimeOrigin::signed(admin),
     1,
-    b"Tokenised GBP".to_vec(),
+    b"tGBP".to_vec(),
     b"tGBP".to_vec(),
     18, // Same as Ethereum (no conversion)
 )?;
@@ -280,7 +280,7 @@ let tgbp_registration = AssetRegistration {
 
     reg: GatewayAssetRegistration {
         symbol: "tGBP".as_bytes().to_vec(),
-        name: "Tokenised GBP".as_bytes().to_vec(),
+        name: "tGBP".as_bytes().to_vec(),
         chains: vec![StateMachine::Evm(1)], // Ethereum mainnet
         minimum_balance: 1,
     },
