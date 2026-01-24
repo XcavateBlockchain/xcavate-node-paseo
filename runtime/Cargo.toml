@@ -37,6 +37,8 @@ pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-utility = { workspace = true }
+pallet-nfts = { workspace = true }
+pallet-assets-holder = { workspace = true }
 pallet-vesting = { workspace = true }
 sp-api = { workspace = true }
 sp-arithmetic = { workspace = true }
@@ -84,6 +86,12 @@ pallet-hyperbridge = { workspace = true }
 pallet-ismp = { workspace = true, features = ["unsigned"] }
 pallet-ismp-runtime-api = { workspace = true }
 pallet-token-gateway = { workspace = true }
+
+# Local Dependencies
+pallet-xcavate-whitelist = { workspace = true }
+pallet-education-regions = { workspace = true }
+pallet-real-x-education = { workspace = true }
+primitives = { path = "../primitives", default-features = false }
 
 [dev-dependencies]
 hex-literal = { workspace = true }
@@ -136,6 +144,8 @@ std = [
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-utility/std",
+	"pallet-nfts/std",
+	"pallet-assets-holder/std",
 	"pallet-vesting/std",
 	"pallet-xcm/std",
 	"parachain-info/std",
@@ -159,6 +169,10 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	"pallet-xcavate-whitelist/std",
+	"pallet-education-regions/std",
+	"pallet-real-x-education/std",
+	"primitives/std",
 ]
 async-backing = []
 
@@ -184,6 +198,7 @@ runtime-benchmarks = [
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-token-gateway/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
+	"pallet-nfts/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
@@ -193,6 +208,9 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 	"cumulus-pallet-weight-reclaim/runtime-benchmarks",
+	"pallet-xcavate-whitelist/runtime-benchmarks",
+	"pallet-education-regions/runtime-benchmarks",
+	"pallet-real-x-education/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -222,12 +240,17 @@ try-runtime = [
 	"pallet-token-gateway/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"pallet-utility/try-runtime",
+	"pallet-nfts/try-runtime",
+	"pallet-assets-holder/try-runtime",
 	"pallet-vesting/try-runtime",
 	"pallet-xcm/try-runtime",
 	"parachain-info/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
 	"cumulus-pallet-weight-reclaim/try-runtime",
+	"pallet-xcavate-whitelist/try-runtime",
+	"pallet-education-regions/try-runtime",
+	"pallet-real-x-education/try-runtime",
 ]
 
 # Enable the metadata hash generation.

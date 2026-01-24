@@ -50,6 +50,8 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/polkadot-sdk
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 pallet-utility = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
+pallet-nfts = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
+pallet-assets-holder = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 pallet-vesting = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sc-basic-authorship = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sc-chain-spec = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
@@ -136,6 +138,11 @@ pallet-ismp = { git = "https://github.com/polytope-labs/hyperbridge", branch = "
 pallet-ismp-rpc = { git = "https://github.com/polytope-labs/hyperbridge", branch = "polkadot-stable2503" }
 pallet-ismp-runtime-api = { git = "https://github.com/polytope-labs/hyperbridge", branch = "polkadot-stable2503", default-features = false }
 pallet-token-gateway = { git = "https://github.com/polytope-labs/hyperbridge", branch = "polkadot-stable2503", default-features = false }
+
+# Local Dependencies
+pallet-xcavate-whitelist = {  path = "./pallets/xcavate-whitelist", default-features = false }
+pallet-education-regions = {  path = "./pallets/education-regions", default-features = false }
+pallet-real-x-education = { path = "./pallets/real-x-education", default-features = false }
 
 # Fuzzer
 #substrate-runtime-fuzzer = { git = "https://github.com/srlabs/substrate-runtime-fuzzer.git", default-features = false }

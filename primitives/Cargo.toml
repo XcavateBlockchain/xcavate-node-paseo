@@ -1,0 +1,30 @@
+[package]
+name = "primitives"
+description = "A parachain runtime template built with Substrate and Cumulus, part of Polkadot Sdk. (polkadot v1.15.0)"
+version = "0.1.0"
+license = "Unlicense"
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+frame-support = { features = ["experimental"], workspace = true }
+sp-runtime.workspace = true
+
+[features]
+default = [ "std" ]
+std = [
+	"parity-scale-codec/std",
+	"scale-info/std",
+	"sp-runtime/std",
+]
+runtime-benchmarks = [
+	"sp-runtime/runtime-benchmarks",
+]
+try-runtime = [
+	"sp-runtime/try-runtime",
+]

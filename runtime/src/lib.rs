@@ -151,6 +151,8 @@ mod runtime {
     pub type RealEstateAssets = pallet_assets::Pallet<Runtime, Instance1>;
     #[runtime::pallet_index(13)]
     pub type Assets = pallet_assets::Pallet<Runtime, Instance2>;
+    #[runtime::pallet_index(14)]
+    pub type EducationAssets = pallet_assets::Pallet<Runtime, Instance3>;
 
     // Governance
     #[runtime::pallet_index(15)]
@@ -181,6 +183,10 @@ mod runtime {
     // Others.
     #[runtime::pallet_index(40)]
     pub type Vesting = pallet_vesting;
+    #[runtime::pallet_index(41)]
+    pub type EducationNfts = pallet_nfts;
+    #[runtime::pallet_index(42)]
+    pub type AssetsHolder = pallet_assets_holder::Pallet<Runtime, Instance2>;
 
     // ISMP.
     #[runtime::pallet_index(50)]
@@ -191,6 +197,14 @@ mod runtime {
     pub type Hyperbridge = pallet_hyperbridge;
     #[runtime::pallet_index(53)]
     pub type TokenGateway = pallet_token_gateway;
+
+    // Custom pallets,
+    #[runtime::pallet_index(60)]
+    pub type XcavateWhitelist = pallet_xcavate_whitelist;
+    #[runtime::pallet_index(61)]
+    pub type EducationRegions = pallet_education_regions;
+    #[runtime::pallet_index(62)]
+    pub type RealXEducation = pallet_real_x_education;
 }
 
 cumulus_pallet_parachain_system::register_validate_block! {

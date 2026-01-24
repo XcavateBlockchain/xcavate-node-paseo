@@ -8,24 +8,25 @@ use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
     traits::{
-        AsEnsureOriginWithArg, ConstU32, ConstU64, Contains, InstanceFilter, TransformOrigin,
-        WithdrawReasons,
+        AsEnsureOriginWithArg, ConstU32, ConstU64, Contains, EnsureOriginWithArg, InstanceFilter, TransformOrigin,
+        WithdrawReasons, OriginTrait,
     },
     weights::{ConstantMultiplier, Weight},
-    PalletId,
+    BoundedVec, PalletId,
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot, EnsureRootWithSuccess,
 };
+use pallet_nfts::PalletFeatures;
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use scale_info::TypeInfo;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::{
-    traits::{AccountIdLookup, BlakeTwo256, ConvertInto},
-    Perbill, RuntimeDebug,
+    traits::{AccountIdLookup, BlakeTwo256, ConvertInto, Verify},
+    MultiSignature, Perbill, Percent, Permill, RuntimeDebug,
 };
 use sp_version::RuntimeVersion;
 use xcm::latest::prelude::{AssetId, BodyId};
@@ -37,17 +38,21 @@ use crate::{
     constants::{
         currency::{deposit, EXISTENTIAL_DEPOSIT, MICROXCAV, XCAV},
         AVERAGE_ON_INITIALIZE_RATIO, HOURS, MAXIMUM_BLOCK_WEIGHT, MAX_BLOCK_LENGTH,
-        NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
+        NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION, DAYS,
     },
     types::{
         AccountId, Balance, Block, BlockNumber, CollatorSelectionUpdateOrigin, ConsensusHook, Hash,
         Nonce, PriceForSiblingParachainDelivery,
     },
     weights::{self, BlockExecutionWeight, ExtrinsicBaseWeight, ParityDbWeight},
-    Aura, Balances, CollatorSelection, MessageQueue, OriginCaller, PalletInfo, ParachainSystem,
+    Assets, AssetsHolder, Aura, Balances, CollatorSelection, EducationNfts, EducationRegions, MessageQueue, OriginCaller, PalletInfo, ParachainSystem,
     Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin,
-    RuntimeTask, Session, SessionKeys, System, WeightToFee, XcmpQueue,
+    RuntimeTask, Session, SessionKeys, System, WeightToFee, XcmpQueue, EducationAssets, XcavateWhitelist,
 };
+
+use primitives::MarketplaceHoldReason;
+
+pub type Signature = MultiSignature;
 
 parameter_types! {
     pub const Version: RuntimeVersion = VERSION;
@@ -308,6 +313,31 @@ impl pallet_assets::Config<pallet_assets::Instance2> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountId>;
     type Freezer = ();
+    type Holder = AssetsHolder;
+    type MetadataDepositBase = MetadataDepositBase;
+    type MetadataDepositPerByte = MetadataDepositPerByte;
+    type RemoveItemsLimit = RemoveItemsLimit;
+    type RuntimeEvent = RuntimeEvent;
+    type StringLimit = StringLimit;
+    /// Rerun benchmarks if you are making changes to runtime configuration.
+    type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
+}
+
+impl pallet_assets::Config<pallet_assets::Instance3> for Runtime {
+    type ApprovalDeposit = ApprovalDeposit;
+    type AssetAccountDeposit = AssetAccountDeposit;
+    type AssetDeposit = AssetDeposit;
+    type AssetId = u32;
+    type AssetIdParameter = parity_scale_codec::Compact<u32>;
+    type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = ();
+    type CallbackHandle = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureRootWithSuccess<AccountId, RootAccountId>>;
+    type Currency = Balances;
+    type Extra = ();
+    type ForceOrigin = EnsureRoot<AccountId>;
+    type Freezer = ();
     type Holder = ();
     type MetadataDepositBase = MetadataDepositBase;
     type MetadataDepositPerByte = MetadataDepositPerByte;
@@ -541,3 +571,229 @@ impl pallet_vesting::Config for Runtime {
 
     const MAX_VESTING_SCHEDULES: u32 = 30;
 }
+
+parameter_types! {
+    pub Features: PalletFeatures = PalletFeatures::all_enabled();
+    pub const MaxAttributesPerCall: u32 = 10;
+    pub const CollectionDeposit: Balance = 0;
+    pub const ItemDeposit: Balance = 0;
+    pub const KeyLimit: u32 = 32;
+    pub const ValueLimit: u32 = 256;
+    pub const ApprovalsLimit: u32 = 20;
+    pub const ItemAttributesApprovalsLimit: u32 = 20;
+    pub const MaxTips: u32 = 10;
+    pub const MaxDeadlineDuration: BlockNumber = 12 * 30 * DAYS;
+}
+
+impl pallet_nfts::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type CollectionId = u32;
+    type ItemId = u32;
+    type Currency = Balances;
+    type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+    type CollectionDeposit = CollectionDeposit;
+    type ItemDeposit = ItemDeposit;
+    type MetadataDepositBase = ZeroDeposit;
+    type AttributeDepositBase = ZeroDeposit;
+    type DepositPerByte = ZeroDeposit;
+    type StringLimit = StringLimit;
+    type KeyLimit = KeyLimit;
+    type ValueLimit = ValueLimit;
+    type ApprovalsLimit = ApprovalsLimit;
+    type ItemAttributesApprovalsLimit = ItemAttributesApprovalsLimit;
+    type MaxTips = MaxTips;
+    type MaxDeadlineDuration = MaxDeadlineDuration;
+    type MaxAttributesPerCall = MaxAttributesPerCall;
+    type Features = Features;
+    type OffchainSignature = Signature;
+    type OffchainPublic = <Signature as Verify>::Signer;
+    type WeightInfo = ();
+    #[cfg(feature = "runtime-benchmarks")]
+    type Helper = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureRootWithSuccess<AccountId, RootAccountId>>;
+    type Locker = ();
+    type BlockNumberProvider = frame_system::Pallet<Runtime>;
+}
+
+impl pallet_assets_holder::Config<pallet_assets::Instance2> for Runtime {
+    type RuntimeHoldReason = MarketplaceHoldReason;
+    type RuntimeEvent = RuntimeEvent;
+}
+
+/// Configure the pallet-xcavate-whitelist in pallets/xcavate-whitelist.
+impl pallet_xcavate_whitelist::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = weights::pallet_xcavate_whitelist::WeightInfo<Runtime>;
+    type WhitelistOrigin = EnsureRoot<Self::AccountId>;
+}
+
+use pallet_xcavate_whitelist::{self as whitelist, RolePermission};
+
+pub struct EnsureHasRole<T>(core::marker::PhantomData<T>);
+
+impl<T: whitelist::Config> EnsureOriginWithArg<T::RuntimeOrigin, whitelist::Role>
+    for EnsureHasRole<T>
+{
+    type Success = T::AccountId;
+
+    fn try_origin(
+        origin: T::RuntimeOrigin,
+        role: &whitelist::Role,
+    ) -> Result<Self::Success, T::RuntimeOrigin> {
+        let Some(who) = origin.clone().into_signer() else {
+            return Err(origin);
+        };
+        if whitelist::Pallet::<T>::has_role(&who, role.clone()) {
+            Ok(who)
+        } else {
+            Err(origin)
+        }
+    }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn try_successful_origin(_role: &whitelist::Role) -> Result<T::RuntimeOrigin, ()> {
+        let account = frame_benchmarking::whitelisted_caller();
+        Ok(frame_system::RawOrigin::Signed(account).into())
+    }
+}
+
+pub struct EnsureCompliant<T>(core::marker::PhantomData<T>);
+
+impl<T: whitelist::Config> EnsureOriginWithArg<T::RuntimeOrigin, whitelist::Role>
+    for EnsureCompliant<T>
+{
+    type Success = T::AccountId;
+
+    fn try_origin(
+        origin: T::RuntimeOrigin,
+        role: &whitelist::Role,
+    ) -> Result<Self::Success, T::RuntimeOrigin> {
+        let Some(who) = origin.clone().into_signer() else {
+            return Err(origin);
+        };
+        if whitelist::Pallet::<T>::is_compliant(&who, role.clone()) {
+            Ok(who)
+        } else {
+            Err(origin)
+        }
+    }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn try_successful_origin(_role: &whitelist::Role) -> Result<T::RuntimeOrigin, ()> {
+        let account = frame_benchmarking::whitelisted_caller();
+        Ok(frame_system::RawOrigin::Signed(account).into())
+    }
+}
+
+parameter_types! {
+    pub const RegionVotingTime: BlockNumber = 30;
+    pub const RegionAuctionTime: BlockNumber = 30;
+    pub const RegionOperatorVotingTime: BlockNumber = 20;
+    pub const RegionThreshold: Percent = Percent::from_percent(75);
+    pub const MaxProposalForBlock: u32 = 100;
+    pub const RegionSlashingAmount: Balance = 10 * XCAV;
+    pub const RegionOwnerChangeTime: BlockNumber = 400;
+    pub const RegionOwnerNoticeTime: BlockNumber = 50;
+    pub const RegionOwnerDisputeDepositAmount: Balance = 1_000 * XCAV;
+    pub const MinimumRegionDepositAmount: Balance = 100_000 * XCAV;
+    pub const RegionProposalDepositAmount: Balance = 5_000 * XCAV;
+    pub const MinimumVotingPower: Balance = 100 * XCAV;
+    pub const MaxAllowedStrikes: u8 = 3;
+    pub const RegionVotingQuorum: Permill = Permill::from_percent(1);
+    pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+}
+
+/// Configure the pallet-property-governance in pallets/property-governance.
+impl pallet_education_regions::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = weights::pallet_education_regions::WeightInfo<Runtime>;
+    type Balance = Balance;
+    type NativeCurrency = Balances;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type RegionVotingTime = RegionVotingTime;
+    type RegionAuctionTime = RegionAuctionTime;
+    type RegionThreshold = RegionThreshold;
+    type RegionOperatorVotingTime = RegionOperatorVotingTime;
+    type MaxProposalsForBlock = MaxProposalForBlock;
+    type RegionSlashingAmount = RegionSlashingAmount;
+    type TreasuryId = TreasuryPalletId;
+    type RegionOwnerChangePeriod = RegionOwnerChangeTime;
+    type Slash = ();
+    type RegionOwnerNoticePeriod = RegionOwnerNoticeTime;
+    type RegionOwnerDisputeDeposit = RegionOwnerDisputeDepositAmount;
+    type MinimumRegionDeposit = MinimumRegionDepositAmount;
+    type RegionProposalDeposit = RegionProposalDepositAmount;
+    type MinimumVotingAmount = MinimumVotingPower;
+    type PermissionOrigin = EnsureHasRole<Self>;
+    type BlockNumberProvider = System;
+    type AllowedStrikes = MaxAllowedStrikes;
+    type MinVotingQuorum = RegionVotingQuorum;
+}
+
+parameter_types! {
+    pub const XEducationPalletId: PalletId = PalletId(*b"py/xeduc");
+    pub const MaximumModuleToken: u32 = 1000;
+    pub const ModulePriceLimit: Balance = 100 * MICROXCAV;
+    pub const ContentCreatorPercentage: Perbill = Perbill::from_parts(83_000_000);
+    pub const RegionalOperatorPercentage: Perbill = Perbill::from_parts(83_000_000);
+    pub const ProtocolPercentage: Perbill = Perbill::from_parts(50_000_000);
+    pub const DBSPercentage: Perbill = Perbill::from_parts(34_000_000);
+    pub const BookingDepositAmount: Balance = 10 * XCAV;
+    pub const ModuleDepositAmount: Balance = 100 * XCAV;
+    pub const MaxCancellationAmount: u32 = 5;
+    pub const CancellationWindow: BlockNumber = 100;
+    pub const SponsorshipWindow: BlockNumber = 200;
+    pub const ModuleDelivererDepositAmount: Balance = 500 * XCAV;
+    pub const MaxAllowedStrikesAmount: u8 = 3;
+    pub const StrikeSlashPercentage: Perbill = Perbill::from_parts(100_000_000);
+    pub const MaxCleanupPerCallAmount: u32 = 50;
+    pub const MinimumImpactScore: Permill = Permill::from_percent(50);
+    pub const SuccessfulDeliveriesForStrikeReduction: u32 = 5;
+    pub const AcceptedPaymentAssets: [u32; 2] = [1337, 1984];
+    pub NewAssetSymbol: BoundedVec<u8, StringLimit> = (*b"BRIX").to_vec().try_into().unwrap();
+    pub NewAssetName: BoundedVec<u8, StringLimit> = (*b"Brix").to_vec().try_into().unwrap();
+}
+
+/// Configure the pallet-real-x-education in pallets/real-x-education.
+impl pallet_real_x_education::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = weights::pallet_real_x_education::WeightInfo<Runtime>;
+    type Balance = Balance;
+    type NativeCurrency = Balances;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type Nfts = EducationNfts;
+    type NftCollectionId = <Self as pallet_nfts::Config>::CollectionId;
+    type NftId = <Self as pallet_nfts::Config>::ItemId;
+    type MaxModuleToken = MaximumModuleToken;
+    type LocalCurrency = EducationAssets;
+    type ForeignCurrency = Assets;
+    type ForeignAssetsHolder = AssetsHolder;
+    type StringLimit = StringLimit;
+    type ModulePrice = ModulePriceLimit;
+    type BlockNumberProvider = System;
+    type ContentCreatorPercentage = ContentCreatorPercentage;
+    type RegionalOperatorPercentage = RegionalOperatorPercentage;
+    type ProtocolPercentage = ProtocolPercentage;
+    type DBSPercentage = DBSPercentage;
+    type PalletId = XEducationPalletId;
+    type TreasuryId = TreasuryPalletId;
+    type PermissionOrigin = EnsureHasRole<Self>;
+    type AcceptedAssets = AcceptedPaymentAssets;
+    type BookingDeposit = BookingDepositAmount;
+    type ModuleDeposit = ModuleDepositAmount;
+    type RegionProvider = EducationRegions;
+    type NewAssetSymbol = NewAssetSymbol;
+    type NewAssetName = NewAssetName;
+    type Slash = ();
+    type MaxCancellations = MaxCancellationAmount;
+    type CancellationWindow = CancellationWindow;
+    type SponsorshipWindow = SponsorshipWindow;
+    type ModuleDelivererDeposit = ModuleDelivererDepositAmount;
+    type MaxAllowedStrikes = MaxAllowedStrikesAmount;
+    type StrikeSlashPercentage = StrikeSlashPercentage;
+    type MaxCleanupPerCall = MaxCleanupPerCallAmount;
+    type MinImpactScore = MinimumImpactScore;
+    type SuccessfulDeliveriesForStrikeReduction = SuccessfulDeliveriesForStrikeReduction;
+    type RoleProvider = XcavateWhitelist;
+}
+

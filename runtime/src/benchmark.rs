@@ -16,6 +16,10 @@ frame_benchmarking::define_benchmarks!(
     [cumulus_pallet_weight_reclaim, WeightReclaim]
     [pallet_transaction_payment, TransactionPayment]
     [pallet_vesting, Vesting]
+    [pallet_nfts, EducationNfts]
+    [pallet_xcavate_whitelist, XcavateWhitelist]
+    [pallet_education_regions, EducationRegions]
+    [pallet_real_x_education, RealXEducation]
     // ISMP.
     [ismp_parachain, IsmpParachain]
     [pallet_token_gateway, TokenGateway]
