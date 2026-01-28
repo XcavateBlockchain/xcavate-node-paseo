@@ -265,7 +265,7 @@ parameter_types! {
     pub const AssetDeposit: Balance = 10 * XCAV;
     pub const AssetAccountDeposit: Balance = deposit(1, 16);
     pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
-    pub const StringLimit: u32 = 50;
+    pub const StringLimit: u32 = 5000;
     pub const MetadataDepositBase: Balance = deposit(1, 68);
     pub const MetadataDepositPerByte: Balance = deposit(0, 1);
     pub const RemoveItemsLimit: u32 = 1000;
