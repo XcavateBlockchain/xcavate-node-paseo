@@ -303,7 +303,7 @@ parameter_types! {
     pub const RegionalOperatorPercentage: Perbill = Perbill::from_parts(83_000_000);
     pub const ProtocolPercentage: Perbill = Perbill::from_parts(50_000_000);
     pub const DBSPercentage: Perbill = Perbill::from_parts(34_000_000);
-    pub const AcceptedPaymentAssets: [u32; 2] = [1337, 1984];
+    pub const AcceptedPaymentAssets: [u32; 4] = [1, 10, 1337, 1984];
     pub const CancellationWindow: BlockNumber = 100;
     pub const MaximumCancellations: u32 = 3;
     pub const SponsorshipWindow: BlockNumber = 200;
@@ -354,6 +354,17 @@ impl crate::Config for Test {
     type MinImpactScore = MinimumImpactScore;
     type SuccessfulDeliveriesForStrikeReduction = SuccessfulDeliveriesForStrikeReduction;
     type RoleProvider = XcavateWhitelist;
+    type AssetMetadata = AssetsMetadataWrapper;
+}
+
+pub struct AssetsMetadataWrapper;
+
+impl AssetMetadataProvider for AssetsMetadataWrapper {
+    type AssetId = u32;
+
+    fn get_decimals(asset_id: Self::AssetId) -> Option<u8> {
+        Some(pallet_assets::Metadata::<Test, Instance2>::get(asset_id).decimals)
+    }
 }
 
 // Build genesis storage according to the mock runtime.
@@ -377,8 +388,17 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
     pallet_assets::GenesisConfig::<Test, Instance2> {
         assets: vec![(1984, [0; 32].into(), true, 1)], // Genesis assets: id, owner, is_sufficient, min_balance
-        metadata: vec![(1984, "USDT".into(), "USDT".into(), 0)], // Genesis metadata: id, name, symbol, decimals
-        accounts: vec![(1984, [2; 32].into(), 60_000)], // Genesis accounts: id, account_id, balance
+        metadata: vec![(1984, "USDT".into(), "USDT".into(), 2)], // Genesis metadata: id, name, symbol, decimals
+        accounts: vec![(1984, [2; 32].into(), 6_000_000)], // Genesis accounts: id, account_id, balance
+        next_asset_id: None,
+    }
+    .assimilate_storage(&mut test)
+    .unwrap();
+
+    pallet_assets::GenesisConfig::<Test, Instance2> {
+        assets: vec![(10, [0; 32].into(), true, 1)], // Genesis assets: id, owner, is_sufficient, min_balance
+        metadata: vec![(10, "ttGBP".into(), "ttGBP".into(), 6)], // Genesis metadata: id, name, symbol, decimals
+        accounts: vec![(10, [2; 32].into(), 60_000_000_000)], // Genesis accounts: id, account_id, balance
         next_asset_id: None,
     }
     .assimilate_storage(&mut test)

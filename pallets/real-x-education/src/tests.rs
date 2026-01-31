@@ -252,7 +252,8 @@ fn sponsor_module_works() {
 
         // 1. Funds were held correctly
         let price_per_token = 1250;
-        let expected_hold = price_per_token * purchase_amount as u128;
+        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let expected_hold = price_per_token * purchase_amount as u128 * multiplier;
 
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &[2; 32].into());
         assert_eq!(held, expected_hold);
@@ -270,6 +271,90 @@ fn sponsor_module_works() {
                 sponsor: [2; 32].into(),
                 amount: purchase_amount,
                 payment_asset: 1984,
+                sponsored_at: 61,
+            }
+        );
+
+        // 4. Event emitted
+        System::assert_last_event(
+            Event::ModuleSponsored {
+                module_id: 0,
+                sponsor_id: 0,
+                sponsor: [2; 32].into(),
+                module_amount: purchase_amount,
+                sponsored_at: 61,
+            }
+            .into(),
+        );
+    });
+}
+
+#[test]
+fn sponsor_module_works2() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        let module_amount = 100u32;
+        let purchase_amount = 30u32;
+
+        // Step 1: Setup permissions
+        assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
+        assert_ok!(XcavateWhitelist::assign_role(
+            RuntimeOrigin::signed([20; 32].into()),
+            [1; 32].into(),
+            pallet_xcavate_whitelist::Role::ModuleCreator
+        ));
+        assert_ok!(XcavateWhitelist::assign_role(
+            RuntimeOrigin::signed([20; 32].into()),
+            [2; 32].into(),
+            pallet_xcavate_whitelist::Role::ModuleSponsor
+        ));
+        new_region_helper();
+
+        // Step 2: Creator creates a module
+        assert_ok!(RealXEducation::create_module(
+            RuntimeOrigin::signed([1; 32].into()),
+            3,
+            module_amount,
+            bvec![1, 2, 3]
+        ));
+
+        let module = ModuleInfo::<Test>::get(0).unwrap();
+        let asset_id = module.asset_id.into();
+
+        // Pre-check: creator owns all 100 tokens
+        assert_eq!(EducationAssets::balance(asset_id, &[1; 32].into()), 100);
+        assert_eq!(EducationAssets::balance(asset_id, &[2; 32].into()), 0);
+        assert_eq!(NextSponsorId::<Test>::get(), 0);
+
+        // Step 3: Sponsor purchases 30 tokens
+        assert_ok!(RealXEducation::sponsor_module(
+            RuntimeOrigin::signed([2; 32].into()),
+            0,
+            purchase_amount,
+            10
+        ));
+
+        // 1. Funds were held correctly
+        let price_per_token = 1250;
+        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(10).unwrap().into()).unwrap(); // USDT has 6 decimals
+        let expected_hold = price_per_token * purchase_amount as u128 * multiplier;
+
+        let held = AssetsHolder::total_balance_on_hold(10u32.into(), &[2; 32].into());
+        assert_eq!(held, expected_hold);
+
+        // 2. Fractional tokens transferred
+        let updated_module = ModuleInfo::<Test>::get(0).unwrap();
+        assert_eq!(updated_module.sponsor_allocation, 70);
+        assert_eq!(updated_module.school_allocation, 30);
+
+        // 3. SponsoredModules tracking works
+        assert_eq!(NextSponsorId::<Test>::get(), 1);
+        assert_eq!(
+            SponsoredModules::<Test>::get(0, 0).unwrap(),
+            SponsoredModulesDetails {
+                sponsor: [2; 32].into(),
+                amount: purchase_amount,
+                payment_asset: 10,
                 sponsored_at: 61,
             }
         );
@@ -347,7 +432,8 @@ fn sponsor_module_multiple_times_works() {
 
         // 1. Funds were held correctly
         let price_per_token = 1250;
-        let expected_hold = price_per_token * purchase_amount as u128 * 2;
+        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let expected_hold = price_per_token * purchase_amount as u128 * 2 * multiplier;
 
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &[2; 32].into());
         assert_eq!(held, expected_hold);
@@ -897,11 +983,12 @@ fn submit_impact_score_works() {
 
         // Pre-checks
         assert_eq!(EducationAssets::balance(asset_id, &school), 1);
-        let expected_hold = 1250 * purchase_amount as u128;
+        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let expected_hold = 1250 * purchase_amount as u128 * multiplier;
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
         assert_eq!(held, expected_hold);
         assert_eq!(EducationAssets::total_issuance(asset_id), module_amount.into());
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500);
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500 * multiplier);
 
         // Step 6: AI Agent submits test results
         assert_ok!(RealXEducation::submit_impact_score(
@@ -919,11 +1006,11 @@ fn submit_impact_score_works() {
         assert_eq!(EducationAssets::total_issuance(asset_id), (module_amount - 1).into());
 
         // 2. Funds released and distributed
-        let creator_pay = 62u128;
-        let protocol_pay = 37u128;
-        let regional_operator_pay = 62u128;
-        let dbs_pay = 25u128;
-        let lecturer_pay = 750u128;
+        let creator_pay = 6225u128;
+        let protocol_pay = 3750u128;
+        let regional_operator_pay = 6225u128;
+        let dbs_pay = 2550u128;
+        let lecturer_pay = 750u128 * multiplier;
 
         assert_eq!(ForeignAssets::balance(1984, &creator), creator_pay);
         assert_eq!(ForeignAssets::balance(1984, &lecturer), lecturer_pay + dbs_pay);
@@ -933,7 +1020,7 @@ fn submit_impact_score_works() {
             protocol_pay
         );
 
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 36_250);
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 36_250 * multiplier);
 
         // 3. NFTs minted
         let next_id = NextNftId::<Test>::get(0);
@@ -1031,12 +1118,12 @@ fn submit_impact_score_100_works() {
 
         // Pre-checks
         assert_eq!(EducationAssets::balance(asset_id, &school), 1);
-        let expected_hold = 1250 * purchase_amount as u128;
+        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let expected_hold = 1250 * purchase_amount as u128 * multiplier;
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
         assert_eq!(held, expected_hold);
         assert_eq!(EducationAssets::total_issuance(asset_id), module_amount.into());
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500);
-
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500 * multiplier);
         // Step 6: AI Agent submits test results
         assert_ok!(RealXEducation::submit_impact_score(
             RuntimeOrigin::signed(ai_agent),
@@ -1053,11 +1140,11 @@ fn submit_impact_score_100_works() {
         assert_eq!(EducationAssets::total_issuance(asset_id), (module_amount - 1).into());
 
         // 2. Funds released and distributed
-        let creator_pay = 83u128;
-        let protocol_pay = 50u128;
-        let regional_operator_pay = 83u128;
-        let dbs_pay = 34u128;
-        let lecturer_pay = 1000u128;
+        let creator_pay = 83u128 * multiplier;
+        let protocol_pay = 50u128 * multiplier;
+        let regional_operator_pay = 83u128 * multiplier;
+        let dbs_pay = 34u128 * multiplier;
+        let lecturer_pay = 1000u128 * multiplier;
 
         assert_eq!(ForeignAssets::balance(1984, &creator), creator_pay);
         assert_eq!(ForeignAssets::balance(1984, &lecturer), lecturer_pay + dbs_pay);
@@ -1066,9 +1153,9 @@ fn submit_impact_score_100_works() {
             ForeignAssets::balance(1984, &RealXEducation::treasury_account_id()),
             protocol_pay
         );
-        assert_eq!(ForeignAssets::balance(1984, &sponsor), 22_500u128);
+        assert_eq!(ForeignAssets::balance(1984, &sponsor), 22_500u128 * multiplier);
 
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 36_250);
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 36_250 * multiplier);
 
         // 3. NFTs minted
         let next_id = NextNftId::<Test>::get(0);
@@ -1166,12 +1253,12 @@ fn submit_impact_score_below_50_works() {
 
         // Pre-checks
         assert_eq!(EducationAssets::balance(asset_id, &school), 1);
-        let expected_hold = 1250 * purchase_amount as u128;
+        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let expected_hold = 1250 * purchase_amount as u128 * multiplier;
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
         assert_eq!(held, expected_hold);
         assert_eq!(EducationAssets::total_issuance(asset_id), module_amount.into());
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500);
-
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500 * multiplier);
         // Step 6: AI Agent submits test results
         assert_ok!(RealXEducation::submit_impact_score(
             RuntimeOrigin::signed(ai_agent),
@@ -1195,9 +1282,9 @@ fn submit_impact_score_below_50_works() {
         assert_eq!(ForeignAssets::balance(1984, &[10; 32].into()), pay);
         assert_eq!(ForeignAssets::balance(1984, &[11; 32].into()), pay);
         assert_eq!(ForeignAssets::balance(1984, &RealXEducation::treasury_account_id()), pay);
-        assert_eq!(ForeignAssets::balance(1984, &sponsor), 23_750u128);
+        assert_eq!(ForeignAssets::balance(1984, &sponsor), 23_750u128 * multiplier);
 
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 36_250);
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 36_250 * multiplier);
 
         // 3. NFTs minted
         let next_id = NextNftId::<Test>::get(0);
@@ -1333,7 +1420,8 @@ fn submit_impact_score_reduce_strikes_works() {
 
         // Pre-checks
         assert_eq!(EducationAssets::balance(asset_id, &school), 1);
-        let expected_hold = 1250 * 26 as u128;
+        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let expected_hold = 1250 * 26 as u128 * multiplier;
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
         assert_eq!(held, expected_hold);
         assert_eq!(EducationAssets::total_issuance(asset_id), (module_amount - 4).into());
@@ -1356,11 +1444,11 @@ fn submit_impact_score_reduce_strikes_works() {
         assert_eq!(EducationAssets::total_issuance(asset_id), (module_amount - 5).into());
 
         // 2. Funds released and distributed
-        let creator_pay = 290u128;
-        let protocol_pay = 175u128;
-        let regional_operator_pay = 290u128;
-        let dbs_pay = 115u128;
-        let lecturer_pay = 3_500u128;
+        let creator_pay = 29050u128;
+        let protocol_pay = 175u128 * multiplier;
+        let regional_operator_pay = 29050u128;
+        let dbs_pay = 11_900u128;
+        let lecturer_pay = 350_000u128;
 
         assert_eq!(ForeignAssets::balance(1984, &creator), creator_pay);
         assert_eq!(ForeignAssets::balance(1984, &lecturer), lecturer_pay + dbs_pay);
@@ -1370,7 +1458,7 @@ fn submit_impact_score_reduce_strikes_works() {
             protocol_pay
         );
 
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 31_250);
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 31_250 * multiplier);
 
         // 3. Module deliverer storage updated
         assert_eq!(ModuleDeliverer::<Test>::get(&lecturer).unwrap().successful_deliveries, 5);
@@ -1383,7 +1471,7 @@ fn submit_impact_score_reduce_strikes_works() {
                 booking_id: 4,
                 lecturer,
                 score: Permill::from_percent(70),
-                lecturer_pay: 723,
+                lecturer_pay: 72_380,
             }
             .into(),
         );
@@ -3137,10 +3225,11 @@ fn reclaim_unused_sponsorship_works1() {
         ));
 
         // Pre-checks
+        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
         assert_eq!(EducationAssets::balance(asset_id, &creator), 70);
         assert_eq!(EducationAssets::balance(asset_id, &sponsor), 29);
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500);
-        assert_eq!(ForeignAssets::balance(1984, &sponsor), 22_500);
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500 * multiplier);
+        assert_eq!(ForeignAssets::balance(1984, &sponsor), 22_500 * multiplier);
         let module = ModuleInfo::<Test>::get(0).unwrap();
         assert_eq!(module.sponsor_allocation, 70);
         assert_eq!(module.school_allocation, 29);
@@ -3161,8 +3250,8 @@ fn reclaim_unused_sponsorship_works1() {
 
         // 1. Sponsor balance updated
         assert_eq!(EducationAssets::balance(asset_id, &sponsor), 19);
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 25_000);
-        assert_eq!(ForeignAssets::balance(1984, &sponsor), 35_000);
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 25_000 * multiplier);
+        assert_eq!(ForeignAssets::balance(1984, &sponsor), 35_000 * multiplier);
 
         // 2. Storage updated
         let updated_module = ModuleInfo::<Test>::get(0).unwrap();
@@ -3177,7 +3266,7 @@ fn reclaim_unused_sponsorship_works1() {
                 sponsor,
                 amount: 10,
                 payment_asset: 1984,
-                refunded: 12_500,
+                refunded: 12_500 * multiplier,
             }
             .into(),
         );
@@ -3243,10 +3332,11 @@ fn reclaim_unused_sponsorship_works2() {
         ));
 
         // Pre-checks
+        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
         assert_eq!(EducationAssets::balance(asset_id, &creator), 70);
         assert_eq!(EducationAssets::balance(asset_id, &sponsor), 29);
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500);
-        assert_eq!(ForeignAssets::balance(1984, &sponsor), 22_500);
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500 * multiplier);
+        assert_eq!(ForeignAssets::balance(1984, &sponsor), 22_500 * multiplier);
         let module = ModuleInfo::<Test>::get(0).unwrap();
         assert_eq!(module.sponsor_allocation, 70);
         assert_eq!(module.school_allocation, 29);
@@ -3267,8 +3357,8 @@ fn reclaim_unused_sponsorship_works2() {
 
         // 1. Sponsor balance updated
         assert_eq!(EducationAssets::balance(asset_id, &sponsor), 0);
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 1_250);
-        assert_eq!(ForeignAssets::balance(1984, &sponsor), 58_750);
+        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 1_250 * multiplier);
+        assert_eq!(ForeignAssets::balance(1984, &sponsor), 58_750 * multiplier);
 
         // 2. Storage updated
         let updated_module = ModuleInfo::<Test>::get(0).unwrap();
@@ -3283,7 +3373,7 @@ fn reclaim_unused_sponsorship_works2() {
                 sponsor,
                 amount: 29,
                 payment_asset: 1984,
-                refunded: 36_250,
+                refunded: 36_250 * multiplier,
             }
             .into(),
         );

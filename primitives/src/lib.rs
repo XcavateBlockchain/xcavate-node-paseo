@@ -30,3 +30,10 @@ impl VariantCount for MarketplaceHoldReason {
     // Intentionally set below the actual count of variants, to allow testing for `can_freeze`
     const VARIANT_COUNT: u32 = 2;
 }
+
+pub trait AssetMetadataProvider {
+    type AssetId;
+
+    /// Returns the number of decimals for the asset, if available.
+    fn get_decimals(asset_id: Self::AssetId) -> Option<u8>;
+}

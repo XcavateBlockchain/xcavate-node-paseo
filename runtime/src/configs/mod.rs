@@ -18,6 +18,7 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot, EnsureRootWithSuccess,
 };
+use pallet_assets::Instance2;
 use pallet_nfts::PalletFeatures;
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
@@ -50,7 +51,7 @@ use crate::{
     RuntimeTask, Session, SessionKeys, System, WeightToFee, XcmpQueue, EducationAssets, XcavateWhitelist,
 };
 
-use primitives::MarketplaceHoldReason;
+use primitives::{AssetMetadataProvider, MarketplaceHoldReason};
 
 pub type Signature = MultiSignature;
 
@@ -733,7 +734,7 @@ impl pallet_education_regions::Config for Runtime {
 parameter_types! {
     pub const XEducationPalletId: PalletId = PalletId(*b"py/xeduc");
     pub const MaximumModuleToken: u32 = 1000;
-    pub const ModulePriceLimit: Balance = 100 * MICROXCAV;
+    pub const ModulePriceLimit: Balance = 100;
     pub const ContentCreatorPercentage: Perbill = Perbill::from_parts(83_000_000);
     pub const RegionalOperatorPercentage: Perbill = Perbill::from_parts(83_000_000);
     pub const ProtocolPercentage: Perbill = Perbill::from_parts(50_000_000);
@@ -749,7 +750,7 @@ parameter_types! {
     pub const MaxCleanupPerCallAmount: u32 = 50;
     pub const MinimumImpactScore: Permill = Permill::from_percent(50);
     pub const SuccessfulDeliveriesForStrikeReduction: u32 = 5;
-    pub const AcceptedPaymentAssets: [u32; 2] = [1337, 1984];
+    pub const AcceptedPaymentAssets: [u32; 4] = [1, 10, 1337, 1984];
     pub NewAssetSymbol: BoundedVec<u8, StringLimit> = (*b"BRIX").to_vec().try_into().unwrap();
     pub NewAssetName: BoundedVec<u8, StringLimit> = (*b"Brix").to_vec().try_into().unwrap();
 }
@@ -795,5 +796,16 @@ impl pallet_real_x_education::Config for Runtime {
     type MinImpactScore = MinimumImpactScore;
     type SuccessfulDeliveriesForStrikeReduction = SuccessfulDeliveriesForStrikeReduction;
     type RoleProvider = XcavateWhitelist;
+    type AssetMetadata = AssetsMetadataWrapper;
+}
+
+pub struct AssetsMetadataWrapper;
+
+impl AssetMetadataProvider for AssetsMetadataWrapper {
+    type AssetId = u32;
+
+    fn get_decimals(asset_id: Self::AssetId) -> Option<u8> {
+        Some(pallet_assets::Metadata::<Runtime, Instance2>::get(asset_id).decimals)
+    }
 }
 

@@ -56,7 +56,7 @@ use frame_support::{
     PalletId,
 };
 
-use primitives::MarketplaceHoldReason;
+use primitives::{AssetMetadataProvider, MarketplaceHoldReason};
 use scale_info::prelude::{format, string::String};
 
 use core::fmt::Display;
@@ -311,7 +311,7 @@ pub mod pallet {
 
         /// Accepted assets for payments (e.g., USDC, USDT).
         #[pallet::constant]
-        type AcceptedAssets: Get<[u32; 2]>;
+        type AcceptedAssets: Get<[u32; 4]>;
 
         /// Deposit required for booking a module.
         #[pallet::constant]
@@ -379,6 +379,9 @@ pub mod pallet {
 
         /// Provider for region information.
         type RoleProvider: RoleRemover<AccountIdOf<Self>>;
+
+        /// Asset metadata provider.
+        type AssetMetadata: AssetMetadataProvider<AssetId = u32>;
     }
 
     pub type RegionId = u16;
@@ -633,6 +636,9 @@ pub mod pallet {
         SchoolCannotClaimOwnBooking,
         /// Module deliverer does not have sufficient deposit to claim the booking.
         InsufficientDepositToClaim,
+        /// Error by retrieving asset metadata.
+        AssetMetadataNotAvailable,
+        ArithmeticError,
     }
 
     #[pallet::call]
@@ -716,7 +722,7 @@ pub mod pallet {
             )?;
 
             // Calculate pricing details
-            let price = T::ModulePrice::get();
+            let price = T::ModulePrice::get().saturating_mul(100u128.into());
             let content_creator_percentage = T::ContentCreatorPercentage::get();
             let regional_operator_percentage = T::RegionalOperatorPercentage::get();
             let protocol_percentage = T::ProtocolPercentage::get();
@@ -821,8 +827,20 @@ pub mod pallet {
             let current_block_number =
                 <T as pallet::Config>::BlockNumberProvider::current_block_number();
 
-            let total_price = module_details
+            let asset_decimals = T::AssetMetadata::get_decimals(payment_asset)
+                .ok_or(Error::<T>::AssetMetadataNotAvailable)?;
+            let multiplier =
+                10u128.checked_pow(asset_decimals as u32).ok_or(Error::<T>::ArithmeticError)?;
+            let adjusted_price = module_details
                 .total_module_price
+                .checked_mul(&multiplier.into())
+                .ok_or(Error::<T>::MultiplyError)?
+                .checked_div(&100u128.into())
+                .ok_or(Error::<T>::ArithmeticError)?;
+
+            let price_per_token = adjusted_price;
+
+            let total_price = price_per_token
                 .checked_mul(&(token_amount as u128).into())
                 .ok_or(Error::<T>::MultiplyError)?;
 
@@ -1110,12 +1128,23 @@ pub mod pallet {
                 Fortitude::Force,
             )?;
 
+            let asset_decimals = T::AssetMetadata::get_decimals(payment_asset)
+                .ok_or(Error::<T>::AssetMetadataNotAvailable)?;
+            let multiplier =
+                10u128.checked_pow(asset_decimals as u32).ok_or(Error::<T>::ArithmeticError)?;
+            let total_module_price = module_details
+                .total_module_price
+                .checked_mul(&multiplier.into())
+                .ok_or(Error::<T>::MultiplyError)?
+                .checked_div(&100u128.into())
+                .ok_or(Error::<T>::ArithmeticError)?;
+
             // Release the locked funds from the sponsor
             T::ForeignAssetsHolder::release(
                 payment_asset,
                 &MarketplaceHoldReason::ModulePurchase,
                 &booking_details.sponsor,
-                module_details.total_module_price,
+                total_module_price,
                 Precision::Exact,
             )?;
 
@@ -1123,20 +1152,27 @@ pub mod pallet {
             let (content_creator_pay, regional_operator_pay, protocol_pay, lecturer_pay_part) =
                 // Success path — everyone gets paid based on score
                 if score >= T::MinImpactScore::get() {
-                    // Use floor to make sure we don't overcharge the sponsor.
-                    let content_creator_pay = score.mul_floor(
-                        module_details.content_creator_percentage.mul_ceil(module_details.price),
-                    );
-                    let regional_operator_pay = score.mul_floor(
-                        module_details.regional_operator_percentage.mul_ceil(module_details.price),
-                    );
-                    let protocol_pay =
-                        score.mul_floor(module_details.protocol_percentage.mul_ceil(module_details.price));
-                    let dbs_pay =
-                        score.mul_floor(module_details.dbs_percentage.mul_ceil(module_details.price));
+                    let module_price = module_details
+                        .price
+                        .checked_mul(&multiplier.into())
+                        .ok_or(Error::<T>::MultiplyError)?
+                        .checked_div(&100u32.into())
+                        .ok_or(Error::<T>::ArithmeticError)?;
 
                     // Use floor to make sure we don't overcharge the sponsor.
-                    let mut lecturer_pay = score.mul_floor(module_details.price);
+                    let content_creator_pay = score.mul_floor(
+                        module_details.content_creator_percentage.mul_ceil(module_price),
+                    );
+                    let regional_operator_pay = score.mul_floor(
+                        module_details.regional_operator_percentage.mul_ceil(module_price),
+                    );
+                    let protocol_pay =
+                        score.mul_floor(module_details.protocol_percentage.mul_ceil(module_price));
+                    let dbs_pay =
+                        score.mul_floor(module_details.dbs_percentage.mul_ceil(module_price));
+
+                    // Use floor to make sure we don't overcharge the sponsor.
+                    let mut lecturer_pay = score.mul_floor(module_price);
                     lecturer_pay = lecturer_pay.checked_add(&dbs_pay).ok_or(Error::<T>::ArithmeticOverflow)?;
 
                     // Make sure we don't overcharge the sponsor.
@@ -1144,11 +1180,10 @@ pub mod pallet {
                         .saturating_add(content_creator_pay)
                         .saturating_add(regional_operator_pay)
                         .saturating_add(protocol_pay);
-                    let lecturer_pay_part = if total_pay <= module_details.total_module_price {
+                    let lecturer_pay_part = if total_pay <= total_module_price {
                         lecturer_pay
                     } else {
-                        module_details
-                            .total_module_price
+                        total_module_price
                             .checked_sub(&content_creator_pay)
                             .ok_or(Error::<T>::ArithmeticUnderflow)?
                             .checked_sub(&regional_operator_pay)
@@ -1526,12 +1561,22 @@ pub mod pallet {
                 funded_by_sponsor.sponsored_at.saturating_add(T::SponsorshipWindow::get());
             ensure!(current_block_number > deadline, Error::<T>::SponsorshipWindowNotExpired);
 
-            let total_price = module_details
+            let payment_asset = funded_by_sponsor.payment_asset;
+
+            let asset_decimals = T::AssetMetadata::get_decimals(payment_asset)
+                .ok_or(Error::<T>::AssetMetadataNotAvailable)?;
+            let multiplier =
+                10u128.checked_pow(asset_decimals as u32).ok_or(Error::<T>::ArithmeticError)?;
+            let total_module_price = module_details
                 .total_module_price
+                .checked_mul(&multiplier.into())
+                .ok_or(Error::<T>::MultiplyError)?
+                .checked_div(&100u128.into())
+                .ok_or(Error::<T>::ArithmeticError)?;
+
+            let total_price = total_module_price
                 .checked_mul(&(amount as u128).into())
                 .ok_or(Error::<T>::MultiplyError)?;
-
-            let payment_asset = funded_by_sponsor.payment_asset;
 
             // Release the locked funds back to the sponsor
             T::ForeignAssetsHolder::release(
