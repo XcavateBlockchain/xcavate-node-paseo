@@ -35,7 +35,7 @@ mod runtime_tests {
                 spec_name: alloc::borrow::Cow::Borrowed("template-parachain"),
                 impl_name: alloc::borrow::Cow::Borrowed("template-parachain"),
                 authoring_version: 1,
-                spec_version: 9,
+                spec_version: 12,
                 impl_version: 0,
                 apis: xcavate_runtime::apis::RUNTIME_API_VERSIONS,
                 transaction_version: 7,
@@ -122,7 +122,7 @@ mod runtime_tests {
 
         assert_eq!(ApprovalDeposit::get(), EXISTENTIAL_DEPOSIT);
 
-        assert_eq!(StringLimit::get(), 50);
+        assert_eq!(StringLimit::get(), 5000);
 
         assert_eq!(MetadataDepositBase::get(), deposit(1, 68));
 
