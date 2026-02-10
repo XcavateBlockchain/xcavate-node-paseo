@@ -522,7 +522,7 @@ parameter_types! {
     pub const StakingAdminBodyId: BodyId = BodyId::Defense;
     pub const MaxCandidates: u32 = 100;
     pub const MaxInvulnerables: u32 = 20;
-    pub const MinEligibleCollators: u32 = 4;
+    pub const MinEligibleCollators: u32 = 1;
 }
 
 impl pallet_collator_selection::Config for Runtime {
