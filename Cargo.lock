@@ -8273,6 +8273,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-bucket"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+]
+
+[[package]]
 name = "pallet-child-bounties"
 version = "39.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=stable2503#59e2d723f112aa85f4ebb3591d04ac7e618a280a"
@@ -8771,6 +8786,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-marketplace"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-assets",
+ "pallet-assets-freezer",
+ "pallet-assets-holder",
+ "pallet-balances",
+ "pallet-nft-fractionalization",
+ "pallet-nfts",
+ "pallet-real-world-asset",
+ "pallet-regions",
+ "pallet-xcavate-whitelist",
+ "parity-scale-codec",
+ "primitives",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-membership"
 version = "40.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=stable2503#59e2d723f112aa85f4ebb3591d04ac7e618a280a"
@@ -9078,6 +9119,63 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-property-governance"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-assets",
+ "pallet-assets-freezer",
+ "pallet-assets-holder",
+ "pallet-balances",
+ "pallet-marketplace",
+ "pallet-nft-fractionalization",
+ "pallet-nfts",
+ "pallet-property-management",
+ "pallet-real-world-asset",
+ "pallet-regions",
+ "pallet-xcavate-whitelist",
+ "parity-scale-codec",
+ "primitives",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-property-management"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-assets",
+ "pallet-assets-freezer",
+ "pallet-assets-holder",
+ "pallet-balances",
+ "pallet-marketplace",
+ "pallet-nft-fractionalization",
+ "pallet-nfts",
+ "pallet-real-world-asset",
+ "pallet-regions",
+ "pallet-xcavate-whitelist",
+ "parity-scale-codec",
+ "primitives",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-proxy"
 version = "40.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=stable2503#59e2d723f112aa85f4ebb3591d04ac7e618a280a"
@@ -9100,6 +9198,27 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-real-world-asset"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-nft-fractionalization",
+ "pallet-nfts",
+ "pallet-regions",
+ "pallet-xcavate-whitelist",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -9155,6 +9274,24 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-arithmetic",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-regions"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-nfts",
+ "pallet-xcavate-whitelist",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
  "sp-io",
  "sp-runtime",
 ]
@@ -18892,20 +19029,28 @@ dependencies = [
  "ismp-parachain-runtime-api",
  "log",
  "pallet-assets",
+ "pallet-assets-freezer",
  "pallet-assets-holder",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
+ "pallet-bucket",
  "pallet-collator-selection",
  "pallet-education-regions",
  "pallet-hyperbridge",
  "pallet-ismp",
  "pallet-ismp-runtime-api",
+ "pallet-marketplace",
  "pallet-message-queue",
  "pallet-multisig",
+ "pallet-nft-fractionalization",
  "pallet-nfts",
+ "pallet-property-governance",
+ "pallet-property-management",
  "pallet-proxy",
+ "pallet-real-world-asset",
  "pallet-real-x-education",
+ "pallet-regions",
  "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",

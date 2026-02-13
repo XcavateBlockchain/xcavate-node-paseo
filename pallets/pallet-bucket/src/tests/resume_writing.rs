@@ -1,0 +1,53 @@
+use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
+
+use crate::{mock::*, types::Status, Error};
+
+#[test]
+fn resume_writing() {
+    ExtBuilder::default()
+        .add_namespace(DEFAULT_NAMESPACE_ID, MetadataMock { unique_plus_1: 10 })
+        .add_bucket(DEFAULT_NAMESPACE_ID, DEFAULT_BUCKET_ID, BUCKET_EXAMPLE_LOCKED)
+        .add_admin(DEFAULT_BUCKET_ID, ACCOUNT_00)
+        .build_and_execute_with_sanity_tests(|| {
+            let origin = RawOrigin::Signed(ACCOUNT_00);
+            assert_ok!(Buckets::resume_writing(
+                origin.clone().into(),
+                DEFAULT_NAMESPACE_ID,
+                DEFAULT_BUCKET_ID,
+                DEFAULT_ENCRYPTION_KEY
+            ));
+            let bucket = Buckets::bucket_with_id(DEFAULT_NAMESPACE_ID, DEFAULT_BUCKET_ID)
+                .expect("Bucket should exist");
+            assert!(matches!(bucket.status, Status::Writable(1)));
+
+            assert!(events().contains(&crate::Event::BucketWritableWithKey {
+                namespace_id: DEFAULT_NAMESPACE_ID,
+                bucket_id: DEFAULT_BUCKET_ID,
+                new_encryption_key: DEFAULT_ENCRYPTION_KEY
+            }));
+            assert_eq!(events().len(), 1);
+        });
+}
+
+#[test]
+fn resume_writing_not_admin() {
+    ExtBuilder::default()
+        .add_namespace(DEFAULT_NAMESPACE_ID, MetadataMock { unique_plus_1: 10 })
+        .add_bucket(DEFAULT_NAMESPACE_ID, DEFAULT_BUCKET_ID, BUCKET_EXAMPLE_LOCKED)
+        .add_contributor(DEFAULT_BUCKET_ID, ACCOUNT_00)
+        .add_manager(DEFAULT_NAMESPACE_ID, ACCOUNT_00)
+        .build_and_execute_with_sanity_tests(|| {
+            let origin = RawOrigin::Signed(ACCOUNT_00);
+            assert_noop!(
+                Buckets::resume_writing(
+                    origin.clone().into(),
+                    DEFAULT_NAMESPACE_ID,
+                    DEFAULT_BUCKET_ID,
+                    0
+                ),
+                Error::<Test>::NotAdmin
+            );
+            assert_eq!(events().len(), 0);
+        });
+}

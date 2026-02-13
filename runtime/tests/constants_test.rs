@@ -35,7 +35,7 @@ mod runtime_tests {
                 spec_name: alloc::borrow::Cow::Borrowed("template-parachain"),
                 impl_name: alloc::borrow::Cow::Borrowed("template-parachain"),
                 authoring_version: 1,
-                spec_version: 12,
+                spec_version: 14,
                 impl_version: 0,
                 apis: xcavate_runtime::apis::RUNTIME_API_VERSIONS,
                 transaction_version: 7,
@@ -196,7 +196,7 @@ mod runtime_tests {
 
         assert_eq!(MaxInvulnerables::get(), 20);
 
-        assert_eq!(MinEligibleCollators::get(), 4);
+        assert_eq!(MinEligibleCollators::get(), 1);
     }
 }
 

@@ -18,9 +18,15 @@ pallets=(
     #pallet_transaction_payment
     #pallet_vesting
     pallet_nfts
-    pallet_xcavate_whitelist
-    pallet_education_regions
-    pallet_real_x_education
+    pallet_nft_fractionalization
+    #pallet_xcavate_whitelist
+    #pallet_education_regions
+    #pallet_real_x_education
+    #pallet_regions
+    #pallet_marketplace
+    #pallet_property_management
+    #pallet_property_governance
+    #pallet_bucket
 )
 
 # Generate weights

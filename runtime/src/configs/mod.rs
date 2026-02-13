@@ -6,19 +6,19 @@ use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
     derive_impl,
     dispatch::DispatchClass,
+    instances::{Instance1, Instance2},
     parameter_types,
     traits::{
-        AsEnsureOriginWithArg, ConstU32, ConstU64, Contains, EnsureOriginWithArg, InstanceFilter, TransformOrigin,
-        WithdrawReasons, OriginTrait,
+        AsEnsureOriginWithArg, ConstU32, ConstU64, Contains, EnsureOriginWithArg, InstanceFilter,
+        MapSuccess, OriginTrait, TransformOrigin, WithdrawReasons,
     },
     weights::{ConstantMultiplier, Weight},
     BoundedVec, PalletId,
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
-    EnsureRoot, EnsureRootWithSuccess,
+    EnsureRoot, EnsureRootWithSuccess, EnsureSigned,
 };
-use pallet_assets::Instance2;
 use pallet_nfts::PalletFeatures;
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
@@ -26,7 +26,7 @@ use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use scale_info::TypeInfo;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::{
-    traits::{AccountIdLookup, BlakeTwo256, ConvertInto, Verify},
+    traits::{AccountIdLookup, BlakeTwo256, ConvertInto, Morph, Verify},
     MultiSignature, Perbill, Percent, Permill, RuntimeDebug,
 };
 use sp_version::RuntimeVersion;
@@ -37,21 +37,23 @@ use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
 
 use crate::{
     constants::{
-        currency::{deposit, EXISTENTIAL_DEPOSIT, MICROXCAV, XCAV},
-        AVERAGE_ON_INITIALIZE_RATIO, HOURS, MAXIMUM_BLOCK_WEIGHT, MAX_BLOCK_LENGTH,
-        NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION, DAYS,
+        currency::{deposit, EXISTENTIAL_DEPOSIT, MICROXCAV, MILLIXCAV, XCAV},
+        AVERAGE_ON_INITIALIZE_RATIO, DAYS, HOURS, MAXIMUM_BLOCK_WEIGHT, MAX_BLOCK_LENGTH,
+        NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
     },
     types::{
         AccountId, Balance, Block, BlockNumber, CollatorSelectionUpdateOrigin, ConsensusHook, Hash,
         Nonce, PriceForSiblingParachainDelivery,
     },
     weights::{self, BlockExecutionWeight, ExtrinsicBaseWeight, ParityDbWeight},
-    Assets, AssetsHolder, Aura, Balances, CollatorSelection, EducationNfts, EducationRegions, MessageQueue, OriginCaller, PalletInfo, ParachainSystem,
-    Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin,
-    RuntimeTask, Session, SessionKeys, System, WeightToFee, XcmpQueue, EducationAssets, XcavateWhitelist,
+    Assets, AssetsFreezer, AssetsHolder, Aura, Balances, CollatorSelection, EducationAssets,
+    EducationNfts, EducationRegions, MessageQueue, OriginCaller, PalletInfo, ParachainSystem,
+    PropertyManagement, RealEstateAssets, RealEstateNfts, RealWorldAsset, Regions, Runtime,
+    RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
+    Session, SessionKeys, System, WeightToFee, XcavateWhitelist, XcmpQueue,
 };
 
-use primitives::{AssetMetadataProvider, MarketplaceHoldReason};
+use primitives::{AssetMetadataProvider, MarketplaceFreezeReason, MarketplaceHoldReason};
 
 pub type Signature = MultiSignature;
 
@@ -288,7 +290,7 @@ impl pallet_assets::Config<pallet_assets::Instance1> for Runtime {
     type Currency = Balances;
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountId>;
-    type Freezer = ();
+    type Freezer = AssetsFreezer;
     type Holder = ();
     type MetadataDepositBase = ZeroDeposit;
     type MetadataDepositPerByte = ZeroDeposit;
@@ -586,7 +588,37 @@ parameter_types! {
     pub const MaxDeadlineDuration: BlockNumber = 12 * 30 * DAYS;
 }
 
-impl pallet_nfts::Config for Runtime {
+impl pallet_nfts::Config<pallet_nfts::Instance1> for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type CollectionId = u32;
+    type ItemId = u32;
+    type Currency = Balances;
+    type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+    type CollectionDeposit = CollectionDeposit;
+    type ItemDeposit = ItemDeposit;
+    type MetadataDepositBase = MetadataDepositBase;
+    type AttributeDepositBase = MetadataDepositBase;
+    type DepositPerByte = MetadataDepositPerByte;
+    type StringLimit = StringLimit;
+    type KeyLimit = KeyLimit;
+    type ValueLimit = ValueLimit;
+    type ApprovalsLimit = ApprovalsLimit;
+    type ItemAttributesApprovalsLimit = ItemAttributesApprovalsLimit;
+    type MaxTips = MaxTips;
+    type MaxDeadlineDuration = MaxDeadlineDuration;
+    type MaxAttributesPerCall = MaxAttributesPerCall;
+    type Features = Features;
+    type OffchainSignature = Signature;
+    type OffchainPublic = <Signature as Verify>::Signer;
+    type WeightInfo = ();
+    #[cfg(feature = "runtime-benchmarks")]
+    type Helper = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureRootWithSuccess<AccountId, RootAccountId>>;
+    type Locker = ();
+    type BlockNumberProvider = frame_system::Pallet<Runtime>;
+}
+
+impl pallet_nfts::Config<pallet_nfts::Instance2> for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type CollectionId = u32;
     type ItemId = u32;
@@ -616,8 +648,40 @@ impl pallet_nfts::Config for Runtime {
     type BlockNumberProvider = frame_system::Pallet<Runtime>;
 }
 
+parameter_types! {
+    pub const NftFractionalizationPalletId: PalletId = PalletId(*b"fraction");
+    pub NewAssetSymbol: BoundedVec<u8, StringLimit> = (*b"BRIX").to_vec().try_into().unwrap();
+    pub NewAssetName: BoundedVec<u8, StringLimit> = (*b"Brix").to_vec().try_into().unwrap();
+    pub const Deposit: Balance = XCAV;
+}
+
+impl pallet_nft_fractionalization::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Deposit = Deposit;
+    type Currency = Balances;
+    type NewAssetSymbol = NewAssetSymbol;
+    type NewAssetName = NewAssetName;
+    type NftCollectionId = <Self as pallet_nfts::Config<Instance1>>::CollectionId;
+    type NftId = <Self as pallet_nfts::Config<Instance1>>::ItemId;
+    type AssetBalance = <Self as pallet_balances::Config>::Balance;
+    type AssetId = <Self as pallet_assets::Config<Instance1>>::AssetId;
+    type Assets = RealEstateAssets;
+    type Nfts = RealEstateNfts;
+    type PalletId = NftFractionalizationPalletId;
+    type WeightInfo = ();
+    type StringLimit = StringLimit;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = ();
+    type RuntimeHoldReason = RuntimeHoldReason;
+}
+
 impl pallet_assets_holder::Config<pallet_assets::Instance2> for Runtime {
     type RuntimeHoldReason = MarketplaceHoldReason;
+    type RuntimeEvent = RuntimeEvent;
+}
+
+impl pallet_assets_freezer::Config<pallet_assets::Instance1> for Runtime {
+    type RuntimeFreezeReason = MarketplaceFreezeReason;
     type RuntimeEvent = RuntimeEvent;
 }
 
@@ -687,21 +751,61 @@ impl<T: whitelist::Config> EnsureOriginWithArg<T::RuntimeOrigin, whitelist::Role
 }
 
 parameter_types! {
-    pub const RegionVotingTime: BlockNumber = 30;
-    pub const RegionAuctionTime: BlockNumber = 30;
-    pub const RegionOperatorVotingTime: BlockNumber = 20;
+    pub const Postcode: u32 = 10;
+    pub const LocationDepositAmount: Balance = 10_000 * XCAV;
+    pub const MaximumListingDuration: BlockNumber = 30 * DAYS;
+    pub const RegionVotingTime: BlockNumber = 30 * DAYS;
+    pub const RegionAuctionTime: BlockNumber = 7 * DAYS;
+    pub const RegionOperatorVotingTime: BlockNumber = 30 * DAYS;
     pub const RegionThreshold: Percent = Percent::from_percent(75);
     pub const MaxProposalForBlock: u32 = 100;
     pub const RegionSlashingAmount: Balance = 10 * XCAV;
-    pub const RegionOwnerChangeTime: BlockNumber = 400;
-    pub const RegionOwnerNoticeTime: BlockNumber = 50;
+    pub const RegionOwnerChangeTime: BlockNumber = 730 * DAYS;
+    pub const RegionOwnerNoticeTime: BlockNumber = 90 * DAYS;
     pub const RegionOwnerDisputeDepositAmount: Balance = 1_000 * XCAV;
     pub const MinimumRegionDepositAmount: Balance = 100_000 * XCAV;
     pub const RegionProposalDepositAmount: Balance = 5_000 * XCAV;
     pub const MinimumVotingPower: Balance = 100 * XCAV;
+    pub const LawyerDepositAmount: Balance = 10_000 * XCAV;
+    pub const MaximumTaxPercent: Permill = Permill::from_percent(10);
     pub const MaxAllowedStrikes: u8 = 3;
     pub const RegionVotingQuorum: Permill = Permill::from_percent(1);
-    pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+}
+
+/// Configure the pallet-property-governance in pallets/property-governance.
+impl pallet_regions::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = weights::pallet_regions::WeightInfo<Runtime>;
+    type Balance = Balance;
+    type NativeCurrency = Balances;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type Nfts = RealEstateNfts;
+    type NftCollectionId = <Self as pallet_nfts::Config<Instance1>>::CollectionId;
+    type NftId = <Self as pallet_nfts::Config<Instance1>>::ItemId;
+    type MarketplacePalletId = MarketplacePalletId;
+    type MaxListingDuration = MaximumListingDuration;
+    type PostcodeLimit = Postcode;
+    type LocationDeposit = LocationDepositAmount;
+    type RegionVotingTime = RegionVotingTime;
+    type RegionAuctionTime = RegionAuctionTime;
+    type RegionThreshold = RegionThreshold;
+    type RegionOperatorVotingTime = RegionOperatorVotingTime;
+    type MaxProposalsForBlock = MaxProposalForBlock;
+    type RegionSlashingAmount = RegionSlashingAmount;
+    type TreasuryId = TreasuryPalletId;
+    type RegionOwnerChangePeriod = RegionOwnerChangeTime;
+    type Slash = ();
+    type RegionOwnerNoticePeriod = RegionOwnerNoticeTime;
+    type RegionOwnerDisputeDeposit = RegionOwnerDisputeDepositAmount;
+    type MinimumRegionDeposit = MinimumRegionDepositAmount;
+    type RegionProposalDeposit = RegionProposalDepositAmount;
+    type MinimumVotingAmount = MinimumVotingPower;
+    type PermissionOrigin = EnsureHasRole<Self>;
+    type LawyerDeposit = LawyerDepositAmount;
+    type BlockNumberProvider = System;
+    type MaxTaxPercent = MaximumTaxPercent;
+    type AllowedStrikes = MaxAllowedStrikes;
+    type MinVotingQuorum = RegionVotingQuorum;
 }
 
 /// Configure the pallet-property-governance in pallets/property-governance.
@@ -751,8 +855,6 @@ parameter_types! {
     pub const MinimumImpactScore: Permill = Permill::from_percent(50);
     pub const SuccessfulDeliveriesForStrikeReduction: u32 = 5;
     pub const AcceptedPaymentAssets: [u32; 4] = [1, 10, 1337, 1984];
-    pub NewAssetSymbol: BoundedVec<u8, StringLimit> = (*b"BRIX").to_vec().try_into().unwrap();
-    pub NewAssetName: BoundedVec<u8, StringLimit> = (*b"Brix").to_vec().try_into().unwrap();
 }
 
 /// Configure the pallet-real-x-education in pallets/real-x-education.
@@ -763,8 +865,8 @@ impl pallet_real_x_education::Config for Runtime {
     type NativeCurrency = Balances;
     type RuntimeHoldReason = RuntimeHoldReason;
     type Nfts = EducationNfts;
-    type NftCollectionId = <Self as pallet_nfts::Config>::CollectionId;
-    type NftId = <Self as pallet_nfts::Config>::ItemId;
+    type NftCollectionId = <Self as pallet_nfts::Config<Instance2>>::CollectionId;
+    type NftId = <Self as pallet_nfts::Config<Instance2>>::ItemId;
     type MaxModuleToken = MaximumModuleToken;
     type LocalCurrency = EducationAssets;
     type ForeignCurrency = Assets;
@@ -809,3 +911,425 @@ impl AssetMetadataProvider for AssetsMetadataWrapper {
     }
 }
 
+parameter_types! {
+    pub const MarketplacePalletId: PalletId = PalletId(*b"py/nftxc");
+    pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+    pub const PropertyFundingAmount: Balance = 10 * XCAV;
+    pub const MaxPropertyTokens: u32 = 250;
+}
+
+/// Configure the pallet-property-governance in pallets/property-governance.
+impl pallet_real_world_asset::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Balance = Balance;
+    type NativeCurrency = Balances;
+    type NftCollectionId = <Self as pallet_nfts::Config<Instance1>>::CollectionId;
+    type NftId = <Self as pallet_nfts::Config<Instance1>>::ItemId;
+    type Nfts = RealEstateNfts;
+    type MarketplacePalletId = MarketplacePalletId;
+    type LocalCurrency = RealEstateAssets;
+    type FractionalizeCollectionId = <Self as pallet_nfts::Config<Instance1>>::CollectionId;
+    type FractionalizeItemId = <Self as pallet_nfts::Config<Instance1>>::ItemId;
+    type AssetId = <Self as pallet_assets::Config<Instance1>>::AssetId;
+    type PropertyAccountFundingAmount = PropertyFundingAmount;
+    type MaxPropertyToken = MaxPropertyTokens;
+    type StringLimit = StringLimit;
+    type RegionProvider = Regions;
+    type PostcodeLimit = Postcode;
+}
+
+parameter_types! {
+    pub const MinPropertyTokens: u32 = 100;
+    pub const ListingDepositAmount: Balance = 10 * MICROXCAV;
+    pub const MarketplaceFeePercent: Perbill = Perbill::from_percent(1);
+    pub const MaximumAcceptedAssets: u32 = 2;
+    pub const LawyerVotingDuration: BlockNumber = 3 * DAYS;
+    pub const LegalProcessDuration: BlockNumber = 30 * DAYS;
+    pub const MinimumVotingQuorum: Percent = Percent::from_percent(50);
+    pub const ClaimWindowTime: BlockNumber = 3 * DAYS;
+    pub const MaximumRelistAttempts: u8 = 1;
+    pub const MaxOwnershipPercentage: Perbill = Perbill::from_percent(50);
+    pub const MaxCallLen: u32 = 64;
+    pub const MaxDelayedCalls: u32 = 10;
+    pub const AcceptedMarketplacePaymentAssets: [u32; 2] = [1337, 1984];
+}
+
+/// Configure the pallet-marketplace in pallets/marketplace.
+impl pallet_marketplace::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
+    type WeightInfo = weights::pallet_marketplace::WeightInfo<Runtime>;
+    type Balance = Balance;
+    type NativeCurrency = Balances;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type LocalCurrency = RealEstateAssets;
+    type ForeignCurrency = Assets;
+    type ForeignAssetsHolder = AssetsHolder;
+    type AssetsFreezer = AssetsFreezer;
+    type NftCollectionId = <Self as pallet_nfts::Config<Instance1>>::CollectionId;
+    type NftId = <Self as pallet_nfts::Config<Instance1>>::ItemId;
+    type PalletId = MarketplacePalletId;
+    type MinPropertyToken = MinPropertyTokens;
+    type MaxPropertyToken = MaxPropertyTokens;
+    type TreasuryId = TreasuryPalletId;
+    type AssetId = <Self as pallet_assets::Config<Instance1>>::AssetId;
+    type ListingDeposit = ListingDepositAmount;
+    type MarketplaceFeePercentage = MarketplaceFeePercent;
+    type AcceptedAssets = AcceptedMarketplacePaymentAssets;
+    type MaxAcceptedAssets = MaximumAcceptedAssets;
+    type PropertyToken = RealWorldAsset;
+    type LawyerVotingTime = LawyerVotingDuration;
+    type LegalProcessTime = LegalProcessDuration;
+    type Whitelist = XcavateWhitelist;
+    type PermissionOrigin = EnsureHasRole<Self>;
+    type CompliantOrigin = EnsureCompliant<Self>;
+    type MinVotingQuorum = MinimumVotingQuorum;
+    type ClaimWindow = ClaimWindowTime;
+    type MaxRelistAttempts = MaximumRelistAttempts;
+    type BlockNumberProvider = System;
+    type IncomeSettlement = PropertyManagement;
+    type RegionProvider = Regions;
+    type StringLimit = StringLimit;
+    type PostcodeLimit = Postcode;
+    type MaxOwnershipPercentage = MaxOwnershipPercentage;
+    type MaxCallLen = MaxCallLen;
+    type MaxDelayedCalls = MaxDelayedCalls;
+}
+
+parameter_types! {
+    pub const MinimumStakingAmount: Balance = 1000 * XCAV;
+    pub const MaxProperty: u32 = 1000;
+    pub const MaxLocation: u32 = 50;
+    pub const LettingAgentVotingDuration: BlockNumber = 3 * DAYS;
+    pub const LettingAgentNoticeTime: BlockNumber = 30 * DAYS;
+    pub const MaximumNoticesPerBlock: u32 = 10;
+}
+
+/// Configure the pallet-property-management in pallets/property-management.
+impl pallet_property_management::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = weights::pallet_property_management::WeightInfo<Runtime>;
+    type Balance = Balance;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type NativeCurrency = Balances;
+    type ForeignCurrency = Assets;
+    type AssetsFreezer = AssetsFreezer;
+    type NftCollectionId = <Self as pallet_nfts::Config<Instance1>>::CollectionId;
+    type NftId = <Self as pallet_nfts::Config<Instance1>>::ItemId;
+    type MarketplacePalletId = MarketplacePalletId;
+    type LettingAgentDeposit = MinimumStakingAmount;
+    type MaxProperties = MaxProperty;
+    type MaxLocations = MaxLocation;
+    type AcceptedAssets = AcceptedMarketplacePaymentAssets;
+    type PropertyToken = RealWorldAsset;
+    type LettingAgentVotingTime = LettingAgentVotingDuration;
+    type PermissionOrigin = EnsureHasRole<Self>;
+    type MinVotingQuorum = MinimumVotingQuorum;
+    type LettingAgentNoticePeriod = LettingAgentNoticeTime;
+    type MaxNoticesPerBlock = MaximumNoticesPerBlock;
+    type BlockNumberProvider = System;
+    type RegionProvider = Regions;
+    type PostcodeLimit = Postcode;
+}
+
+parameter_types! {
+    pub const PropertyVotingTime: BlockNumber = 3 * DAYS;
+    pub const MaxVoteForBlock: u32 = 100;
+    pub const MinimumSlashingAmount: Balance = 10 * XCAV;
+    pub const VotingThreshold: Percent = Percent::from_percent(51);
+    pub const HighVotingThreshold: Percent = Percent::from_percent(67);
+    pub const LowProposal: Balance = 500 * XCAV;
+    pub const HighProposal: Balance = 10_000 * XCAV;
+    pub const ChallengeDepositAmount: Balance = 500 * XCAV;
+    pub const AutoExecutionCooldown: BlockNumber = 2 * DAYS;
+}
+
+/// Configure the pallet-property-governance in pallets/property-governance.
+impl pallet_property_governance::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = weights::pallet_property_governance::WeightInfo<Runtime>;
+    type Balance = Balance;
+    type NativeCurrency = Balances;
+    type AssetsFreezer = AssetsFreezer;
+    type NftCollectionId = <Self as pallet_nfts::Config<Instance1>>::CollectionId;
+    type NftId = <Self as pallet_nfts::Config<Instance1>>::ItemId;
+    type VotingTime = PropertyVotingTime;
+    type MaxVotesForBlock = MaxVoteForBlock;
+    type MinSlashingAmount = MinimumSlashingAmount;
+    type HighThreshold = HighVotingThreshold;
+    type LowProposal = LowProposal;
+    type HighProposal = HighProposal;
+    type MarketplacePalletId = MarketplacePalletId;
+    type Slash = ();
+    type PropertyToken = RealWorldAsset;
+    type PermissionOrigin = EnsureHasRole<Self>;
+    type MinVotingQuorum = MinimumVotingQuorum;
+    type BlockNumberProvider = System;
+    type ChallengeDeposit = ChallengeDepositAmount;
+    type StringLimit = StringLimit;
+    type PostcodeLimit = Postcode;
+    type AutoExecutionCooldown = AutoExecutionCooldown;
+}
+
+use pallet_bucket::{traits::CallSources, AccountIdOf};
+
+use pallet_bucket::types::{
+    BucketMetadata, BucketMetadataInput, BucketPublicKey, MessageMetadata, MessageMetadataInput,
+    NamespaceMetadata, NamespaceMetadataInput,
+};
+
+pub struct SuccessOrigin {
+    sender: AccountIdOf<Runtime>,
+}
+impl SuccessOrigin {
+    fn new(sender: AccountIdOf<Runtime>) -> Self {
+        SuccessOrigin { sender }
+    }
+}
+
+impl CallSources<AccountIdOf<Runtime>, AccountIdOf<Runtime>> for SuccessOrigin {
+    fn sender(&self) -> AccountIdOf<Runtime> {
+        self.sender.clone()
+    }
+
+    fn subject(&self) -> AccountIdOf<Runtime> {
+        self.sender.clone()
+    }
+}
+impl Morph<AccountIdOf<Runtime>> for SuccessOrigin {
+    type Outcome = Self;
+
+    fn morph(a: AccountIdOf<Runtime>) -> Self::Outcome {
+        Self::new(a)
+    }
+}
+
+type BucketsOrigin = MapSuccess<EnsureSigned<AccountIdOf<Runtime>>, SuccessOrigin>;
+
+parameter_types! {
+    pub const NamespaceStorageFee: Balance = deposit(1, 2856);
+    pub const BucketStorageFee: Balance = deposit(1, 2650);
+    pub const MessageStorageFee: Balance = deposit(1, 2682);
+    pub const StorageFee: Balance = MILLIXCAV;
+    pub const MaxStringLength: u32 = 200;
+    #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
+    pub const MaxNameLen: u32 = 100;
+    #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
+    pub const MaxUriLen: u32 = 256;
+    #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
+    pub const MaxCategoryLen: u32 = 50;
+    #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
+    pub const MaxProperties: u32 = 10;
+    #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
+    pub const MaxPropertyKeyLen: u32 = 50;
+    #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
+    pub const MaxPropertyValueLen: u32 = 200;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct BucketHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_bucket::benchmarking::BenchmarkHelper<Runtime> for BucketHelper {
+    fn create_force_origin(_seed: u32) -> RuntimeOrigin {
+        frame_system::RawOrigin::Root.into()
+    }
+
+    fn create_origin(seed: u32) -> RuntimeOrigin {
+        use frame_support::traits::fungible::Mutate;
+
+        let mut array = [0u8; 32];
+        let bytes = seed.to_le_bytes();
+        array[..4].copy_from_slice(&bytes);
+
+        let account = AccountId::from(array);
+        Balances::set_balance(&account, 1_000_000_000_000_000_000_000_000);
+        frame_system::RawOrigin::Signed(account).into()
+    }
+
+    fn get_bucket(
+        _seed: u32,
+    ) -> (
+        <Runtime as pallet_bucket::Config>::BucketId,
+        <Runtime as pallet_bucket::Config>::BucketMetadataInput,
+        <Runtime as pallet_bucket::Config>::BucketMetadata,
+    ) {
+        use alloc::{collections::BTreeMap, vec};
+        use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
+        let properties = BoundedBTreeMap::<
+            BoundedVec<u8, MaxPropertyKeyLen>,
+            BoundedVec<u8, MaxPropertyValueLen>,
+            MaxProperties,
+        >::try_from(
+            (0..MaxProperties::get() as usize)
+                .map(|i| {
+                    (
+                        BoundedVec::truncate_from(vec![
+                            b'a' + (i as u8 % 26);
+                            MaxPropertyKeyLen::get() as usize
+                        ]),
+                        BoundedVec::truncate_from(vec![
+                            b'a' + (i as u8 % 26);
+                            MaxPropertyValueLen::get() as usize
+                        ]),
+                    )
+                })
+                .collect::<BTreeMap<_, _>>(),
+        )
+        .expect("Failed to create max-length properties");
+        let input = BucketMetadataInput {
+            name: BoundedVec::truncate_from(vec![1; MaxNameLen::get() as usize]),
+            category: BoundedVec::truncate_from(vec![1; MaxCategoryLen::get() as usize]),
+            properties: properties.clone(),
+        };
+        (
+            u128::MAX - 1,
+            input.clone(),
+            BucketMetadata {
+                name: BoundedVec::truncate_from(vec![1; MaxNameLen::get() as usize]),
+                created_at: 1,
+                category: BoundedVec::truncate_from(vec![1; MaxCategoryLen::get() as usize]),
+                properties,
+            },
+        )
+    }
+
+    fn get_key_id(seed: u32) -> <Runtime as pallet_bucket::Config>::KeyId {
+        let account_id = frame_benchmarking::account::<AccountId>("key_id", seed, 0);
+        BucketPublicKey(account_id.into())
+    }
+
+    fn get_message(
+        _seed: u32,
+    ) -> (
+        <Runtime as pallet_bucket::Config>::Reference,
+        pallet_bucket::MessageMetadataInputOf<Runtime>,
+        <Runtime as pallet_bucket::Config>::MessageMetadata,
+    ) {
+        use alloc::{collections::BTreeMap, vec};
+        use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
+        let properties = BoundedBTreeMap::<
+            BoundedVec<u8, MaxPropertyKeyLen>,
+            BoundedVec<u8, MaxPropertyValueLen>,
+            MaxProperties,
+        >::try_from(
+            (0..MaxProperties::get() as usize)
+                .map(|i| {
+                    (
+                        BoundedVec::truncate_from(vec![
+                            b'a' + (i as u8 % 26);
+                            MaxPropertyKeyLen::get() as usize
+                        ]),
+                        BoundedVec::truncate_from(vec![
+                            b'a' + (i as u8 % 26);
+                            MaxPropertyValueLen::get() as usize
+                        ]),
+                    )
+                })
+                .collect::<BTreeMap<_, _>>(),
+        )
+        .expect("Failed to create max-length properties");
+        let reference =
+            frame_support::BoundedVec::<u8, MaxStringLength>::try_from(vec![0; 200]).unwrap();
+        let input = MessageMetadataInput {
+            description: BoundedVec::truncate_from(vec![1; MaxNameLen::get() as usize]),
+            content_type: BoundedVec::truncate_from(vec![1; MaxCategoryLen::get() as usize]),
+            content_hash: Default::default(),
+            properties: properties.clone(),
+        };
+        (
+            reference,
+            input,
+            MessageMetadata {
+                description: BoundedVec::truncate_from(vec![1; MaxNameLen::get() as usize]),
+                created_at: 1,
+                content_type: BoundedVec::truncate_from(vec![1; MaxCategoryLen::get() as usize]),
+                content_hash: Default::default(),
+                properties,
+            },
+        )
+    }
+
+    fn get_namespace(
+        _seed: u32,
+    ) -> (
+        <Runtime as pallet_bucket::Config>::NamespaceId,
+        <Runtime as pallet_bucket::Config>::NamespaceMetadataInput,
+        <Runtime as pallet_bucket::Config>::NamespaceMetadata,
+    ) {
+        use alloc::{collections::BTreeMap, vec};
+        use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
+        let properties = BoundedBTreeMap::<
+            BoundedVec<u8, MaxPropertyKeyLen>,
+            BoundedVec<u8, MaxPropertyValueLen>,
+            MaxProperties,
+        >::try_from(
+            (0..MaxProperties::get() as usize)
+                .map(|i| {
+                    (
+                        BoundedVec::truncate_from(vec![
+                            b'a' + (i as u8 % 26);
+                            MaxPropertyKeyLen::get() as usize
+                        ]),
+                        BoundedVec::truncate_from(vec![
+                            b'a' + (i as u8 % 26);
+                            MaxPropertyValueLen::get() as usize
+                        ]),
+                    )
+                })
+                .collect::<BTreeMap<_, _>>(),
+        )
+        .expect("Failed to create max-length properties");
+        let input = NamespaceMetadataInput {
+            name: BoundedVec::truncate_from(vec![1; MaxNameLen::get() as usize]),
+            schema_uri: Some(BoundedVec::truncate_from(vec![1; MaxUriLen::get() as usize])),
+            properties: properties.clone(),
+        };
+        (
+            0,
+            input.clone(),
+            NamespaceMetadata {
+                name: BoundedVec::truncate_from(vec![1; MaxNameLen::get() as usize]),
+                created_at: 1,
+                schema_uri: Some(BoundedVec::truncate_from(vec![1; MaxUriLen::get() as usize])),
+                properties,
+            },
+        )
+    }
+}
+
+impl pallet_bucket::Config for Runtime {
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = BucketHelper;
+    type BucketId = u128;
+    type Currency = Balances;
+    type FeeBucket = BucketStorageFee;
+    type FeeCollector = ();
+    type FeeMessage = MessageStorageFee;
+    type FeeNamespace = NamespaceStorageFee;
+    type FeeTag = StorageFee;
+    type ForceOriginCheck = EnsureRoot<AccountId>;
+    type KeyId = BucketPublicKey;
+    type MaxStringInputLengthTag = MaxStringLength;
+    type MessageId = u128;
+    type NamespaceId = u128;
+    type NamespaceMetadataInput = NamespaceMetadataInput<Self>;
+    type BucketMetadataInput = BucketMetadataInput<Self>;
+    type MessageMetadataInput = MessageMetadataInput<Self>;
+    type NamespaceMetadata = NamespaceMetadata<Self>;
+    type BucketMetadata = BucketMetadata<Self>;
+    type MessageMetadata = MessageMetadata<Self>;
+    type OnCallHooks = ();
+    type OriginCheck = BucketsOrigin;
+    type OriginSuccess = SuccessOrigin;
+    type Reference = BoundedVec<u8, MaxStringLength>;
+    type RuntimeEvent = RuntimeEvent;
+    type SubjectId = AccountIdOf<Runtime>;
+    type WeightInfo = weights::pallet_bucket::WeightInfo<Runtime>;
+    type MaxNameLen = MaxNameLen;
+    type MaxUriLen = MaxUriLen;
+    type MaxCategoryLen = MaxCategoryLen;
+    type MaxProperties = MaxProperties;
+    type MaxPropertyKeyLen = MaxPropertyKeyLen;
+    type MaxPropertyValueLen = MaxPropertyValueLen;
+}

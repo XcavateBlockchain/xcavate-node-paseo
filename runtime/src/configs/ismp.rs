@@ -96,10 +96,12 @@ pub struct IsmpModuleRouter;
 impl IsmpRouter for IsmpModuleRouter {
     fn module_for_id(&self, input: Vec<u8>) -> Result<Box<dyn IsmpModule>, anyhow::Error> {
         match input.as_slice() {
-            pallet_hyperbridge::PALLET_HYPERBRIDGE_ID =>
-                Ok(Box::new(pallet_hyperbridge::Pallet::<Runtime>::default())),
-            id if TokenGateway::is_token_gateway(id) =>
-                Ok(Box::new(pallet_token_gateway::Pallet::<Runtime>::default())),
+            pallet_hyperbridge::PALLET_HYPERBRIDGE_ID => {
+                Ok(Box::new(pallet_hyperbridge::Pallet::<Runtime>::default()))
+            }
+            id if TokenGateway::is_token_gateway(id) => {
+                Ok(Box::new(pallet_token_gateway::Pallet::<Runtime>::default()))
+            }
             _ => Err(ismp::Error::ModuleNotFound(input))?,
         }
     }

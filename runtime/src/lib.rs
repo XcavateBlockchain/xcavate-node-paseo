@@ -184,9 +184,15 @@ mod runtime {
     #[runtime::pallet_index(40)]
     pub type Vesting = pallet_vesting;
     #[runtime::pallet_index(41)]
-    pub type EducationNfts = pallet_nfts;
+    pub type EducationNfts = pallet_nfts::Pallet<Runtime, Instance2>;
     #[runtime::pallet_index(42)]
     pub type AssetsHolder = pallet_assets_holder::Pallet<Runtime, Instance2>;
+    #[runtime::pallet_index(43)]
+    pub type NftFractionalization = pallet_nft_fractionalization;
+    #[runtime::pallet_index(44)]
+    pub type AssetsFreezer = pallet_assets_freezer::Pallet<Runtime, Instance1>;
+    #[runtime::pallet_index(45)]
+    pub type RealEstateNfts = pallet_nfts::Pallet<Runtime, Instance1>;
 
     // ISMP.
     #[runtime::pallet_index(50)]
@@ -205,6 +211,18 @@ mod runtime {
     pub type EducationRegions = pallet_education_regions;
     #[runtime::pallet_index(62)]
     pub type RealXEducation = pallet_real_x_education;
+    #[runtime::pallet_index(63)]
+    pub type Regions = pallet_regions;
+    #[runtime::pallet_index(64)]
+    pub type RealWorldAsset = pallet_real_world_asset;
+    #[runtime::pallet_index(65)]
+    pub type Marketplace = pallet_marketplace;
+    #[runtime::pallet_index(66)]
+    pub type PropertyManagement = pallet_property_management;
+    #[runtime::pallet_index(67)]
+    pub type PropertyGovernance = pallet_property_governance;
+    #[runtime::pallet_index(68)]
+    pub type Buckets = pallet_bucket;
 }
 
 cumulus_pallet_parachain_system::register_validate_block! {

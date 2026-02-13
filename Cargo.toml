@@ -51,7 +51,9 @@ pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/polkadot
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 pallet-utility = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 pallet-nfts = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
+pallet-nft-fractionalization = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 pallet-assets-holder = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
+pallet-assets-freezer = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 pallet-vesting = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sc-basic-authorship = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sc-chain-spec = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
@@ -143,6 +145,12 @@ pallet-token-gateway = { git = "https://github.com/polytope-labs/hyperbridge", b
 pallet-xcavate-whitelist = {  path = "./pallets/xcavate-whitelist", default-features = false }
 pallet-education-regions = {  path = "./pallets/education-regions", default-features = false }
 pallet-real-x-education = { path = "./pallets/real-x-education", default-features = false }
+pallet-marketplace = { path = "./pallets/marketplace", default-features = false }
+pallet-property-management = {  path = "./pallets/property-management", default-features = false }
+pallet-property-governance = {  path = "./pallets/property-governance", default-features = false }
+pallet-regions = {  path = "./pallets/regions", default-features = false }
+pallet-real-world-asset = {  path = "./pallets/real-world-asset", default-features = false }
+pallet-bucket = { path = "./pallets/pallet-bucket", default-features = false }
 
 # Fuzzer
 #substrate-runtime-fuzzer = { git = "https://github.com/srlabs/substrate-runtime-fuzzer.git", default-features = false }

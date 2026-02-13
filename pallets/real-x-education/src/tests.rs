@@ -252,7 +252,9 @@ fn sponsor_module_works() {
 
         // 1. Funds were held correctly
         let price_per_token = 1250;
-        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let multiplier = 10u128
+            .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
+            .unwrap();
         let expected_hold = price_per_token * purchase_amount as u128 * multiplier;
 
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &[2; 32].into());
@@ -336,7 +338,8 @@ fn sponsor_module_works2() {
 
         // 1. Funds were held correctly
         let price_per_token = 1250;
-        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(10).unwrap().into()).unwrap(); // USDT has 6 decimals
+        let multiplier =
+            10u128.checked_pow(AssetsMetadataWrapper::get_decimals(10).unwrap().into()).unwrap(); // USDT has 6 decimals
         let expected_hold = price_per_token * purchase_amount as u128 * multiplier;
 
         let held = AssetsHolder::total_balance_on_hold(10u32.into(), &[2; 32].into());
@@ -432,7 +435,9 @@ fn sponsor_module_multiple_times_works() {
 
         // 1. Funds were held correctly
         let price_per_token = 1250;
-        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let multiplier = 10u128
+            .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
+            .unwrap();
         let expected_hold = price_per_token * purchase_amount as u128 * 2 * multiplier;
 
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &[2; 32].into());
@@ -983,12 +988,17 @@ fn submit_impact_score_works() {
 
         // Pre-checks
         assert_eq!(EducationAssets::balance(asset_id, &school), 1);
-        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let multiplier = 10u128
+            .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
+            .unwrap();
         let expected_hold = 1250 * purchase_amount as u128 * multiplier;
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
         assert_eq!(held, expected_hold);
         assert_eq!(EducationAssets::total_issuance(asset_id), module_amount.into());
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            37_500 * multiplier
+        );
 
         // Step 6: AI Agent submits test results
         assert_ok!(RealXEducation::submit_impact_score(
@@ -1020,7 +1030,10 @@ fn submit_impact_score_works() {
             protocol_pay
         );
 
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 36_250 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            36_250 * multiplier
+        );
 
         // 3. NFTs minted
         let next_id = NextNftId::<Test>::get(0);
@@ -1118,12 +1131,17 @@ fn submit_impact_score_100_works() {
 
         // Pre-checks
         assert_eq!(EducationAssets::balance(asset_id, &school), 1);
-        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let multiplier = 10u128
+            .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
+            .unwrap();
         let expected_hold = 1250 * purchase_amount as u128 * multiplier;
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
         assert_eq!(held, expected_hold);
         assert_eq!(EducationAssets::total_issuance(asset_id), module_amount.into());
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            37_500 * multiplier
+        );
         // Step 6: AI Agent submits test results
         assert_ok!(RealXEducation::submit_impact_score(
             RuntimeOrigin::signed(ai_agent),
@@ -1155,7 +1173,10 @@ fn submit_impact_score_100_works() {
         );
         assert_eq!(ForeignAssets::balance(1984, &sponsor), 22_500u128 * multiplier);
 
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 36_250 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            36_250 * multiplier
+        );
 
         // 3. NFTs minted
         let next_id = NextNftId::<Test>::get(0);
@@ -1253,12 +1274,17 @@ fn submit_impact_score_below_50_works() {
 
         // Pre-checks
         assert_eq!(EducationAssets::balance(asset_id, &school), 1);
-        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let multiplier = 10u128
+            .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
+            .unwrap();
         let expected_hold = 1250 * purchase_amount as u128 * multiplier;
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
         assert_eq!(held, expected_hold);
         assert_eq!(EducationAssets::total_issuance(asset_id), module_amount.into());
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            37_500 * multiplier
+        );
         // Step 6: AI Agent submits test results
         assert_ok!(RealXEducation::submit_impact_score(
             RuntimeOrigin::signed(ai_agent),
@@ -1284,7 +1310,10 @@ fn submit_impact_score_below_50_works() {
         assert_eq!(ForeignAssets::balance(1984, &RealXEducation::treasury_account_id()), pay);
         assert_eq!(ForeignAssets::balance(1984, &sponsor), 23_750u128 * multiplier);
 
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 36_250 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            36_250 * multiplier
+        );
 
         // 3. NFTs minted
         let next_id = NextNftId::<Test>::get(0);
@@ -1420,7 +1449,9 @@ fn submit_impact_score_reduce_strikes_works() {
 
         // Pre-checks
         assert_eq!(EducationAssets::balance(asset_id, &school), 1);
-        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let multiplier = 10u128
+            .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
+            .unwrap();
         let expected_hold = 1250 * 26 as u128 * multiplier;
         let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
         assert_eq!(held, expected_hold);
@@ -1458,7 +1489,10 @@ fn submit_impact_score_reduce_strikes_works() {
             protocol_pay
         );
 
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 31_250 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            31_250 * multiplier
+        );
 
         // 3. Module deliverer storage updated
         assert_eq!(ModuleDeliverer::<Test>::get(&lecturer).unwrap().successful_deliveries, 5);
@@ -3225,10 +3259,15 @@ fn reclaim_unused_sponsorship_works1() {
         ));
 
         // Pre-checks
-        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let multiplier = 10u128
+            .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
+            .unwrap();
         assert_eq!(EducationAssets::balance(asset_id, &creator), 70);
         assert_eq!(EducationAssets::balance(asset_id, &sponsor), 29);
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            37_500 * multiplier
+        );
         assert_eq!(ForeignAssets::balance(1984, &sponsor), 22_500 * multiplier);
         let module = ModuleInfo::<Test>::get(0).unwrap();
         assert_eq!(module.sponsor_allocation, 70);
@@ -3250,7 +3289,10 @@ fn reclaim_unused_sponsorship_works1() {
 
         // 1. Sponsor balance updated
         assert_eq!(EducationAssets::balance(asset_id, &sponsor), 19);
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 25_000 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            25_000 * multiplier
+        );
         assert_eq!(ForeignAssets::balance(1984, &sponsor), 35_000 * multiplier);
 
         // 2. Storage updated
@@ -3332,10 +3374,15 @@ fn reclaim_unused_sponsorship_works2() {
         ));
 
         // Pre-checks
-        let multiplier = 10u128.checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into()).unwrap();
+        let multiplier = 10u128
+            .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
+            .unwrap();
         assert_eq!(EducationAssets::balance(asset_id, &creator), 70);
         assert_eq!(EducationAssets::balance(asset_id, &sponsor), 29);
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 37_500 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            37_500 * multiplier
+        );
         assert_eq!(ForeignAssets::balance(1984, &sponsor), 22_500 * multiplier);
         let module = ModuleInfo::<Test>::get(0).unwrap();
         assert_eq!(module.sponsor_allocation, 70);
@@ -3357,7 +3404,10 @@ fn reclaim_unused_sponsorship_works2() {
 
         // 1. Sponsor balance updated
         assert_eq!(EducationAssets::balance(asset_id, &sponsor), 0);
-        assert_eq!(AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor), 1_250 * multiplier);
+        assert_eq!(
+            AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
+            1_250 * multiplier
+        );
         assert_eq!(ForeignAssets::balance(1984, &sponsor), 58_750 * multiplier);
 
         // 2. Storage updated
