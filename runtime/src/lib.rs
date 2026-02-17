@@ -7,6 +7,8 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod apis;
+pub mod assets;
+pub mod authorization;
 pub mod configs;
 pub mod constants;
 mod migrations;
@@ -223,6 +225,22 @@ mod runtime {
     pub type PropertyGovernance = pallet_property_governance;
     #[runtime::pallet_index(68)]
     pub type Buckets = pallet_bucket;
+
+    // KILT
+    #[runtime::pallet_index(80)]
+    pub type Ctype = ctype;
+    #[runtime::pallet_index(81)]
+    pub type Attestation = attestation;
+    #[runtime::pallet_index(82)]
+    pub type Delegation = delegation;
+    #[runtime::pallet_index(83)]
+    pub type Did = did;
+    #[runtime::pallet_index(84)]
+    pub type PublicCredentials = public_credentials;
+    #[runtime::pallet_index(85)]
+    pub type KiltMigration = pallet_kilt_migration;
+    #[runtime::pallet_index(86)]
+    pub type DidLookup = pallet_did_lookup;
 }
 
 cumulus_pallet_parachain_system::register_validate_block! {

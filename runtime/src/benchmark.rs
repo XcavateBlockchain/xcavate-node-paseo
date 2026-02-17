@@ -29,6 +29,13 @@ frame_benchmarking::define_benchmarks!(
     // ISMP.
     [ismp_parachain, IsmpParachain]
     [pallet_token_gateway, TokenGateway]
+    // KILT
+    [attestation, Attestation]
+    [ctype, Ctype]
+    [delegation, Delegation]
+    [did, Did]
+    [public_credentials, PublicCredentials]
+    [pallet_did_lookup, DidLookup]
 );
 
 use core::marker::PhantomData;

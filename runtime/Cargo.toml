@@ -54,6 +54,7 @@ sp-runtime = { workspace = true }
 sp-session = { workspace = true }
 sp-transaction-pool = { workspace = true }
 sp-version = { workspace = true }
+sp-weights = { workspace = true }
 frame-metadata-hash-extension = { workspace = true }
 
 # Polkadot
@@ -100,6 +101,19 @@ pallet-property-management = { workspace = true }
 pallet-property-governance = { workspace = true }
 pallet-bucket = { workspace = true }
 primitives = { path = "../primitives", default-features = false }
+
+# KILT DIDs
+kilt-support = { workspace = true }
+kilt-asset-dids = { workspace = true }
+attestation = { workspace = true }
+ctype = { workspace = true }
+delegation = { workspace = true }
+did = { workspace = true }
+public-credentials = { workspace = true }
+pallet-kilt-migration = { workspace = true }
+pallet-did-lookup = { workspace = true }
+kilt-runtime-api-did = { workspace = true }
+kilt-runtime-api-public-credentials = { workspace = true }
 
 [dev-dependencies]
 hex-literal = { workspace = true }
@@ -189,6 +203,19 @@ std = [
 	"pallet-property-governance/std",
 	"pallet-bucket/std",
 	"primitives/std",
+	
+	# KILT
+	"kilt-support/std",
+	"kilt-asset-dids/std",
+	"attestation/std",
+  	"ctype/std",
+	"delegation/std",
+  	"did/std",
+	"public-credentials/std",
+	"pallet-kilt-migration/std",
+	"pallet-did-lookup/std",
+	"kilt-runtime-api-did/std",
+	"kilt-runtime-api-public-credentials/std",
 ]
 async-backing = []
 
@@ -233,6 +260,15 @@ runtime-benchmarks = [
 	"pallet-property-governance/runtime-benchmarks",
 	"pallet-property-management/runtime-benchmarks",
 	"pallet-bucket/runtime-benchmarks",
+
+	# KILT
+	"kilt-support/runtime-benchmarks",
+	"attestation/runtime-benchmarks",
+  	"ctype/runtime-benchmarks",
+	"delegation/runtime-benchmarks",
+  	"did/runtime-benchmarks",
+	"public-credentials/runtime-benchmarks",
+	"pallet-did-lookup/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -281,6 +317,16 @@ try-runtime = [
 	"pallet-property-management/try-runtime",
 	"pallet-bucket/try-runtime",
 	"pallet-real-x-education/try-runtime",
+
+	# KILT
+	"kilt-support/try-runtime",
+	"attestation/try-runtime",
+  	"ctype/try-runtime",
+	"delegation/try-runtime",
+  	"did/try-runtime",
+	"public-credentials/try-runtime",
+	"pallet-kilt-migration/try-runtime",
+	"pallet-did-lookup/try-runtime",
 ]
 
 # Enable the metadata hash generation.

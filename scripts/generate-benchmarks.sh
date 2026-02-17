@@ -17,8 +17,8 @@ pallets=(
     #cumulus_pallet_weight_reclaim
     #pallet_transaction_payment
     #pallet_vesting
-    pallet_nfts
-    pallet_nft_fractionalization
+    #pallet_nfts
+    #pallet_nft_fractionalization
     #pallet_xcavate_whitelist
     #pallet_education_regions
     #pallet_real_x_education
@@ -27,6 +27,12 @@ pallets=(
     #pallet_property_management
     #pallet_property_governance
     #pallet_bucket
+    #attestation
+    #ctype
+    #delegation
+    #did
+    #pallet-public_credentials
+    pallet_did_lookup
 )
 
 # Generate weights

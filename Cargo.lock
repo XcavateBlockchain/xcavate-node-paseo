@@ -1322,6 +1322,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
+name = "attestation"
+version = "1.0.0"
+dependencies = [
+ "ctype",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "kilt-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-std",
+ "sp-weights",
+]
+
+[[package]]
 name = "attohttpc"
 version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2703,6 +2725,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ctype"
+version = "1.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "kilt-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "cumulus-client-cli"
 version = "0.23.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=stable2503#59e2d723f112aa85f4ebb3591d04ac7e618a280a"
@@ -3548,6 +3589,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "delegation"
+version = "1.0.0"
+dependencies = [
+ "attestation",
+ "bitflags 1.3.2",
+ "ctype",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "kilt-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "public-credentials",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-std",
+ "sp-weights",
+]
+
+[[package]]
 name = "der"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3681,6 +3746,30 @@ dependencies = [
  "quote",
  "syn 2.0.110",
  "unicode-xid",
+]
+
+[[package]]
+name = "did"
+version = "1.0.0"
+dependencies = [
+ "ctype",
+ "env_logger 0.10.2",
+ "fluent-uri",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "kilt-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-std",
+ "sp-weights",
 ]
 
 [[package]]
@@ -4017,6 +4106,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_filter"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a1c3cc8e57274ec99de65301228b537f1e4eedc1b8e0f9411c6caac8ae7308f"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4027,6 +4125,18 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2daee4ea451f429a58296525ddf28b45a3b64f1acf6587e2067437bb11e218d"
+dependencies = [
+ "anstream",
+ "anstyle",
+ "env_filter",
+ "log",
 ]
 
 [[package]]
@@ -4269,7 +4379,7 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84f2e425d9790201ba4af4630191feac6dcc98765b118d4d18e91d23c2353866"
 dependencies = [
- "env_logger",
+ "env_logger 0.10.2",
  "log",
 ]
 
@@ -4330,6 +4440,15 @@ name = "fixedbitset"
 version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
+
+[[package]]
+name = "fluent-uri"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17c704e9dbe1ddd863da1e6ff3567795087b1eb201ce80d8fa81162e1516500d"
+dependencies = [
+ "bitflags 1.3.2",
+]
 
 [[package]]
 name = "fnv"
@@ -6237,6 +6356,63 @@ name = "keystream"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c33070833c9ee02266356de0c43f723152bd38bd96ddf52c82b3af10c9138b28"
+
+[[package]]
+name = "kilt-asset-dids"
+version = "1.0.0"
+dependencies = [
+ "base58",
+ "frame-support",
+ "hex",
+ "hex-literal",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-std",
+]
+
+[[package]]
+name = "kilt-runtime-api-did"
+version = "1.0.0"
+dependencies = [
+ "did",
+ "frame-system",
+ "kilt-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-std",
+]
+
+[[package]]
+name = "kilt-runtime-api-public-credentials"
+version = "1.0.0"
+dependencies = [
+ "kilt-support",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
+]
+
+[[package]]
+name = "kilt-support"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "sp-weights",
+ "staging-xcm",
+ "staging-xcm-executor",
+]
 
 [[package]]
 name = "kvdb"
@@ -8520,6 +8696,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-did-lookup"
+version = "1.0.0"
+dependencies = [
+ "base58",
+ "blake2 0.10.6",
+ "env_logger 0.10.2",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "kilt-support",
+ "libsecp256k1",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sha3",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-std",
+ "test-log",
+]
+
+[[package]]
 name = "pallet-education-regions"
 version = "4.0.0-dev"
 dependencies = [
@@ -8770,6 +8973,35 @@ dependencies = [
  "polkadot-sdk 2503.2.0",
  "primitive-types 0.13.1",
  "serde",
+]
+
+[[package]]
+name = "pallet-kilt-migration"
+version = "1.0.0"
+dependencies = [
+ "attestation",
+ "ctype",
+ "delegation",
+ "did",
+ "env_logger 0.10.2",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "kilt-support",
+ "pallet-aura",
+ "pallet-balances",
+ "pallet-did-lookup",
+ "pallet-session",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "public-credentials",
+ "scale-info",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -12321,6 +12553,27 @@ checksum = "d11f2fedc3b7dafdc2851bc52f277377c5473d378859be234bc7ebb593144d01"
 dependencies = [
  "ar_archive_writer",
  "cc",
+]
+
+[[package]]
+name = "public-credentials"
+version = "1.0.0"
+dependencies = [
+ "ctype",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "kilt-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-std",
+ "sp-weights",
 ]
 
 [[package]]
@@ -16960,6 +17213,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
 
 [[package]]
+name = "test-log"
+version = "0.2.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37d53ac171c92a39e4769491c4b4dde7022c60042254b5fc044ae409d34a24d4"
+dependencies = [
+ "env_logger 0.11.9",
+ "test-log-macros",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "test-log-macros"
+version = "0.2.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be35209fd0781c5401458ab66e4f98accf63553e8fae7425503e92fdd319783b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.110",
+]
+
+[[package]]
 name = "testnet-parachains-constants"
 version = "13.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=stable2503#59e2d723f112aa85f4ebb3591d04ac7e618a280a"
@@ -19006,6 +19281,8 @@ version = "1.0.0"
 dependencies = [
  "anyhow",
  "assets-common",
+ "attestation",
+ "ctype",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
@@ -19015,6 +19292,8 @@ dependencies = [
  "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
+ "delegation",
+ "did",
  "frame-benchmarking",
  "frame-executive",
  "frame-metadata-hash-extension",
@@ -19027,6 +19306,10 @@ dependencies = [
  "ismp",
  "ismp-parachain",
  "ismp-parachain-runtime-api",
+ "kilt-asset-dids",
+ "kilt-runtime-api-did",
+ "kilt-runtime-api-public-credentials",
+ "kilt-support",
  "log",
  "pallet-assets",
  "pallet-assets-freezer",
@@ -19036,10 +19319,12 @@ dependencies = [
  "pallet-balances",
  "pallet-bucket",
  "pallet-collator-selection",
+ "pallet-did-lookup",
  "pallet-education-regions",
  "pallet-hyperbridge",
  "pallet-ismp",
  "pallet-ismp-runtime-api",
+ "pallet-kilt-migration",
  "pallet-marketplace",
  "pallet-message-queue",
  "pallet-multisig",
@@ -19066,6 +19351,7 @@ dependencies = [
  "polkadot-parachain-primitives",
  "polkadot-runtime-common",
  "primitives",
+ "public-credentials",
  "scale-info",
  "smallvec",
  "sp-api",
@@ -19081,6 +19367,7 @@ dependencies = [
  "sp-session",
  "sp-transaction-pool",
  "sp-version",
+ "sp-weights",
  "staging-parachain-info",
  "staging-xcm",
  "staging-xcm-builder",

@@ -1,0 +1,120 @@
+// KILT Blockchain – <https://kilt.io>
+// Copyright (C) 2025, KILT Foundation
+
+// The KILT Blockchain is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// The KILT Blockchain is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// If you feel like getting in touch with us, you can do so at <hello@kilt.io>
+
+use frame_support::BoundedVec;
+use frame_system::pallet_prelude::BlockNumberFor;
+use sp_runtime::{AccountId32, SaturatedConversion};
+use sp_std::{
+    convert::{TryFrom, TryInto},
+    vec,
+    vec::Vec,
+};
+
+use crate::{
+    did_details::{
+        DidCreationDetails, DidDetails, DidEncryptionKey, DidNewKeyAgreementKeySet,
+        DidVerificationKey,
+    },
+    service_endpoints::DidEndpoint,
+    AccountIdOf, Config, DidCreationDetailsOf, DidIdentifierOf,
+};
+
+pub(crate) type DidNewKeyAgreementKeySetOf<T> =
+    DidNewKeyAgreementKeySet<<T as Config>::MaxNewKeyAgreementKeys>;
+
+pub fn get_key_agreement_keys<T: Config>(n_keys: u32) -> DidNewKeyAgreementKeySetOf<T> {
+    // Build a temporary Vec<DidEncryptionKey>
+    let keys: Vec<DidEncryptionKey> = (1..=n_keys)
+        .map(|i| {
+            // Convert index → big-endian bytes → pad to 32 bytes
+            let mut seed_vec = i.to_be_bytes().to_vec();
+            seed_vec.resize(32, 0u8);
+
+            let seed: [u8; 32] =
+                seed_vec.try_into().expect("Length is exactly 32 after resize → this never fails");
+
+            DidEncryptionKey::X25519(seed)
+        })
+        .collect();
+
+    // Try to convert Vec → BoundedVec (will fail at runtime if > bound)
+    BoundedVec::try_from(keys)
+        .expect("Generated exactly n_keys ≤ MaxNewKeyAgreementKeys → should succeed")
+}
+
+pub fn get_service_endpoints<T: Config>(
+    count: u32,
+    endpoint_id_length: u32,
+    endpoint_type_count: u32,
+    endpoint_type_length: u32,
+    endpoint_url_count: u32,
+    endpoint_url_length: u32,
+) -> Vec<DidEndpoint<T>> {
+    (0..count)
+        .map(|i| {
+            // Create a string of characters of all 'a', 'b', 'c', and so on depending on
+            // the current iteration value, given by `i`.
+            let endpoint_id = vec![b'a' + i as u8; endpoint_id_length.saturated_into()];
+            let endpoint_types = (0..endpoint_type_count)
+                .map(|t| {
+                    let mut endpoint_type = t.to_be_bytes().to_vec();
+                    endpoint_type.resize(endpoint_type_length.saturated_into(), 0u8);
+                    endpoint_type
+                })
+                .collect();
+            let endpoint_urls = (0..endpoint_url_count)
+                .map(|u| {
+                    // Create a string of characters of all 'a', 'b', 'c', and so on depending on
+                    // the  iteration value, given by `u`.current
+                    vec![b'a' + u as u8; endpoint_url_length.saturated_into()]
+                })
+                .collect();
+            DidEndpoint::new(endpoint_id, endpoint_types, endpoint_urls)
+        })
+        .collect()
+}
+
+pub fn generate_base_did_creation_details<T: Config>(
+    did: DidIdentifierOf<T>,
+    submitter: AccountIdOf<T>,
+) -> DidCreationDetailsOf<T> {
+    DidCreationDetails {
+        did,
+        submitter,
+        new_key_agreement_keys: BoundedVec::new(),
+        new_attestation_key: None,
+        new_delegation_key: None,
+        new_service_details: Vec::new(),
+    }
+}
+
+pub fn generate_base_did_details<T>(
+    authentication_key: DidVerificationKey<AccountIdOf<T>>,
+    deposit_owner: Option<AccountIdOf<T>>,
+) -> DidDetails<T>
+where
+    T: Config,
+    <T as frame_system::Config>::AccountId: From<AccountId32>,
+{
+    DidDetails::new(
+        authentication_key,
+        BlockNumberFor::<T>::default(),
+        deposit_owner.unwrap_or_else(|| AccountId32::new([0u8; 32]).into()),
+    )
+    .expect("Failed to generate new DidDetails from auth_key due to BoundedBTreeSet bound")
+}

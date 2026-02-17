@@ -1901,7 +1901,10 @@ fn finalize_letting_agent_fails() {
                 1984
             ));
             assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), x,));
-            assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([0; 32].into()), x));
+            assert_ok!(Marketplace::do_claim_property_token(
+                RuntimeOrigin::signed([0; 32].into()),
+                x
+            ));
             assert_ok!(Marketplace::do_claim_property_token(
                 RuntimeOrigin::signed([15; 32].into()),
                 x

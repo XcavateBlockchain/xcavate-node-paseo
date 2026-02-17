@@ -11,6 +11,12 @@ use ismp::{
     consensus::{ConsensusClientId, StateMachineHeight, StateMachineId},
     host::StateMachine,
 };
+use kilt_runtime_api_did::RawDidLinkedInfo;
+use kilt_support::traits::ItemFilter;
+use pallet_did_lookup::linkable_account::LinkableAccountId;
+use parity_scale_codec::{Decode, Encode};
+use public_credentials::CredentialEntry;
+use scale_info::TypeInfo;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H256};
@@ -22,11 +28,19 @@ use sp_runtime::{
 use sp_version::RuntimeVersion;
 
 use crate::{
+    assets::{AssetDid, PublicCredentialsFilter},
+    authorization::AuthorizationId,
+    configs::DidIdentifier,
     constants::{SLOT_DURATION, VERSION},
-    types::{AccountId, Balance, Block, ConsensusHook, Executive, Nonce},
+    types::{AccountId, Balance, Block, BlockNumber, ConsensusHook, Executive, Hash, Nonce},
     InherentDataExt, IsmpParachain, ParachainSystem, Runtime, RuntimeCall, RuntimeGenesisConfig,
     SessionKeys, System, TransactionPayment,
 };
+
+#[derive(Encode, Decode, TypeInfo)]
+pub enum PublicCredentialsApiError {
+    InvalidSubjectId,
+}
 
 impl_runtime_apis! {
     impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
@@ -386,6 +400,109 @@ impl_runtime_apis! {
 
         fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
             Default::default()
+        }
+    }
+
+    impl kilt_runtime_api_did::Did<
+        Block,
+        DidIdentifier,
+        AccountId,
+        LinkableAccountId,
+        Balance,
+        Hash,
+        BlockNumber,
+        RuntimeCall
+    > for Runtime {
+        fn query_by_account(account: LinkableAccountId) -> Option<
+            RawDidLinkedInfo<
+                DidIdentifier,
+                AccountId,
+                LinkableAccountId,
+                Balance,
+                Hash,
+                BlockNumber
+            >
+        > {
+            pallet_did_lookup::ConnectedDids::<Runtime>::get(account)
+                .and_then(|owner_info| {
+                    did::Did::<Runtime>::get(&owner_info.did).map(|details| (owner_info, details))
+                })
+                .map(|(connection_record, details)| {
+                    let accounts = pallet_did_lookup::ConnectedAccounts::<Runtime>::iter_key_prefix(&connection_record.did).collect();
+                    let service_endpoints = did::ServiceEndpoints::<Runtime>::iter_prefix(&connection_record.did).map(|e| From::from(e.1)).collect();
+
+                    RawDidLinkedInfo {
+                        identifier: connection_record.did,
+                        accounts,
+                        service_endpoints,
+                        details: details.into(),
+                    }
+                })
+        }
+
+        fn batch_query_by_account(accounts: Vec<LinkableAccountId>) -> Vec<Option<
+            RawDidLinkedInfo<
+                DidIdentifier,
+                AccountId,
+                LinkableAccountId,
+                Balance,
+                Hash,
+                BlockNumber
+            >
+        >> {
+            accounts.into_iter().map(Self::query_by_account).collect()
+        }
+
+        fn query(did: DidIdentifier) -> Option<
+            RawDidLinkedInfo<
+                DidIdentifier,
+                AccountId,
+                LinkableAccountId,
+                Balance,
+                Hash,
+                BlockNumber
+            >
+        > {
+            let details = did::Did::<Runtime>::get(&did)?;
+            let accounts = pallet_did_lookup::ConnectedAccounts::<Runtime>::iter_key_prefix(&did).collect();
+            let service_endpoints = did::ServiceEndpoints::<Runtime>::iter_prefix(&did).map(|e| From::from(e.1)).collect();
+
+            Some(RawDidLinkedInfo {
+                identifier: did,
+                accounts,
+                service_endpoints,
+                details: details.into(),
+            })
+        }
+
+        fn batch_query(dids: Vec<DidIdentifier>) -> Vec<Option<
+            RawDidLinkedInfo<
+                DidIdentifier,
+                AccountId,
+                LinkableAccountId,
+                Balance,
+                Hash,
+                BlockNumber
+            >
+        >> {
+            dids.into_iter().map(Self::query).collect()
+        }
+    }
+
+    impl kilt_runtime_api_public_credentials::PublicCredentials<Block, Vec<u8>, Hash, CredentialEntry<Hash, DidIdentifier, BlockNumber, AccountId, Balance, AuthorizationId<<Runtime as delegation::Config>::DelegationNodeId>>, PublicCredentialsFilter<Hash, AccountId>, PublicCredentialsApiError> for Runtime {
+        fn get_by_id(credential_id: Hash) -> Option<CredentialEntry<Hash, DidIdentifier, BlockNumber, AccountId, Balance, AuthorizationId<<Runtime as delegation::Config>::DelegationNodeId>>> {
+            let subject = public_credentials::CredentialSubjects::<Runtime>::get(credential_id)?;
+            public_credentials::Credentials::<Runtime>::get(subject, credential_id)
+        }
+
+        fn get_by_subject(subject: Vec<u8>, filter: Option<PublicCredentialsFilter<Hash, AccountId>>) -> Result<Vec<(Hash, CredentialEntry<Hash, DidIdentifier, BlockNumber, AccountId, Balance, AuthorizationId<<Runtime as delegation::Config>::DelegationNodeId>>)>, PublicCredentialsApiError> {
+            let asset_did = AssetDid::try_from(subject).map_err(|_| PublicCredentialsApiError::InvalidSubjectId)?;
+            let credentials_prefix = public_credentials::Credentials::<Runtime>::iter_prefix(asset_did);
+            if let Some(credentials_filter) = filter {
+                Ok(credentials_prefix.filter(|(_, entry)| credentials_filter.should_include(entry)).collect())
+            } else {
+                Ok(credentials_prefix.collect())
+            }
         }
     }
 }

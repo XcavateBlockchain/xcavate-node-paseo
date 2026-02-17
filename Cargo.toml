@@ -10,13 +10,20 @@ edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/XcavateBlockchain/xcavate-node-paseo"
 homepage = "https://xcavate.io/"
+version = "1.0.0"
 
 [workspace.dependencies]
+base58 = { version = "0.2.0", default-features = false }
+bitflags = { version = "1.3.2", default-features = false }
 clap = { version = "4.5.3", features = ["derive"] }
 color-print = "0.3.4"
+env_logger = { version = "0.10.0" }
+fluent-uri = { version = "0.1.4", default-features = false }
 futures = "0.3.31"
+hex = { version = "0.4.0", default-features = false }
 hex-literal = "0.4.1"
 jsonrpsee = { version = "0.24.7", features = ["server"] }
+libsecp256k1 = { version = "0.7", default-features = false }
 log = { version = "0.4.22", default-features = false }
 parity-scale-codec = { version = "3.7.5", default-features = false, features = [
 	"derive",
@@ -25,6 +32,7 @@ parity-scale-codec = { version = "3.7.5", default-features = false, features = [
 scale-info = { version = "2.11.6", default-features = false }
 serde = { version = "1.0.214", default-features = false }
 serde_json = "1.0.132"
+sha3 = { version = "0.10.0", default-features = false }
 smallvec = "1.13.2"
 
 # Substrate
@@ -79,7 +87,7 @@ sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", defaul
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sp-genesis-builder = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2503" }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sp-keystore = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
@@ -88,6 +96,8 @@ sp-state-machine = { git = "https://github.com/paritytech/polkadot-sdk", default
 sp-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sp-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 sp-version = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
+sp-weights = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 substrate-build-script-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2503" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "stable2503" }
@@ -151,6 +161,19 @@ pallet-property-governance = {  path = "./pallets/property-governance", default-
 pallet-regions = {  path = "./pallets/regions", default-features = false }
 pallet-real-world-asset = {  path = "./pallets/real-world-asset", default-features = false }
 pallet-bucket = { path = "./pallets/pallet-bucket", default-features = false }
+
+# KILT DIDs
+kilt-support = { path = "support", default-features = false }
+kilt-asset-dids = { path = "crates/assets", default-features = false }
+attestation = { path = "kilt-pallets/attestation", default-features = false }
+ctype = { path = "kilt-pallets/ctype", default-features = false }
+delegation = { path = "kilt-pallets/delegation", default-features = false }
+did = { path = "kilt-pallets/did", default-features = false }
+pallet-did-lookup = { path = "kilt-pallets/pallet-did-lookup", default-features = false }
+public-credentials = { path = "kilt-pallets/public-credentials", default-features = false }
+pallet-kilt-migration = { path = "kilt-pallets/pallet-migration", default-features = false }
+kilt-runtime-api-did = { path = "runtime-api/did", default-features = false }
+kilt-runtime-api-public-credentials = { path = "runtime-api/public-credentials", default-features = false }
 
 # Fuzzer
 #substrate-runtime-fuzzer = { git = "https://github.com/srlabs/substrate-runtime-fuzzer.git", default-features = false }

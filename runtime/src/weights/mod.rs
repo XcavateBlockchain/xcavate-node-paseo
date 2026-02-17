@@ -17,16 +17,21 @@
 
 //! Expose the auto generated weight files.
 
+pub mod attestation;
 pub mod block_weights;
+pub mod ctype;
 pub mod cumulus_pallet_parachain_system;
 pub mod cumulus_pallet_weight_reclaim;
 pub mod cumulus_pallet_xcmp_queue;
+pub mod delegation;
+pub mod did;
 pub mod extrinsic_weights;
 pub mod ismp_parachain;
 pub mod pallet_assets;
 pub mod pallet_balances;
 pub mod pallet_bucket;
 pub mod pallet_collator_selection;
+pub mod pallet_did_lookup;
 pub mod pallet_education_regions;
 pub mod pallet_marketplace;
 pub mod pallet_message_queue;
@@ -46,6 +51,7 @@ pub mod pallet_vesting;
 pub mod pallet_xcavate_whitelist;
 pub mod pallet_xcm;
 pub mod paritydb_weights;
+pub mod public_credentials;
 pub mod rocksdb_weights;
 
 pub use block_weights::constants::BlockExecutionWeight;

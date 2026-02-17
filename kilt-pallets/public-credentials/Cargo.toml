@@ -1,0 +1,67 @@
+[package]
+authors       = { workspace = true }
+description   = "Enables adding and revoking public credentials."
+edition       = { workspace = true }
+homepage      = { workspace = true }
+name          = "public-credentials"
+repository    = { workspace = true }
+version       = { workspace = true }
+
+[dev-dependencies]
+ctype        = { workspace = true, features = ["mock"] }
+kilt-support = { workspace = true, features = ["mock"] }
+
+pallet-balances = { workspace = true, features = ["std"] }
+sp-io           = { workspace = true, features = ["std"] }
+sp-keystore     = { workspace = true, features = ["std"] }
+
+[dependencies]
+# External dependencies
+log                = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info         = { workspace = true, features = ["derive"] }
+
+# Internal dependencies
+ctype        = { workspace = true }
+kilt-support = { workspace = true }
+
+# Substrate dependencies
+frame-benchmarking = { workspace = true, optional = true }
+frame-support      = { workspace = true }
+frame-system       = { workspace = true }
+sp-core            = { workspace = true }
+sp-io              = { workspace = true, optional = true }
+sp-keystore        = { workspace = true, optional = true }
+sp-runtime         = { workspace = true }
+sp-std             = { workspace = true }
+sp-weights         = { workspace = true }
+
+[features]
+default = ["std"]
+mock = []
+runtime-benchmarks = [
+  "frame-benchmarking",
+  "frame-support/runtime-benchmarks",
+  "frame-system/runtime-benchmarks",
+  "kilt-support/runtime-benchmarks",
+  "sp-runtime/runtime-benchmarks",
+]
+std = [
+  "ctype/std",
+  "frame-benchmarking?/std",
+  "frame-support/std",
+  "frame-system/std",
+  "kilt-support/std",
+  "log/std",
+  "parity-scale-codec/std",
+  "scale-info/std",
+  "sp-core/std",
+  "sp-io/std",
+  "sp-runtime/std",
+  "sp-std/std",
+]
+try-runtime = [
+  "frame-support/try-runtime",
+  "frame-system/try-runtime",
+  "kilt-support/try-runtime",
+]

@@ -25,6 +25,7 @@ use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use scale_info::TypeInfo;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_core::ConstBool;
 use sp_runtime::{
     traits::{AccountIdLookup, BlakeTwo256, ConvertInto, Morph, Verify},
     MultiSignature, Perbill, Percent, Permill, RuntimeDebug,
@@ -47,10 +48,10 @@ use crate::{
     },
     weights::{self, BlockExecutionWeight, ExtrinsicBaseWeight, ParityDbWeight},
     Assets, AssetsFreezer, AssetsHolder, Aura, Balances, CollatorSelection, EducationAssets,
-    EducationNfts, EducationRegions, MessageQueue, OriginCaller, PalletInfo, ParachainSystem,
-    PropertyManagement, RealEstateAssets, RealEstateNfts, RealWorldAsset, Regions, Runtime,
-    RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
-    Session, SessionKeys, System, WeightToFee, XcavateWhitelist, XcmpQueue,
+    EducationNfts, EducationRegions, KiltMigration, MessageQueue, OriginCaller, PalletInfo,
+    ParachainSystem, PropertyManagement, RealEstateAssets, RealEstateNfts, RealWorldAsset, Regions,
+    Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin,
+    RuntimeTask, Session, SessionKeys, System, WeightToFee, XcavateWhitelist, XcmpQueue,
 };
 
 use primitives::{AssetMetadataProvider, MarketplaceFreezeReason, MarketplaceHoldReason};
@@ -754,14 +755,14 @@ parameter_types! {
     pub const Postcode: u32 = 10;
     pub const LocationDepositAmount: Balance = 10_000 * XCAV;
     pub const MaximumListingDuration: BlockNumber = 30 * DAYS;
-    pub const RegionVotingTime: BlockNumber = 30 * DAYS;
-    pub const RegionAuctionTime: BlockNumber = 7 * DAYS;
-    pub const RegionOperatorVotingTime: BlockNumber = 30 * DAYS;
+    pub const RegionVotingTime: BlockNumber = 30;
+    pub const RegionAuctionTime: BlockNumber = 30;
+    pub const RegionOperatorVotingTime: BlockNumber = 20;
     pub const RegionThreshold: Percent = Percent::from_percent(75);
     pub const MaxProposalForBlock: u32 = 100;
     pub const RegionSlashingAmount: Balance = 10 * XCAV;
-    pub const RegionOwnerChangeTime: BlockNumber = 730 * DAYS;
-    pub const RegionOwnerNoticeTime: BlockNumber = 90 * DAYS;
+    pub const RegionOwnerChangeTime: BlockNumber = 400;
+    pub const RegionOwnerNoticeTime: BlockNumber = 50;
     pub const RegionOwnerDisputeDepositAmount: Balance = 1_000 * XCAV;
     pub const MinimumRegionDepositAmount: Balance = 100_000 * XCAV;
     pub const RegionProposalDepositAmount: Balance = 5_000 * XCAV;
@@ -943,10 +944,10 @@ parameter_types! {
     pub const ListingDepositAmount: Balance = 10 * MICROXCAV;
     pub const MarketplaceFeePercent: Perbill = Perbill::from_percent(1);
     pub const MaximumAcceptedAssets: u32 = 2;
-    pub const LawyerVotingDuration: BlockNumber = 3 * DAYS;
-    pub const LegalProcessDuration: BlockNumber = 30 * DAYS;
+    pub const LawyerVotingDuration: BlockNumber = 30;
+    pub const LegalProcessDuration: BlockNumber = 80;
     pub const MinimumVotingQuorum: Percent = Percent::from_percent(50);
-    pub const ClaimWindowTime: BlockNumber = 3 * DAYS;
+    pub const ClaimWindowTime: BlockNumber = 100;
     pub const MaximumRelistAttempts: u8 = 1;
     pub const MaxOwnershipPercentage: Perbill = Perbill::from_percent(50);
     pub const MaxCallLen: u32 = 64;
@@ -1000,8 +1001,8 @@ parameter_types! {
     pub const MinimumStakingAmount: Balance = 1000 * XCAV;
     pub const MaxProperty: u32 = 1000;
     pub const MaxLocation: u32 = 50;
-    pub const LettingAgentVotingDuration: BlockNumber = 3 * DAYS;
-    pub const LettingAgentNoticeTime: BlockNumber = 30 * DAYS;
+    pub const LettingAgentVotingDuration: BlockNumber = 20;
+    pub const LettingAgentNoticeTime: BlockNumber = 30;
     pub const MaximumNoticesPerBlock: u32 = 10;
 }
 
@@ -1033,7 +1034,7 @@ impl pallet_property_management::Config for Runtime {
 }
 
 parameter_types! {
-    pub const PropertyVotingTime: BlockNumber = 3 * DAYS;
+    pub const PropertyVotingTime: BlockNumber = 20;
     pub const MaxVoteForBlock: u32 = 100;
     pub const MinimumSlashingAmount: Balance = 10 * XCAV;
     pub const VotingThreshold: Percent = Percent::from_percent(51);
@@ -1041,7 +1042,7 @@ parameter_types! {
     pub const LowProposal: Balance = 500 * XCAV;
     pub const HighProposal: Balance = 10_000 * XCAV;
     pub const ChallengeDepositAmount: Balance = 500 * XCAV;
-    pub const AutoExecutionCooldown: BlockNumber = 2 * DAYS;
+    pub const AutoExecutionCooldown: BlockNumber = 28;
 }
 
 /// Configure the pallet-property-governance in pallets/property-governance.
@@ -1332,4 +1333,291 @@ impl pallet_bucket::Config for Runtime {
     type MaxProperties = MaxProperties;
     type MaxPropertyKeyLen = MaxPropertyKeyLen;
     type MaxPropertyValueLen = MaxPropertyValueLen;
+}
+
+use crate::{
+    assets::AssetDid,
+    authorization::{AuthorizationId, PalletAuthorize},
+};
+use delegation::DelegationAc;
+use did::{
+    DeriveDidCallAuthorizationVerificationKeyRelationship, DeriveDidCallKeyRelationshipResult,
+    DidRawOrigin, DidVerificationKeyRelationship, EnsureDidOrigin, RelationshipDeriveError,
+};
+
+/// A Kilt DID subject identifier.
+pub type DidIdentifier = AccountId;
+
+impl DeriveDidCallAuthorizationVerificationKeyRelationship for RuntimeCall {
+    fn derive_verification_key_relationship(&self) -> DeriveDidCallKeyRelationshipResult {
+        /// ensure that all calls have the same VerificationKeyRelationship
+        fn single_key_relationship(calls: &[RuntimeCall]) -> DeriveDidCallKeyRelationshipResult {
+            let init = calls
+                .first()
+                .ok_or(RelationshipDeriveError::InvalidCallParameter)?
+                .derive_verification_key_relationship()?;
+            calls.iter().skip(1).map(RuntimeCall::derive_verification_key_relationship).try_fold(
+                init,
+                |acc, next| {
+                    if next.is_err() {
+                        next
+                    } else if Ok(acc) == next {
+                        Ok(acc)
+                    } else {
+                        Err(RelationshipDeriveError::InvalidCallParameter)
+                    }
+                },
+            )
+        }
+        match self {
+            RuntimeCall::Attestation { .. } => Ok(DidVerificationKeyRelationship::AssertionMethod),
+            RuntimeCall::Ctype { .. } => Ok(DidVerificationKeyRelationship::AssertionMethod),
+            RuntimeCall::Delegation { .. } => {
+                Ok(DidVerificationKeyRelationship::CapabilityDelegation)
+            }
+            // DID creation is not allowed through the DID proxy.
+            RuntimeCall::Did(did::Call::create { .. }) => {
+                Err(RelationshipDeriveError::NotCallableByDid)
+            }
+            RuntimeCall::Did { .. } => Ok(DidVerificationKeyRelationship::Authentication),
+            RuntimeCall::PublicCredentials { .. } => {
+                Ok(DidVerificationKeyRelationship::AssertionMethod)
+            }
+            RuntimeCall::Utility(pallet_utility::Call::batch { calls }) => {
+                single_key_relationship(&calls[..])
+            }
+            RuntimeCall::Utility(pallet_utility::Call::batch_all { calls }) => {
+                single_key_relationship(&calls[..])
+            }
+            RuntimeCall::Utility(pallet_utility::Call::force_batch { calls }) => {
+                single_key_relationship(&calls[..])
+            }
+            #[cfg(not(feature = "runtime-benchmarks"))]
+            _ => Err(RelationshipDeriveError::NotCallableByDid),
+            // By default, returns the authentication key
+            #[cfg(feature = "runtime-benchmarks")]
+            _ => Ok(DidVerificationKeyRelationship::Authentication),
+        }
+    }
+
+    // Always return a System::remark() extrinsic call
+    #[cfg(feature = "runtime-benchmarks")]
+    fn get_call_for_did_call_benchmark() -> Self {
+        RuntimeCall::System(frame_system::Call::remark { remark: alloc::vec![] })
+    }
+}
+
+parameter_types! {
+    pub const CtypeFee: Balance = 0;
+}
+
+impl ctype::Config for Runtime {
+    type CtypeCreatorId = AccountId;
+    type Currency = Balances;
+    type Fee = CtypeFee;
+    type FeeCollector = ();
+
+    type EnsureOrigin = EnsureDidOrigin<DidIdentifier, AccountId>;
+    type OriginSuccess = DidRawOrigin<AccountId, DidIdentifier>;
+    type OverarchingOrigin = EnsureRoot<AccountId>;
+
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = weights::ctype::WeightInfo<Runtime>;
+}
+
+parameter_types! {
+    pub const MaxDelegatedAttestations: u32 = 1000;
+    pub const AttestationDeposit: Balance = EXISTENTIAL_DEPOSIT;
+}
+
+impl attestation::Config for Runtime {
+    type EnsureOrigin = EnsureDidOrigin<DidIdentifier, AccountId>;
+    type OriginSuccess = DidRawOrigin<AccountId, DidIdentifier>;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = weights::attestation::WeightInfo<Runtime>;
+
+    type Currency = Balances;
+    type Deposit = AttestationDeposit;
+    type MaxDelegatedAttestations = MaxDelegatedAttestations;
+    type AttesterId = DidIdentifier;
+    type AuthorizationId = AuthorizationId<<Runtime as delegation::Config>::DelegationNodeId>;
+    type AccessControl = PalletAuthorize<DelegationAc<Runtime>>;
+    type BalanceMigrationManager = KiltMigration;
+}
+
+parameter_types! {
+pub const MaxSignatureByteLength: u16 = 64;
+pub const MaxParentChecks: u32 = 5;
+pub const MaxRevocations: u32 = 5;
+pub const MaxRemovals: u32 = 5;
+#[derive(Clone, TypeInfo)]
+pub const MaxChildren: u32 = 1000;
+pub const DelegationDeposit: Balance = EXISTENTIAL_DEPOSIT;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+#[derive(
+    Clone, Copy, Default, Debug, Encode, Decode, DecodeWithMemTracking, PartialEq, Eq, TypeInfo,
+)]
+pub struct DummySignature;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<A> From<(A, alloc::vec::Vec<u8>)> for DummySignature {
+    fn from(_: (A, alloc::vec::Vec<u8>)) -> Self {
+        DummySignature
+    }
+}
+
+impl delegation::Config for Runtime {
+    type DelegationEntityId = DidIdentifier;
+    type DelegationNodeId = Hash;
+
+    type EnsureOrigin = EnsureDidOrigin<DidIdentifier, AccountId>;
+    type OriginSuccess = DidRawOrigin<AccountId, DidIdentifier>;
+
+    #[cfg(not(feature = "runtime-benchmarks"))]
+    type DelegationSignatureVerification = did::DidSignatureVerify<Runtime>;
+    #[cfg(not(feature = "runtime-benchmarks"))]
+    type Signature = did::DidSignature;
+
+    #[cfg(feature = "runtime-benchmarks")]
+    type Signature = DummySignature;
+    #[cfg(feature = "runtime-benchmarks")]
+    type DelegationSignatureVerification =
+        kilt_support::signature::AlwaysVerify<AccountId, alloc::vec::Vec<u8>, Self::Signature>;
+
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type MaxSignatureByteLength = MaxSignatureByteLength;
+    type MaxParentChecks = MaxParentChecks;
+    type MaxRevocations = MaxRevocations;
+    type MaxRemovals = MaxRemovals;
+    type MaxChildren = MaxChildren;
+    type WeightInfo = weights::delegation::WeightInfo<Runtime>;
+    type Currency = Balances;
+    type Deposit = DelegationDeposit;
+    type BalanceMigrationManager = KiltMigration;
+}
+
+parameter_types! {
+#[derive(Debug, Clone, Eq, PartialEq, TypeInfo, Decode, Encode, DecodeWithMemTracking)]
+pub const MaxNewKeyAgreementKeys: u32 = 10;
+#[derive(Clone)]
+pub const MaxPublicKeysPerDid: u32 = 20;
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub const MaxTotalKeyAgreementKeys: u32 = 20;
+// Standalone block time is half the duration of a parachain block.
+pub const MaxBlocksTxValidity: BlockNumber = HOURS;
+pub const DidBaseDeposit: Balance = 0;
+pub const KeyDeposit: Balance = 0;
+pub const ServiceEndpointDeposit: Balance = 0;
+pub const DidFee: Balance = 0;
+pub const MaxNumberOfServicesPerDid: u32 = 25;
+pub const MaxServiceIdLength: u32 = 50;
+pub const MaxServiceTypeLength: u32 = 50;
+pub const MaxServiceUrlLength: u32 = 2_000;
+pub const MaxNumberOfTypesPerService: u32 = 1;
+pub const MaxNumberOfUrlsPerService: u32 = 2;
+}
+
+impl did::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type RuntimeOrigin = RuntimeOrigin;
+    type Currency = Balances;
+    type DidIdentifier = DidIdentifier;
+    type KeyDeposit = KeyDeposit;
+    type ServiceEndpointDeposit = ServiceEndpointDeposit;
+    type BaseDeposit = DidBaseDeposit;
+    type Fee = DidFee;
+    type FeeCollector = ();
+
+    #[cfg(not(feature = "runtime-benchmarks"))]
+    type EnsureOrigin = EnsureDidOrigin<DidIdentifier, AccountId>;
+    #[cfg(not(feature = "runtime-benchmarks"))]
+    type OriginSuccess = DidRawOrigin<AccountId, DidIdentifier>;
+
+    #[cfg(feature = "runtime-benchmarks")]
+    type EnsureOrigin = frame_system::EnsureSigned<DidIdentifier>;
+    #[cfg(feature = "runtime-benchmarks")]
+    type OriginSuccess = DidIdentifier;
+
+    type MaxNewKeyAgreementKeys = MaxNewKeyAgreementKeys;
+    type MaxTotalKeyAgreementKeys = MaxTotalKeyAgreementKeys;
+    type MaxPublicKeysPerDid = MaxPublicKeysPerDid;
+    type MaxBlocksTxValidity = MaxBlocksTxValidity;
+    type MaxNumberOfServicesPerDid = MaxNumberOfServicesPerDid;
+    type MaxServiceIdLength = MaxServiceIdLength;
+    type MaxServiceTypeLength = MaxServiceTypeLength;
+    type MaxServiceUrlLength = MaxServiceUrlLength;
+    type MaxNumberOfTypesPerService = MaxNumberOfTypesPerService;
+    type MaxNumberOfUrlsPerService = MaxNumberOfUrlsPerService;
+    type WeightInfo = weights::did::WeightInfo<Runtime>;
+    type BalanceMigrationManager = KiltMigration;
+    type DidLifecycleHooks = ();
+}
+
+parameter_types! {
+    pub const DidAssetPrefix: &'static [u8] = b"did:asset:";  // = 10
+    pub const MaximumChainIdLength: u32 = 8 + 1 + 32;           // = 41
+    pub const MaximumAssetIdLength: u32 = 8 + 1 + 128 + 1 + 78; // = 216
+    pub const PublicCredentialsDeposit: Balance = EXISTENTIAL_DEPOSIT;
+    pub const MaxEncodedClaimsLength: u32 = 100_000;	// 100 Kb
+    pub const MaxSubjectIdLength: u32 = 41 + 1 + 216 + 10;
+}
+
+impl public_credentials::Config for Runtime {
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type AccessControl = PalletAuthorize<DelegationAc<Runtime>>;
+    type AttesterId = DidIdentifier;
+    type AuthorizationId = AuthorizationId<<Runtime as delegation::Config>::DelegationNodeId>;
+    type CredentialId = Hash;
+    type CredentialHash = BlakeTwo256;
+    type Currency = Balances;
+    type Deposit = PublicCredentialsDeposit;
+    type EnsureOrigin = EnsureDidOrigin<DidIdentifier, AccountId>;
+    type MaxEncodedClaimsLength = MaxEncodedClaimsLength;
+    type MaxSubjectIdLength = MaxSubjectIdLength;
+    type OriginSuccess = DidRawOrigin<AccountId, DidIdentifier>;
+    type RuntimeEvent = RuntimeEvent;
+    type SubjectId = AssetDid;
+    type WeightInfo = weights::public_credentials::WeightInfo<Runtime>;
+    type BalanceMigrationManager = KiltMigration;
+}
+
+parameter_types! {
+    pub const  MaxMigrationsPerPallet: u32 = 100;
+}
+
+impl pallet_kilt_migration::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type MaxMigrationsPerPallet = MaxMigrationsPerPallet;
+    type WeightInfo = ();
+}
+
+parameter_types! {
+    pub const DidLookupDeposit: Balance = 10;
+}
+
+impl pallet_did_lookup::Config for Runtime {
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type RuntimeEvent = RuntimeEvent;
+
+    type DidIdentifier = DidIdentifier;
+
+    type Currency = Balances;
+    type Deposit = DidLookupDeposit;
+
+    type EnsureOrigin = EnsureDidOrigin<DidIdentifier, AccountId>;
+    type AssociateOrigin = Self::EnsureOrigin;
+    type OriginSuccess = DidRawOrigin<AccountId, DidIdentifier>;
+
+    type WeightInfo = weights::pallet_did_lookup::WeightInfo<Runtime>;
+    type BalanceMigrationManager = KiltMigration;
+    // Do not change the below flag to `true` without also deploying a runtime
+    // migration which removes any links that point to the same DID!
+    type UniqueLinkingEnabled = ConstBool<false>;
 }
