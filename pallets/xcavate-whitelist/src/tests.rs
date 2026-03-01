@@ -77,11 +77,11 @@ fn assign_role_works() {
         assert_ok!(Whitelist::add_admin(RuntimeOrigin::root(), 3));
         assert_ok!(Whitelist::assign_role(RuntimeOrigin::signed(3), 1, Role::Lawyer));
         // Check if has_role and is_compliant work as expected.
-        assert_eq!(Whitelist::has_role(&1, Role::Lawyer), true);
-        assert_eq!(Whitelist::has_role(&1, Role::LettingAgent), false);
+        assert!(Whitelist::has_role(&1, Role::Lawyer));
+        assert!(!Whitelist::has_role(&1, Role::LettingAgent));
         // Check if is_compliant works as expected.
-        assert_eq!(Whitelist::is_compliant(&1, Role::Lawyer), true);
-        assert_eq!(Whitelist::is_compliant(&1, Role::LettingAgent), false);
+        assert!(Whitelist::is_compliant(&1, Role::Lawyer));
+        assert!(!Whitelist::is_compliant(&1, Role::LettingAgent));
         assert_eq!(
             AccountRoles::<Test>::get(&1, Role::Lawyer).unwrap(),
             AccessPermission::Compliant
@@ -123,7 +123,7 @@ fn remove_role_works() {
         assert_ok!(Whitelist::assign_role(RuntimeOrigin::signed(3), 1, Role::RealEstateInvestor));
         assert_ok!(Whitelist::remove_role(RuntimeOrigin::signed(3), 1, Role::RealEstateInvestor));
         // Check if has_role works as expected after removing the role.
-        assert_eq!(Whitelist::has_role(&1, Role::RealEstateInvestor), false);
+        assert!(!Whitelist::has_role(&1, Role::RealEstateInvestor));
         assert!(AccountRoles::<Test>::get(&1, Role::Lawyer).is_none());
     });
 }
@@ -161,7 +161,7 @@ fn set_permission_works() {
         System::set_block_number(1);
         assert_ok!(Whitelist::add_admin(RuntimeOrigin::root(), 3));
         assert_ok!(Whitelist::assign_role(RuntimeOrigin::signed(3), 1, Role::Lawyer));
-        assert_eq!(Whitelist::has_role(&1, Role::Lawyer), true);
+        assert!(Whitelist::has_role(&1, Role::Lawyer));
         assert_eq!(
             AccountRoles::<Test>::get(&1, Role::Lawyer).unwrap(),
             AccessPermission::Compliant
@@ -172,9 +172,9 @@ fn set_permission_works() {
             Role::Lawyer,
             AccessPermission::Revoked
         ));
-        assert_eq!(Whitelist::has_role(&1, Role::Lawyer), true);
+        assert!(Whitelist::has_role(&1, Role::Lawyer));
         assert_eq!(AccountRoles::<Test>::get(&1, Role::Lawyer).unwrap(), AccessPermission::Revoked);
-        assert_eq!(Whitelist::is_compliant(&1, Role::Lawyer), false);
+        assert!(!Whitelist::is_compliant(&1, Role::Lawyer));
         assert_ok!(Whitelist::set_permission(
             RuntimeOrigin::signed(3),
             1,
@@ -185,7 +185,7 @@ fn set_permission_works() {
             AccountRoles::<Test>::get(&1, Role::Lawyer).unwrap(),
             AccessPermission::Compliant
         );
-        assert_eq!(Whitelist::is_compliant(&1, Role::Lawyer), true);
+        assert!(Whitelist::is_compliant(&1, Role::Lawyer));
     });
 }
 

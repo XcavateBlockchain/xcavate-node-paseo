@@ -30,7 +30,6 @@ pub mod weights;
 pub use weights::*;
 
 use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::FixedU128;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -121,9 +120,6 @@ pub mod pallet {
     #[pallet::storage]
     pub type AdminAccounts<T: Config> =
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), OptionQuery>;
-
-    #[pallet::storage]
-    pub type StoredNumber<T: Config> = StorageValue<_, FixedU128, ValueQuery>;
 
     /// Mapping of accounts to their assigned roles and permissions.
     #[pallet::storage]
@@ -281,22 +277,14 @@ pub mod pallet {
             let signer = ensure_signed(origin)?;
             // Verify that the caller is a registered admin.
             ensure!(AdminAccounts::<T>::contains_key(&signer), Error::<T>::AccountNotAdmin);
-            let current_permission =
-                AccountRoles::<T>::get(&user, &role).ok_or(Error::<T>::RoleNotAssigned)?;
-            ensure!(current_permission != permission, Error::<T>::PermissionAlreadySet);
+            ensure!(
+                AccountRoles::<T>::get(&user, &role).ok_or(Error::<T>::RoleNotAssigned)?
+                    != permission,
+                Error::<T>::PermissionAlreadySet
+            );
 
             AccountRoles::<T>::insert(&user, role.clone(), permission.clone());
             Self::deposit_event(Event::<T>::PermissionUpdated { user, role, permission });
-            Ok(())
-        }
-
-        #[pallet::call_index(10)]
-        #[pallet::weight(T::WeightInfo::add_admin())]
-        pub fn test(origin: OriginFor<T>, number: u32) -> DispatchResult {
-            let _ = ensure_signed(origin)?;
-            // Prevent double-registration.
-            let converted_number = FixedU128::from_u32(number);
-            StoredNumber::<T>::put(converted_number);
             Ok(())
         }
     }
@@ -320,7 +308,7 @@ pub trait RolePermission<AccountId> {
     fn is_admin(account: &AccountId) -> bool;
 }
 
-/// Trait removing a Role from an account.
+/// Trait for removing a Role from an account.
 pub trait RoleRemover<AccountId> {
     /// Remove a role from an account.
     fn role_removal(account: AccountId, role: Role) -> DispatchResult;

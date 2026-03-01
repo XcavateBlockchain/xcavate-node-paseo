@@ -240,7 +240,7 @@ pub mod pallet {
         #[pallet::constant]
         type MaxProposalsForBlock: Get<u32>;
 
-        /// The Trasury's pallet id, used for deriving its sovereign account ID.
+        /// The Treasury's pallet id, used for deriving its sovereign account ID.
         #[pallet::constant]
         type TreasuryId: Get<PalletId>;
 
@@ -526,7 +526,7 @@ pub mod pallet {
         ProposalExpired,
         /// Bid amount can not be zero.
         BidCannotBeZero,
-        /// There is alerady a proposal ongoing for this region.
+        /// There is already a proposal ongoing for this region.
         ProposalAlreadyOngoing,
         /// There are already too many proposals in the ending block.
         TooManyProposals,
@@ -655,7 +655,7 @@ pub mod pallet {
         ///
         /// Parameters:
         /// - `region_id`: Id of the region.
-        /// - `vote`: Must be either a Yes vote, a No vote or a Abstain vote.
+        /// - `vote`: Must be either a Yes vote, a No vote or an Abstain vote.
         /// - `amount`: The amount that the caller is using for voting.
         ///
         /// Emits `VotedOnRegionProposal` event when successful.
@@ -963,7 +963,7 @@ pub mod pallet {
         ///
         /// Parameters:
         /// - `region_id`: The region where the region owner should be removed.
-        /// - `vote`: Must be either a Yes vote, a No vote or a Abstain vote.
+        /// - `vote`: Must be either a Yes vote, a No vote or an Abstain vote.
         /// - `amount`: The amount that the caller is using for voting.
         ///
         /// Emits `VotedOnRegionOwnerProposal` event when successful.

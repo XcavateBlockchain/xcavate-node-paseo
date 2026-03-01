@@ -68,6 +68,71 @@ fn new_region_helper() {
     assert_ok!(EducationRegions::create_new_region(RuntimeOrigin::signed([8; 32].into()), 3,));
 }
 
+/// Sets up admin [20] and assigns all five standard roles:
+/// creator=[1], sponsor=[2], school=[3], lecturer=[4], ai_agent=[5].
+/// Also creates the test region.
+fn setup_all_roles() {
+    assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into()));
+    assert_ok!(XcavateWhitelist::assign_role(
+        RuntimeOrigin::signed([20; 32].into()),
+        [1; 32].into(),
+        pallet_xcavate_whitelist::Role::ModuleCreator
+    ));
+    assert_ok!(XcavateWhitelist::assign_role(
+        RuntimeOrigin::signed([20; 32].into()),
+        [2; 32].into(),
+        pallet_xcavate_whitelist::Role::ModuleSponsor
+    ));
+    assert_ok!(XcavateWhitelist::assign_role(
+        RuntimeOrigin::signed([20; 32].into()),
+        [3; 32].into(),
+        pallet_xcavate_whitelist::Role::ModuleBooker
+    ));
+    assert_ok!(XcavateWhitelist::assign_role(
+        RuntimeOrigin::signed([20; 32].into()),
+        [4; 32].into(),
+        pallet_xcavate_whitelist::Role::ModuleDeliverer
+    ));
+    assert_ok!(XcavateWhitelist::assign_role(
+        RuntimeOrigin::signed([20; 32].into()),
+        [5; 32].into(),
+        pallet_xcavate_whitelist::Role::ModuleAIAgent
+    ));
+    new_region_helper();
+}
+
+/// Runs the full booking flow: register lecturer, create module (100 tokens),
+/// sponsor 30 tokens with USDT (asset 1984), book one token, and claim it.
+///
+/// Assumes `setup_all_roles()` has already been called.
+/// Returns the asset ID of the created module's fractional token.
+fn setup_and_claim_booking() -> u32 {
+    assert_ok!(RealXEducation::register_module_deliverer(RuntimeOrigin::signed(
+        [4; 32].into()
+    )));
+    assert_ok!(RealXEducation::create_module(
+        RuntimeOrigin::signed([1; 32].into()),
+        3,
+        100,
+        bvec![1, 2, 3]
+    ));
+    let asset_id = ModuleInfo::<Test>::get(0).unwrap().asset_id;
+    assert_ok!(RealXEducation::sponsor_module(
+        RuntimeOrigin::signed([2; 32].into()),
+        0,
+        30,
+        1984
+    ));
+    assert_ok!(RealXEducation::book_module(
+        RuntimeOrigin::signed([3; 32].into()),
+        0,
+        0,
+        bvec![4, 5, 6]
+    ));
+    assert_ok!(RealXEducation::claim_booking(RuntimeOrigin::signed([4; 32].into()), 0, 0));
+    asset_id
+}
+
 // create_module tests
 
 #[test]
@@ -292,7 +357,7 @@ fn sponsor_module_works() {
 }
 
 #[test]
-fn sponsor_module_works2() {
+fn sponsor_module_works_different_asset() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
         let module_amount = 100u32;
@@ -339,7 +404,7 @@ fn sponsor_module_works2() {
         // 1. Funds were held correctly
         let price_per_token = 1250;
         let multiplier =
-            10u128.checked_pow(AssetsMetadataWrapper::get_decimals(10).unwrap().into()).unwrap(); // USDT has 6 decimals
+            10u128.checked_pow(AssetsMetadataWrapper::get_decimals(10).unwrap().into()).unwrap(); // ttGBP has 6 decimals
         let expected_hold = price_per_token * purchase_amount as u128 * multiplier;
 
         let held = AssetsHolder::total_balance_on_hold(10u32.into(), &[2; 32].into());
@@ -914,6 +979,8 @@ fn claim_booking_fails() {
 fn submit_impact_score_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
+        setup_all_roles();
+        let asset_id: u32 = setup_and_claim_booking();
 
         let creator: AccountId = [1; 32].into();
         let sponsor: AccountId = [2; 32].into();
@@ -921,86 +988,19 @@ fn submit_impact_score_works() {
         let lecturer: AccountId = [4; 32].into();
         let ai_agent: AccountId = [5; 32].into();
 
-        let module_amount = 100u32;
-        let purchase_amount = 30u32;
-
-        // Step 1: Setup permissions
-        assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [1; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleCreator
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [2; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleSponsor
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [3; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleBooker
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [4; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleDeliverer
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [5; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleAIAgent
-        ));
-        new_region_helper();
-        assert_ok!(RealXEducation::register_module_deliverer(RuntimeOrigin::signed(
-            [4; 32].into()
-        )));
-
-        // Step 2: Creator creates a module
-        assert_ok!(RealXEducation::create_module(
-            RuntimeOrigin::signed(creator.clone()),
-            3,
-            module_amount,
-            bvec![1, 2, 3]
-        ));
-
-        let module = ModuleInfo::<Test>::get(0).unwrap();
-        let asset_id = module.asset_id.into();
-
-        // Step 3: Sponsor purchases 30 tokens
-        assert_ok!(RealXEducation::sponsor_module(
-            RuntimeOrigin::signed(sponsor.clone()),
-            0,
-            purchase_amount,
-            1984
-        ));
-
-        // Step 4: School books a module
-        assert_ok!(RealXEducation::book_module(
-            RuntimeOrigin::signed(school.clone()),
-            0,
-            0,
-            bvec![4, 5, 6]
-        ));
-
-        // Step 5: University student claims a module
-        assert_ok!(RealXEducation::claim_booking(RuntimeOrigin::signed(lecturer.clone()), 0, 0,));
-
-        // Pre-checks
-        assert_eq!(EducationAssets::balance(asset_id, &school), 1);
         let multiplier = 10u128
             .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
             .unwrap();
-        let expected_hold = 1250 * purchase_amount as u128 * multiplier;
-        let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
-        assert_eq!(held, expected_hold);
-        assert_eq!(EducationAssets::total_issuance(asset_id), module_amount.into());
+
+        // Pre-checks
+        assert_eq!(EducationAssets::balance(asset_id.into(), &school), 1);
+        assert_eq!(EducationAssets::total_issuance(asset_id.into()), 100u128);
         assert_eq!(
             AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
             37_500 * multiplier
         );
 
-        // Step 6: AI Agent submits test results
+        // Submit test results
         assert_ok!(RealXEducation::submit_impact_score(
             RuntimeOrigin::signed(ai_agent),
             0,
@@ -1012,8 +1012,8 @@ fn submit_impact_score_works() {
         ));
 
         // 1. Token burned
-        assert_eq!(EducationAssets::balance(asset_id, &lecturer), 0);
-        assert_eq!(EducationAssets::total_issuance(asset_id), (module_amount - 1).into());
+        assert_eq!(EducationAssets::balance(asset_id.into(), &lecturer), 0);
+        assert_eq!(EducationAssets::total_issuance(asset_id.into()), 99u128);
 
         // 2. Funds released and distributed
         let creator_pay = 6225u128;
@@ -1029,15 +1029,13 @@ fn submit_impact_score_works() {
             ForeignAssets::balance(1984, &RealXEducation::treasury_account_id()),
             protocol_pay
         );
-
         assert_eq!(
             AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
             36_250 * multiplier
         );
 
         // 3. NFTs minted
-        let next_id = NextNftId::<Test>::get(0);
-        assert_eq!(next_id, 4);
+        assert_eq!(NextNftId::<Test>::get(0), 4);
 
         // 4. Event
         System::assert_last_event(
@@ -1057,92 +1055,26 @@ fn submit_impact_score_works() {
 fn submit_impact_score_100_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
+        setup_all_roles();
+        let asset_id: u32 = setup_and_claim_booking();
 
         let creator: AccountId = [1; 32].into();
         let sponsor: AccountId = [2; 32].into();
-        let school: AccountId = [3; 32].into();
         let lecturer: AccountId = [4; 32].into();
         let ai_agent: AccountId = [5; 32].into();
 
-        let module_amount = 100u32;
-        let purchase_amount = 30u32;
-
-        // Step 1: Setup permissions
-        assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [1; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleCreator
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [2; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleSponsor
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [3; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleBooker
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [4; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleDeliverer
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [5; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleAIAgent
-        ));
-        new_region_helper();
-        assert_ok!(RealXEducation::register_module_deliverer(RuntimeOrigin::signed(
-            [4; 32].into()
-        )));
-
-        // Step 2: Creator creates a module
-        assert_ok!(RealXEducation::create_module(
-            RuntimeOrigin::signed(creator.clone()),
-            3,
-            module_amount,
-            bvec![1, 2, 3]
-        ));
-
-        let module = ModuleInfo::<Test>::get(0).unwrap();
-        let asset_id = module.asset_id.into();
-
-        // Step 3: Sponsor purchases 30 tokens
-        assert_ok!(RealXEducation::sponsor_module(
-            RuntimeOrigin::signed(sponsor.clone()),
-            0,
-            purchase_amount,
-            1984
-        ));
-
-        // Step 4: School books a module
-        assert_ok!(RealXEducation::book_module(
-            RuntimeOrigin::signed(school.clone()),
-            0,
-            0,
-            bvec![4, 5, 6]
-        ));
-
-        // Step 5: University student claims a module
-        assert_ok!(RealXEducation::claim_booking(RuntimeOrigin::signed(lecturer.clone()), 0, 0,));
-
-        // Pre-checks
-        assert_eq!(EducationAssets::balance(asset_id, &school), 1);
         let multiplier = 10u128
             .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
             .unwrap();
-        let expected_hold = 1250 * purchase_amount as u128 * multiplier;
-        let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
-        assert_eq!(held, expected_hold);
-        assert_eq!(EducationAssets::total_issuance(asset_id), module_amount.into());
+
+        // Pre-checks
+        assert_eq!(EducationAssets::total_issuance(asset_id.into()), 100u128);
         assert_eq!(
             AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
             37_500 * multiplier
         );
-        // Step 6: AI Agent submits test results
+
+        // Submit test results at 100% score
         assert_ok!(RealXEducation::submit_impact_score(
             RuntimeOrigin::signed(ai_agent),
             0,
@@ -1154,8 +1086,8 @@ fn submit_impact_score_100_works() {
         ));
 
         // 1. Token burned
-        assert_eq!(EducationAssets::balance(asset_id, &lecturer), 0);
-        assert_eq!(EducationAssets::total_issuance(asset_id), (module_amount - 1).into());
+        assert_eq!(EducationAssets::balance(asset_id.into(), &lecturer), 0);
+        assert_eq!(EducationAssets::total_issuance(asset_id.into()), 99u128);
 
         // 2. Funds released and distributed
         let creator_pay = 83u128 * multiplier;
@@ -1172,15 +1104,13 @@ fn submit_impact_score_100_works() {
             protocol_pay
         );
         assert_eq!(ForeignAssets::balance(1984, &sponsor), 22_500u128 * multiplier);
-
         assert_eq!(
             AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
             36_250 * multiplier
         );
 
         // 3. NFTs minted
-        let next_id = NextNftId::<Test>::get(0);
-        assert_eq!(next_id, 4);
+        assert_eq!(NextNftId::<Test>::get(0), 4);
 
         // 4. Event
         System::assert_last_event(
@@ -1200,92 +1130,26 @@ fn submit_impact_score_100_works() {
 fn submit_impact_score_below_50_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
+        setup_all_roles();
+        let asset_id: u32 = setup_and_claim_booking();
 
         let creator: AccountId = [1; 32].into();
         let sponsor: AccountId = [2; 32].into();
-        let school: AccountId = [3; 32].into();
         let lecturer: AccountId = [4; 32].into();
         let ai_agent: AccountId = [5; 32].into();
 
-        let module_amount = 100u32;
-        let purchase_amount = 30u32;
-
-        // Step 1: Setup permissions
-        assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [1; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleCreator
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [2; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleSponsor
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [3; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleBooker
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [4; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleDeliverer
-        ));
-        assert_ok!(XcavateWhitelist::assign_role(
-            RuntimeOrigin::signed([20; 32].into()),
-            [5; 32].into(),
-            pallet_xcavate_whitelist::Role::ModuleAIAgent
-        ));
-        new_region_helper();
-        assert_ok!(RealXEducation::register_module_deliverer(RuntimeOrigin::signed(
-            [4; 32].into()
-        )));
-
-        // Step 2: Creator creates a module
-        assert_ok!(RealXEducation::create_module(
-            RuntimeOrigin::signed(creator.clone()),
-            3,
-            module_amount,
-            bvec![1, 2, 3]
-        ));
-
-        let module = ModuleInfo::<Test>::get(0).unwrap();
-        let asset_id = module.asset_id.into();
-
-        // Step 3: Sponsor purchases 30 tokens
-        assert_ok!(RealXEducation::sponsor_module(
-            RuntimeOrigin::signed(sponsor.clone()),
-            0,
-            purchase_amount,
-            1984
-        ));
-
-        // Step 4: School books a module
-        assert_ok!(RealXEducation::book_module(
-            RuntimeOrigin::signed(school.clone()),
-            0,
-            0,
-            bvec![4, 5, 6]
-        ));
-
-        // Step 5: University student claims a module
-        assert_ok!(RealXEducation::claim_booking(RuntimeOrigin::signed(lecturer.clone()), 0, 0,));
-
-        // Pre-checks
-        assert_eq!(EducationAssets::balance(asset_id, &school), 1);
         let multiplier = 10u128
             .checked_pow(AssetsMetadataWrapper::get_decimals(1984u32).unwrap().into())
             .unwrap();
-        let expected_hold = 1250 * purchase_amount as u128 * multiplier;
-        let held = AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor);
-        assert_eq!(held, expected_hold);
-        assert_eq!(EducationAssets::total_issuance(asset_id), module_amount.into());
+
+        // Pre-checks
+        assert_eq!(EducationAssets::total_issuance(asset_id.into()), 100u128);
         assert_eq!(
             AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
             37_500 * multiplier
         );
-        // Step 6: AI Agent submits test results
+
+        // Submit test results at 40% (below 50% threshold — no payments)
         assert_ok!(RealXEducation::submit_impact_score(
             RuntimeOrigin::signed(ai_agent),
             0,
@@ -1297,27 +1161,21 @@ fn submit_impact_score_below_50_works() {
         ));
 
         // 1. Token burned
-        assert_eq!(EducationAssets::balance(asset_id, &lecturer), 0);
-        assert_eq!(EducationAssets::total_issuance(asset_id), (module_amount - 1).into());
+        assert_eq!(EducationAssets::balance(asset_id.into(), &lecturer), 0);
+        assert_eq!(EducationAssets::total_issuance(asset_id.into()), 99u128);
 
-        // 2. Funds released and not distributed
-        let pay = 0u128;
-
-        assert_eq!(ForeignAssets::balance(1984, &creator), pay);
-        assert_eq!(ForeignAssets::balance(1984, &lecturer), pay);
-        assert_eq!(ForeignAssets::balance(1984, &[10; 32].into()), pay);
-        assert_eq!(ForeignAssets::balance(1984, &[11; 32].into()), pay);
-        assert_eq!(ForeignAssets::balance(1984, &RealXEducation::treasury_account_id()), pay);
+        // 2. Funds released but not distributed (score below threshold)
+        assert_eq!(ForeignAssets::balance(1984, &creator), 0);
+        assert_eq!(ForeignAssets::balance(1984, &lecturer), 0);
+        assert_eq!(ForeignAssets::balance(1984, &RealXEducation::treasury_account_id()), 0);
         assert_eq!(ForeignAssets::balance(1984, &sponsor), 23_750u128 * multiplier);
-
         assert_eq!(
             AssetsHolder::total_balance_on_hold(1984u32.into(), &sponsor),
             36_250 * multiplier
         );
 
         // 3. NFTs minted
-        let next_id = NextNftId::<Test>::get(0);
-        assert_eq!(next_id, 4);
+        assert_eq!(NextNftId::<Test>::get(0), 4);
 
         // 4. Event
         System::assert_last_event(
@@ -1326,7 +1184,7 @@ fn submit_impact_score_below_50_works() {
                 booking_id: 0,
                 lecturer,
                 score: Permill::from_percent(40),
-                lecturer_pay: pay,
+                lecturer_pay: 0,
             }
             .into(),
         );
@@ -3653,7 +3511,7 @@ fn cancel_claim_works() {
 }
 
 #[test]
-fn cancel_claim_slasing_works() {
+fn cancel_claim_slashing_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(1);
 

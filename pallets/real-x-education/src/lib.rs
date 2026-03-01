@@ -104,7 +104,7 @@ pub mod pallet {
         pub collection_id: NftCollectionId,
         /// The NFT item ID representing the learning module.
         pub item_id: NftId,
-        /// The asset id ID representing the learning module.
+        /// The asset ID representing the learning module.
         pub asset_id: u32,
         /// The region ID where this module is valid.
         pub region: RegionId,
@@ -112,9 +112,9 @@ pub mod pallet {
         pub deposit: <T as pallet::Config>::Balance,
         /// The total amount of token that are available.
         pub total_token_amount: u32,
-        /// Token availalbe for sponsors to buy.
+        /// Token available for sponsors to buy.
         pub sponsor_allocation: u32,
-        /// Token availalbe for schools to book.
+        /// Token available for schools to book.
         pub school_allocation: u32,
         /// Token available for a university student to claim.
         pub university_student_allocation: u32,
@@ -165,7 +165,7 @@ pub mod pallet {
         pub lecturer: Option<AccountIdOf<T>>,
         /// The asset used for payment.
         pub payment_asset: u32,
-        /// Block of sponsoring
+        /// Block of sponsoring.
         pub sponsored_at: BlockNumberFor<T>,
         /// The average score achieved by the students.
         pub score: Option<Permill>,
@@ -298,7 +298,7 @@ pub mod pallet {
         #[pallet::constant]
         type PalletId: Get<PalletId>;
 
-        /// The Trasury's pallet ID, used for deriving its sovereign account ID.
+        /// The Treasury's pallet ID, used for deriving its sovereign account ID.
         #[pallet::constant]
         type TreasuryId: Get<PalletId>;
 
@@ -689,18 +689,12 @@ pub mod pallet {
             let item_id = NextNftId::<T>::get(collection_id);
 
             // Mint the NFT representing the learning module
-            <T as pallet::Config>::Nfts::mint_into(
+            Self::mint_nft_with_metadata(
                 &collection_id,
                 &item_id,
                 &signer,
-                &Self::default_item_config(),
-                true,
-            )?;
-            <T as pallet::Config>::Nfts::set_item_metadata(
-                Some(&education_account),
-                &collection_id,
-                &item_id,
                 &data,
+                &education_account,
             )?;
 
             // Find next available asset ID
@@ -721,19 +715,18 @@ pub mod pallet {
                 &item_id,
             )?;
 
-            // Calculate pricing details
+            // Calculate pricing details (all stored at 100× scale to maintain integer precision).
             let price = T::ModulePrice::get().saturating_mul(100u128.into());
             let content_creator_percentage = T::ContentCreatorPercentage::get();
             let regional_operator_percentage = T::RegionalOperatorPercentage::get();
             let protocol_percentage = T::ProtocolPercentage::get();
             let dbs_percentage = T::DBSPercentage::get();
 
-            let single_module_price = price;
-            let content_creator_part = content_creator_percentage.mul_ceil(single_module_price);
-            let regional_operator_part = regional_operator_percentage.mul_ceil(single_module_price);
-            let protocol_part = protocol_percentage.mul_ceil(single_module_price);
-            let dbs_part = dbs_percentage.mul_ceil(single_module_price);
-            let total_single_module_price = single_module_price
+            let content_creator_part = content_creator_percentage.mul_ceil(price);
+            let regional_operator_part = regional_operator_percentage.mul_ceil(price);
+            let protocol_part = protocol_percentage.mul_ceil(price);
+            let dbs_part = dbs_percentage.mul_ceil(price);
+            let total_single_module_price = price
                 .checked_add(&content_creator_part)
                 .ok_or(Error::<T>::ArithmeticOverflow)?
                 .checked_add(&regional_operator_part)
@@ -827,18 +820,11 @@ pub mod pallet {
             let current_block_number =
                 <T as pallet::Config>::BlockNumberProvider::current_block_number();
 
-            let asset_decimals = T::AssetMetadata::get_decimals(payment_asset)
-                .ok_or(Error::<T>::AssetMetadataNotAvailable)?;
-            let multiplier =
-                10u128.checked_pow(asset_decimals as u32).ok_or(Error::<T>::ArithmeticError)?;
-            let adjusted_price = module_details
-                .total_module_price
-                .checked_mul(&multiplier.into())
-                .ok_or(Error::<T>::MultiplyError)?
-                .checked_div(&100u128.into())
-                .ok_or(Error::<T>::ArithmeticError)?;
-
-            let price_per_token = adjusted_price;
+            let multiplier = Self::asset_decimal_multiplier(payment_asset)?;
+            let price_per_token = Self::adjust_price_by_multiplier(
+                module_details.total_module_price,
+                multiplier,
+            )?;
 
             let total_price = price_per_token
                 .checked_mul(&(token_amount as u128).into())
@@ -1128,16 +1114,11 @@ pub mod pallet {
                 Fortitude::Force,
             )?;
 
-            let asset_decimals = T::AssetMetadata::get_decimals(payment_asset)
-                .ok_or(Error::<T>::AssetMetadataNotAvailable)?;
-            let multiplier =
-                10u128.checked_pow(asset_decimals as u32).ok_or(Error::<T>::ArithmeticError)?;
-            let total_module_price = module_details
-                .total_module_price
-                .checked_mul(&multiplier.into())
-                .ok_or(Error::<T>::MultiplyError)?
-                .checked_div(&100u128.into())
-                .ok_or(Error::<T>::ArithmeticError)?;
+            let multiplier = Self::asset_decimal_multiplier(payment_asset)?;
+            let total_module_price = Self::adjust_price_by_multiplier(
+                module_details.total_module_price,
+                multiplier,
+            )?;
 
             // Release the locked funds from the sponsor
             T::ForeignAssetsHolder::release(
@@ -1152,12 +1133,8 @@ pub mod pallet {
             let (content_creator_pay, regional_operator_pay, protocol_pay, lecturer_pay_part) =
                 // Success path — everyone gets paid based on score
                 if score >= T::MinImpactScore::get() {
-                    let module_price = module_details
-                        .price
-                        .checked_mul(&multiplier.into())
-                        .ok_or(Error::<T>::MultiplyError)?
-                        .checked_div(&100u32.into())
-                        .ok_or(Error::<T>::ArithmeticError)?;
+                    let module_price =
+                        Self::adjust_price_by_multiplier(module_details.price, multiplier)?;
 
                     // Use floor to make sure we don't overcharge the sponsor.
                     let content_creator_pay = score.mul_floor(
@@ -1236,61 +1213,35 @@ pub mod pallet {
                 payment_asset,
             )?;
 
-            // Get next available NFT ID
-            let sponsor_item_id = NextNftId::<T>::get(module_details.collection_id);
-
-            // Get pallet account.
+            // Mint NFTs for sponsor, school, and lecturer
             let education_account = Self::account_id();
-
-            // Mint nft for sponsor
-            <T as pallet::Config>::Nfts::mint_into(
+            let sponsor_item_id = NextNftId::<T>::get(module_details.collection_id);
+            Self::mint_nft_with_metadata(
                 &module_details.collection_id,
                 &sponsor_item_id,
                 &booking_details.sponsor,
-                &Self::default_item_config(),
-                true,
-            )?;
-            <T as pallet::Config>::Nfts::set_item_metadata(
-                Some(&education_account),
-                &module_details.collection_id,
-                &sponsor_item_id,
                 &module_sponsor_data,
+                &education_account,
             )?;
 
             let school_item_id =
                 sponsor_item_id.checked_add(&One::one()).ok_or(Error::<T>::ArithmeticOverflow)?;
-
-            // Mint nft for school
-            <T as pallet::Config>::Nfts::mint_into(
+            Self::mint_nft_with_metadata(
                 &module_details.collection_id,
                 &school_item_id,
                 &booking_details.school,
-                &Self::default_item_config(),
-                true,
-            )?;
-            <T as pallet::Config>::Nfts::set_item_metadata(
-                Some(&education_account),
-                &module_details.collection_id,
-                &school_item_id,
                 &module_booker_data,
+                &education_account,
             )?;
 
             let lecturer_item_id =
                 school_item_id.checked_add(&One::one()).ok_or(Error::<T>::ArithmeticOverflow)?;
-
-            // Mint nft for school
-            <T as pallet::Config>::Nfts::mint_into(
+            Self::mint_nft_with_metadata(
                 &module_details.collection_id,
                 &lecturer_item_id,
                 &lecturer,
-                &Self::default_item_config(),
-                true,
-            )?;
-            <T as pallet::Config>::Nfts::set_item_metadata(
-                Some(&education_account),
-                &module_details.collection_id,
-                &lecturer_item_id,
                 &module_deliverer_data,
+                &education_account,
             )?;
 
             // Update storage.
@@ -1346,25 +1297,15 @@ pub mod pallet {
             let module_details =
                 ModuleInfo::<T>::get(module_id).ok_or(Error::<T>::ModuleNotAvailable)?;
 
-            // Get next available NFT ID
-            let item_id = NextNftId::<T>::get(module_details.collection_id);
-
-            // Get pallet account.
+            // Get next available NFT ID and mint student NFT
             let education_account = Self::account_id();
-
-            // Mint nft for sponsor
-            <T as pallet::Config>::Nfts::mint_into(
+            let item_id = NextNftId::<T>::get(module_details.collection_id);
+            Self::mint_nft_with_metadata(
                 &module_details.collection_id,
                 &item_id,
                 &student,
-                &Self::default_item_config(),
-                true,
-            )?;
-            <T as pallet::Config>::Nfts::set_item_metadata(
-                Some(&education_account),
-                &module_details.collection_id,
-                &item_id,
                 &module_recipient_data,
+                &education_account,
             )?;
 
             let next_item_id =
@@ -1400,7 +1341,7 @@ pub mod pallet {
             ensure!(booking_details.school == signer, Error::<T>::NoPermission);
             ensure!(booking_details.score.is_some(), Error::<T>::NoTestResultsSubmitted);
 
-            // Release the listing deposit back to the real estate developer.
+            // Release the booking deposit back to the school.
             let deposit_amount = booking_details.deposit;
             <T as pallet::Config>::NativeCurrency::release(
                 &HoldReason::BookingReserve.into(),
@@ -1435,7 +1376,7 @@ pub mod pallet {
             module_id: ModuleId,
             amount: u32,
         ) -> DispatchResult {
-            let signer = T::PermissionOrigin::ensure_origin(origin.clone(), &Role::ModuleCreator)?;
+            let signer = T::PermissionOrigin::ensure_origin(origin, &Role::ModuleCreator)?;
 
             // Load module and validate ownership
             let mut module_details =
@@ -1468,14 +1409,14 @@ pub mod pallet {
                 .sponsor_allocation
                 .checked_sub(amount)
                 .ok_or(Error::<T>::ArithmeticUnderflow)?;
-            let new_sponsor_allocation = module_details.sponsor_allocation;
+            let remaining_allocation = module_details.sponsor_allocation;
             ModuleInfo::<T>::insert(module_id, module_details);
 
             Self::deposit_event(Event::UnsponsoredTokensBurned {
                 module_id,
                 creator: signer,
                 amount,
-                remaining_allocation: new_sponsor_allocation,
+                remaining_allocation,
             });
             Ok(())
         }
@@ -1491,7 +1432,7 @@ pub mod pallet {
         #[pallet::call_index(8)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::remove_module())]
         pub fn remove_module(origin: OriginFor<T>, module_id: ModuleId) -> DispatchResult {
-            let signer = T::PermissionOrigin::ensure_origin(origin.clone(), &Role::ModuleCreator)?;
+            let signer = T::PermissionOrigin::ensure_origin(origin, &Role::ModuleCreator)?;
 
             // Load module and validate ownership
             let module_details =
@@ -1541,7 +1482,7 @@ pub mod pallet {
             sponsor_id: SponsorId,
             amount: u32,
         ) -> DispatchResult {
-            let signer = T::PermissionOrigin::ensure_origin(origin.clone(), &Role::ModuleSponsor)?;
+            let signer = T::PermissionOrigin::ensure_origin(origin, &Role::ModuleSponsor)?;
 
             // Check module details and sponsor funding
             let mut module_details =
@@ -1554,7 +1495,7 @@ pub mod pallet {
             ensure!(!amount.is_zero(), Error::<T>::AmountCannotBeZero);
             ensure!(funded_by_sponsor.amount >= amount, Error::<T>::NotEnoughTokenAvailable);
 
-            // Check sponsorhip window
+            // Check sponsorship window
             let current_block_number =
                 <T as pallet::Config>::BlockNumberProvider::current_block_number();
             let deadline =
@@ -1563,18 +1504,12 @@ pub mod pallet {
 
             let payment_asset = funded_by_sponsor.payment_asset;
 
-            let asset_decimals = T::AssetMetadata::get_decimals(payment_asset)
-                .ok_or(Error::<T>::AssetMetadataNotAvailable)?;
-            let multiplier =
-                10u128.checked_pow(asset_decimals as u32).ok_or(Error::<T>::ArithmeticError)?;
-            let total_module_price = module_details
-                .total_module_price
-                .checked_mul(&multiplier.into())
-                .ok_or(Error::<T>::MultiplyError)?
-                .checked_div(&100u128.into())
-                .ok_or(Error::<T>::ArithmeticError)?;
-
-            let total_price = total_module_price
+            let multiplier = Self::asset_decimal_multiplier(payment_asset)?;
+            let price_per_token = Self::adjust_price_by_multiplier(
+                module_details.total_module_price,
+                multiplier,
+            )?;
+            let total_price = price_per_token
                 .checked_mul(&(amount as u128).into())
                 .ok_or(Error::<T>::MultiplyError)?;
 
@@ -1646,7 +1581,7 @@ pub mod pallet {
             module_id: ModuleId,
             booking_id: BookingId,
         ) -> DispatchResult {
-            let signer = T::PermissionOrigin::ensure_origin(origin.clone(), &Role::ModuleBooker)?;
+            let signer = T::PermissionOrigin::ensure_origin(origin, &Role::ModuleBooker)?;
 
             // Load & validate
             let mut module_details =
@@ -1751,7 +1686,7 @@ pub mod pallet {
         #[pallet::call_index(11)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::clear_old_cancellations())]
         pub fn clear_old_cancellations(origin: OriginFor<T>) -> DispatchResult {
-            let signer = T::PermissionOrigin::ensure_origin(origin.clone(), &Role::ModuleBooker)?;
+            let signer = T::PermissionOrigin::ensure_origin(origin, &Role::ModuleBooker)?;
 
             let current_block_number =
                 <T as pallet::Config>::BlockNumberProvider::current_block_number();
@@ -1799,8 +1734,7 @@ pub mod pallet {
             module_id: ModuleId,
             booking_id: BookingId,
         ) -> DispatchResult {
-            let signer =
-                T::PermissionOrigin::ensure_origin(origin.clone(), &Role::ModuleDeliverer)?;
+            let signer = T::PermissionOrigin::ensure_origin(origin, &Role::ModuleDeliverer)?;
 
             // Check booking details
             let mut module_details =
@@ -1975,6 +1909,54 @@ pub mod pallet {
         /// Returns the account ID of the treasury pallet.
         pub fn treasury_account_id() -> AccountIdOf<T> {
             <T as pallet::Config>::TreasuryId::get().into_account_truncating()
+        }
+
+        /// Returns the decimal multiplier (10^decimals) for a given payment asset.
+        fn asset_decimal_multiplier(payment_asset: u32) -> Result<u128, Error<T>> {
+            let asset_decimals = T::AssetMetadata::get_decimals(payment_asset)
+                .ok_or(Error::<T>::AssetMetadataNotAvailable)?;
+            10u128.checked_pow(asset_decimals as u32).ok_or(Error::<T>::ArithmeticError)
+        }
+
+        /// Adjusts a 100×-scaled price to actual foreign asset units.
+        ///
+        /// Prices are stored at 100× scale for integer precision. This divides by 100
+        /// and multiplies by the asset's decimal multiplier.
+        fn adjust_price_by_multiplier(
+            price: <T as pallet::Config>::Balance,
+            multiplier: u128,
+        ) -> Result<<T as pallet::Config>::Balance, Error<T>> {
+            price
+                .checked_mul(&multiplier.into())
+                .ok_or(Error::<T>::MultiplyError)?
+                .checked_div(&100u128.into())
+                .ok_or(Error::<T>::ArithmeticError)
+        }
+
+        /// Mints an NFT into a collection and sets its metadata.
+        ///
+        /// `pallet_account` must be `Self::account_id()` — passed in by the caller so it is
+        /// computed only once even when this function is called multiple times.
+        fn mint_nft_with_metadata(
+            collection_id: &<T as pallet::Config>::NftCollectionId,
+            item_id: &<T as pallet::Config>::NftId,
+            owner: &AccountIdOf<T>,
+            data: &BoundedVec<u8, <T as pallet::Config>::StringLimit>,
+            pallet_account: &AccountIdOf<T>,
+        ) -> DispatchResult {
+            <T as pallet::Config>::Nfts::mint_into(
+                collection_id,
+                item_id,
+                owner,
+                &Self::default_item_config(),
+                true,
+            )?;
+            <T as pallet::Config>::Nfts::set_item_metadata(
+                Some(pallet_account),
+                collection_id,
+                item_id,
+                data,
+            )
         }
 
         /// Transfers funds between accounts for a specific asset.
