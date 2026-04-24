@@ -21,7 +21,8 @@ fn add_admin_through_manager() {
             assert!(events().contains(&crate::Event::AdminAdded {
                 namespace_id: DEFAULT_NAMESPACE_ID,
                 bucket_id: DEFAULT_BUCKET_ID,
-                admin: ACCOUNT_01
+                admin: ACCOUNT_01,
+                caller: Some(ACCOUNT_00)
             }));
             assert_eq!(events().len(), 1);
         });
@@ -132,7 +133,8 @@ fn remove_admin() {
             assert!(events().contains(&crate::Event::AdminRemoved {
                 namespace_id: DEFAULT_NAMESPACE_ID,
                 bucket_id: DEFAULT_BUCKET_ID,
-                admin: ACCOUNT_01
+                admin: ACCOUNT_01,
+                caller: Some(ACCOUNT_00)
             }));
             assert_eq!(events().len(), 1);
         });

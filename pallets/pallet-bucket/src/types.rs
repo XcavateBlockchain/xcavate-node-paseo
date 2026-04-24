@@ -196,7 +196,18 @@ impl<T: Config> From<MessageMetadataInput<T>> for MessageMetadata<T> {
     }
 }
 
-#[derive(Clone, Decode, RuntimeDebug, Encode, TypeInfo, MaxEncodedLen, Default)]
+#[derive(
+    Clone,
+    Decode,
+    DecodeWithMemTracking,
+    RuntimeDebug,
+    Encode,
+    TypeInfo,
+    MaxEncodedLen,
+    PartialEq,
+    Eq,
+    Default,
+)]
 pub enum Status<KeyId> {
     /// Bucket is writable. Admin can lock it.
     Writable(KeyId),
@@ -205,7 +216,17 @@ pub enum Status<KeyId> {
     Locked,
 }
 
-#[derive(Clone, Decode, RuntimeDebug, Encode, TypeInfo, MaxEncodedLen)]
+#[derive(
+    Clone,
+    Decode,
+    DecodeWithMemTracking,
+    RuntimeDebug,
+    Encode,
+    TypeInfo,
+    MaxEncodedLen,
+    PartialEq,
+    Eq,
+)]
 pub struct Bucket<Metadata, MessageId, KeyId> {
     /// Metadata of the bucket.
     pub metadata: Metadata,
@@ -262,7 +283,17 @@ pub struct MessageInput<Tag, Reference, Metadata> {
     pub(crate) metadata_input: Metadata,
 }
 
-#[derive(Clone, Decode, RuntimeDebug, Encode, TypeInfo, MaxEncodedLen)]
+#[derive(
+    Clone,
+    Decode,
+    DecodeWithMemTracking,
+    RuntimeDebug,
+    Encode,
+    TypeInfo,
+    MaxEncodedLen,
+    PartialEq,
+    Eq,
+)]
 pub struct Message<Reference, Tag, Metadata> {
     /// Unique reference of the message to the storage layer
     pub reference: Reference,

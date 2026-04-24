@@ -16,7 +16,11 @@ fn create_tag() {
             assert_ok!(Buckets::create_tag(origin.into(), DEFAULT_BUCKET_ID, tag.clone()));
             assert!(Buckets::tag_with_id(DEFAULT_BUCKET_ID, tag.clone()).is_some());
 
-            assert!(events().contains(&crate::Event::NewTag { bucket_id: DEFAULT_BUCKET_ID, tag }));
+            assert!(events().contains(&crate::Event::NewTag {
+                bucket_id: DEFAULT_BUCKET_ID,
+                tag,
+                creator: Some(ACCOUNT_01)
+            }));
             assert_eq!(events().len(), 1);
         });
 }

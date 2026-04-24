@@ -334,13 +334,18 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new namespace has been created.
-        NamespaceCreated { namespace_id: T::NamespaceId, creator: Option<SubjectIdOf<T>> },
+        NamespaceCreated {
+            namespace_id: T::NamespaceId,
+            metadata: T::NamespaceMetadata,
+            creator: Option<SubjectIdOf<T>>,
+        },
 
         /// A contributor is assigned to a bucket.
         ContributorAdded {
             namespace_id: T::NamespaceId,
             bucket_id: T::BucketId,
             contributor: SubjectIdOf<T>,
+            caller: Option<SubjectIdOf<T>>,
         },
 
         /// A contributor is removed from a bucket.
@@ -348,13 +353,24 @@ pub mod pallet {
             namespace_id: T::NamespaceId,
             bucket_id: T::BucketId,
             contributor: SubjectIdOf<T>,
+            caller: Option<SubjectIdOf<T>>,
         },
 
         /// A new admin is assigned to a bucket.
-        AdminAdded { namespace_id: T::NamespaceId, bucket_id: T::BucketId, admin: SubjectIdOf<T> },
+        AdminAdded {
+            namespace_id: T::NamespaceId,
+            bucket_id: T::BucketId,
+            admin: SubjectIdOf<T>,
+            caller: Option<SubjectIdOf<T>>,
+        },
 
         /// An admin is removed from a bucket.
-        AdminRemoved { namespace_id: T::NamespaceId, bucket_id: T::BucketId, admin: SubjectIdOf<T> },
+        AdminRemoved {
+            namespace_id: T::NamespaceId,
+            bucket_id: T::BucketId,
+            admin: SubjectIdOf<T>,
+            caller: Option<SubjectIdOf<T>>,
+        },
 
         /// A new manager is assigned to an namespace.
         ManagerAdded {
@@ -364,17 +380,27 @@ pub mod pallet {
         },
 
         /// A manager is removed from an namespace.
-        ManagerRemoved { namespace_id: T::NamespaceId, manager: SubjectIdOf<T> },
+        ManagerRemoved {
+            namespace_id: T::NamespaceId,
+            manager: SubjectIdOf<T>,
+            caller: Option<SubjectIdOf<T>>,
+        },
 
         /// A new bucket has been created.
         BucketCreated {
             namespace_id: T::NamespaceId,
             bucket_id: T::BucketId,
+            bucket: BucketDetailsOf<T>,
             creator: Option<SubjectIdOf<T>>,
         },
 
         /// A bucket has been paused for writing.
-        PausedBucket { namespace_id: T::NamespaceId, bucket_id: T::BucketId },
+        PausedBucket {
+            namespace_id: T::NamespaceId,
+            bucket_id: T::BucketId,
+            bucket: BucketDetailsOf<T>,
+            caller: Option<SubjectIdOf<T>>,
+        },
 
         /// A bucket is writable with a specific key.
         /// This event is independent of the bucket being previously paused or not.
@@ -382,25 +408,41 @@ pub mod pallet {
             namespace_id: T::NamespaceId,
             bucket_id: T::BucketId,
             new_encryption_key: KeyIdOf<T>,
+            bucket: BucketDetailsOf<T>,
+            caller: Option<SubjectIdOf<T>>,
         },
 
         /// A new tag has been created.
-        NewTag { bucket_id: T::BucketId, tag: TagOf<T> },
+        NewTag { bucket_id: T::BucketId, tag: TagOf<T>, creator: Option<SubjectIdOf<T>> },
 
         /// A new message has been written.
-        NewMessage { bucket_id: T::BucketId, message_id: T::MessageId, contributor: SubjectIdOf<T> },
+        NewMessage {
+            namespace_id: T::NamespaceId,
+            bucket_id: T::BucketId,
+            message_id: T::MessageId,
+            message: MessageDetailsOf<T>,
+            contributor: SubjectIdOf<T>,
+        },
 
         /// An namespace has been deleted.
-        NamespaceDeleted { namespace_id: T::NamespaceId },
+        NamespaceDeleted { namespace_id: T::NamespaceId, metadata: T::NamespaceMetadata },
 
         /// A bucket has been deleted.
-        BucketDeleted { namespace_id: T::NamespaceId, bucket_id: T::BucketId },
+        BucketDeleted {
+            namespace_id: T::NamespaceId,
+            bucket_id: T::BucketId,
+            bucket: BucketDetailsOf<T>,
+        },
 
         /// A tag has been deleted.
         TagDeleted { bucket_id: T::BucketId, tag: TagOf<T> },
 
         /// A message has been deleted.
-        MessageDeleted { bucket_id: T::BucketId, message_id: T::MessageId },
+        MessageDeleted {
+            bucket_id: T::BucketId,
+            message_id: T::MessageId,
+            message: MessageDetailsOf<T>,
+        },
     }
 
     #[pallet::error]

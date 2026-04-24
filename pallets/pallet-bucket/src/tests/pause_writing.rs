@@ -22,7 +22,13 @@ fn pause_writing() {
 
             assert!(events().contains(&crate::Event::PausedBucket {
                 namespace_id: DEFAULT_NAMESPACE_ID,
-                bucket_id: DEFAULT_BUCKET_ID
+                bucket_id: DEFAULT_BUCKET_ID,
+                bucket: BucketMock {
+                    metadata: MetadataMock { unique_plus_1: 10 },
+                    status: Status::Locked,
+                    next_message_id: 2,
+                },
+                caller: Some(ACCOUNT_00)
             }));
             assert_eq!(events().len(), 1);
         });

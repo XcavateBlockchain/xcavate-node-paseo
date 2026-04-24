@@ -22,7 +22,8 @@ fn add_contributor() {
             assert!(events().contains(&crate::Event::ContributorAdded {
                 namespace_id: DEFAULT_NAMESPACE_ID,
                 bucket_id: DEFAULT_BUCKET_ID,
-                contributor: ACCOUNT_01
+                contributor: ACCOUNT_01,
+                caller: Some(ACCOUNT_00)
             }));
             assert_eq!(events().len(), 1);
         });
@@ -91,7 +92,8 @@ fn remove_contributor() {
             assert!(events().contains(&crate::Event::ContributorRemoved {
                 namespace_id: DEFAULT_NAMESPACE_ID,
                 bucket_id: DEFAULT_BUCKET_ID,
-                contributor: ACCOUNT_01
+                contributor: ACCOUNT_01,
+                caller: Some(ACCOUNT_00)
             }));
             assert_eq!(events().len(), 1);
         });

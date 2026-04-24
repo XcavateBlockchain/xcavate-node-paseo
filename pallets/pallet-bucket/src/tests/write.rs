@@ -33,9 +33,15 @@ fn write_without_tag() {
             assert!(Buckets::message_with_id(DEFAULT_BUCKET_ID, message_id).is_some());
 
             assert!(events().contains(&crate::Event::NewMessage {
+                namespace_id: DEFAULT_NAMESPACE_ID,
                 bucket_id: DEFAULT_BUCKET_ID,
                 contributor: ACCOUNT_01,
-                message_id
+                message_id,
+                message: MessageMock {
+                    reference: create_bounded_vec_example(0),
+                    tag: None,
+                    metadata: MetadataMock { unique_plus_1: 13 },
+                }
             }));
             assert_eq!(events().len(), 1);
         });
@@ -158,7 +164,7 @@ fn force_remove_message() {
         .add_namespace(DEFAULT_NAMESPACE_ID, MetadataMock { unique_plus_1: 10 })
         .add_bucket(DEFAULT_NAMESPACE_ID, DEFAULT_BUCKET_ID, BUCKET_EXAMPLE_LOCKED)
         .add_contributor(DEFAULT_BUCKET_ID, ACCOUNT_01)
-        .add_message(DEFAULT_BUCKET_ID, MESSAGE_ID, message)
+        .add_message(DEFAULT_BUCKET_ID, MESSAGE_ID, message.clone())
         .build_and_execute_with_sanity_tests(|| {
             assert!(Messages::<Test>::get(DEFAULT_BUCKET_ID, MESSAGE_ID).is_some());
             let origin = RawOrigin::Root;
@@ -167,7 +173,8 @@ fn force_remove_message() {
             assert!(Messages::<Test>::get(DEFAULT_BUCKET_ID, MESSAGE_ID).is_none());
             assert!(events().contains(&crate::Event::MessageDeleted {
                 bucket_id: DEFAULT_BUCKET_ID,
-                message_id: MESSAGE_ID
+                message_id: MESSAGE_ID,
+                message,
             }));
         });
 }

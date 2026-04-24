@@ -23,6 +23,7 @@ fn create_namespace() {
             let events = events();
             assert!(events.contains(&crate::Event::NamespaceCreated {
                 namespace_id: DEFAULT_NAMESPACE_ID,
+                metadata: MetadataMock { unique_plus_1: 11 },
                 creator: Some(ACCOUNT_00),
             }));
             assert!(events.contains(&crate::Event::ManagerAdded {
@@ -133,8 +134,10 @@ fn force_remove_namespace() {
         assert!(Buckets::namespace_with_id(DEFAULT_NAMESPACE_ID).is_some());
         assert_ok!(Buckets::force_remove_namespace(origin.into(), DEFAULT_NAMESPACE_ID),);
         assert!(Buckets::namespace_with_id(DEFAULT_NAMESPACE_ID).is_none());
-        assert!(events()
-            .contains(&crate::Event::NamespaceDeleted { namespace_id: DEFAULT_NAMESPACE_ID }));
+        assert!(events().contains(&crate::Event::NamespaceDeleted {
+            namespace_id: DEFAULT_NAMESPACE_ID,
+            metadata: MetadataMock { unique_plus_1: 10 }
+        }));
         assert_eq!(events().len(), 1);
     })
 }

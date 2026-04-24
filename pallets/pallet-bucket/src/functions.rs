@@ -90,7 +90,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // insert namespace in storage
-        Namespaces::<T>::insert(&namespace_id, metadata);
+        Namespaces::<T>::insert(&namespace_id, metadata.clone());
 
         if let Some(ref manager) = caller {
             // insert manager in storage
@@ -101,7 +101,7 @@ impl<T: Config> Pallet<T> {
             .checked_add(&T::NamespaceId::one())
             .ok_or(Error::<T>::ArithmeticOverflow)?;
         NextNamespaceId::<T>::put(next_namespace_id);
-        Self::deposit_event(Event::NamespaceCreated { namespace_id, creator: caller });
+        Self::deposit_event(Event::NamespaceCreated { namespace_id, metadata, creator: caller });
 
         Ok(())
     }
@@ -117,9 +117,9 @@ impl<T: Config> Pallet<T> {
         ensure!(!Managers::<T>::contains_prefix(&namespace_id), Error::<T>::DanglingManagers);
 
         // find and remove namespace
-        Namespaces::<T>::take(&namespace_id).ok_or(Error::<T>::UnknownNamespace)?;
+        let metadata = Namespaces::<T>::take(&namespace_id).ok_or(Error::<T>::UnknownNamespace)?;
 
-        Self::deposit_event(Event::NamespaceDeleted { namespace_id });
+        Self::deposit_event(Event::NamespaceDeleted { namespace_id, metadata });
 
         Ok(())
     }
@@ -157,7 +157,7 @@ impl<T: Config> Pallet<T> {
         let bucket: BucketDetailsOf<T> = Bucket::new(metadata);
 
         // insert bucket in storage
-        Buckets::<T>::insert(&namespace_id, &bucket_id, bucket);
+        Buckets::<T>::insert(&namespace_id, &bucket_id, bucket.clone());
 
         // increment next bucket id
         let next_bucket_id = bucket_id.checked_add(&One::one()).ok_or(ArithmeticError::Overflow)?;
@@ -167,6 +167,7 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::BucketCreated {
             namespace_id,
             bucket_id: bucket_id.clone(),
+            bucket,
             creator: caller,
         });
 
@@ -189,9 +190,9 @@ impl<T: Config> Pallet<T> {
         ensure!(!Tags::<T>::contains_prefix(&bucket_id), Error::<T>::DanglingTags);
 
         // find and remove bucket
-        Buckets::<T>::take(&namespace_id, &bucket_id).ok_or(Error::<T>::UnknownBucket)?;
+        let bucket = Buckets::<T>::take(&namespace_id, &bucket_id).ok_or(Error::<T>::UnknownBucket)?;
 
-        Self::deposit_event(Event::BucketDeleted { namespace_id, bucket_id });
+        Self::deposit_event(Event::BucketDeleted { namespace_id, bucket_id, bucket });
 
         Ok(())
     }
@@ -270,7 +271,7 @@ impl<T: Config> Pallet<T> {
         // drop manager from set
         Managers::<T>::remove(&namespace_id, &manager);
 
-        Self::deposit_event(Event::ManagerRemoved { namespace_id, manager });
+        Self::deposit_event(Event::ManagerRemoved { namespace_id, manager, caller });
 
         Ok(())
     }
@@ -297,7 +298,12 @@ impl<T: Config> Pallet<T> {
         // insert admin in storage
         Admins::<T>::insert(&bucket_id, &new_admin, ());
 
-        Self::deposit_event(Event::AdminAdded { namespace_id, bucket_id, admin: new_admin });
+        Self::deposit_event(Event::AdminAdded {
+            namespace_id,
+            bucket_id,
+            admin: new_admin,
+            caller,
+        });
 
         Ok(())
     }
@@ -325,7 +331,7 @@ impl<T: Config> Pallet<T> {
         // remove admin from storage
         Admins::<T>::remove(&bucket_id, &admin);
 
-        Self::deposit_event(Event::AdminRemoved { namespace_id, bucket_id, admin });
+        Self::deposit_event(Event::AdminRemoved { namespace_id, bucket_id, admin, caller });
 
         Ok(())
     }
@@ -353,7 +359,12 @@ impl<T: Config> Pallet<T> {
         // insert contributor in storage
         Contributors::<T>::insert(&bucket_id, &contributor, ());
 
-        Self::deposit_event(Event::ContributorAdded { namespace_id, bucket_id, contributor });
+        Self::deposit_event(Event::ContributorAdded {
+            namespace_id,
+            bucket_id,
+            contributor,
+            caller,
+        });
 
         Ok(())
     }
@@ -379,7 +390,12 @@ impl<T: Config> Pallet<T> {
         // drop contributor
         Contributors::<T>::remove(&bucket_id, &contributor);
 
-        Self::deposit_event(Event::ContributorRemoved { namespace_id, bucket_id, contributor });
+        Self::deposit_event(Event::ContributorRemoved {
+            namespace_id,
+            bucket_id,
+            contributor,
+            caller,
+        });
 
         Ok(())
     }
@@ -394,22 +410,26 @@ impl<T: Config> Pallet<T> {
         bucket_id: T::BucketId,
         caller: Option<SubjectIdOf<T>>,
     ) -> DispatchResult {
-        if let Some(admin) = caller {
+        if let Some(ref admin) = caller {
             // check if origin is an admin for the bucket
-            Self::ensure_is_admin(&bucket_id, &admin)?;
+            Self::ensure_is_admin(&bucket_id, admin)?;
         };
 
-        Buckets::<T>::try_mutate(&namespace_id, &bucket_id, |bucket| -> DispatchResult {
+        let bucket = Buckets::<T>::try_mutate(
+            &namespace_id,
+            &bucket_id,
+            |bucket| -> Result<BucketDetailsOf<T>, DispatchError> {
             let Some(bucket) = bucket else {
                 return Err(Error::<T>::UnknownBucket.into());
             };
 
             bucket.lock();
 
-            Ok(())
-        })?;
+            Ok(bucket.clone())
+        },
+        )?;
 
-        Self::deposit_event(Event::PausedBucket { namespace_id, bucket_id });
+        Self::deposit_event(Event::PausedBucket { namespace_id, bucket_id, bucket, caller });
 
         Ok(())
     }
@@ -428,12 +448,15 @@ impl<T: Config> Pallet<T> {
         allow_locked: bool,
         caller: Option<SubjectIdOf<T>>,
     ) -> DispatchResult {
-        if let Some(admin) = caller {
+        if let Some(ref admin) = caller {
             // check if origin is an admin for the bucket
-            Self::ensure_is_admin(&bucket_id, &admin)?;
+            Self::ensure_is_admin(&bucket_id, admin)?;
         };
 
-        Buckets::<T>::try_mutate(&namespace_id, &bucket_id, |bucket| -> DispatchResult {
+        let bucket = Buckets::<T>::try_mutate(
+            &namespace_id,
+            &bucket_id,
+            |bucket| -> Result<BucketDetailsOf<T>, DispatchError> {
             let Some(bucket) = bucket else {
                 return Err(Error::<T>::UnknownBucket.into());
             };
@@ -442,13 +465,16 @@ impl<T: Config> Pallet<T> {
 
             bucket.set_writable(new_encryption_key.clone());
 
-            Ok(())
-        })?;
+            Ok(bucket.clone())
+        },
+        )?;
 
         Self::deposit_event(Event::BucketWritableWithKey {
             namespace_id,
             bucket_id,
             new_encryption_key,
+            bucket,
+            caller,
         });
 
         Ok(())
@@ -466,9 +492,9 @@ impl<T: Config> Pallet<T> {
         caller: Option<SubjectIdOf<T>>,
         payer: Option<AccountIdOf<T>>,
     ) -> DispatchResult {
-        if let Some(admin) = caller {
+        if let Some(ref admin) = caller {
             // check if origin is an admin for the bucket
-            Self::ensure_is_admin(&bucket_id, &admin)?;
+            Self::ensure_is_admin(&bucket_id, admin)?;
         };
 
         // take fees from the payer
@@ -480,7 +506,7 @@ impl<T: Config> Pallet<T> {
         // insert tag in storage
         Tags::<T>::insert(&bucket_id, &tag, ());
 
-        Self::deposit_event(Event::NewTag { bucket_id, tag });
+        Self::deposit_event(Event::NewTag { bucket_id, tag, creator: caller });
 
         Ok(())
     }
@@ -534,8 +560,10 @@ impl<T: Config> Pallet<T> {
         Buckets::<T>::insert(&namespace_id, &bucket_id, bucket);
 
         Self::deposit_event(Event::NewMessage {
+            namespace_id,
             bucket_id,
             message_id: message_id.clone(),
+            message: message_details,
             contributor,
         });
 
@@ -563,7 +591,7 @@ impl<T: Config> Pallet<T> {
             })?;
         }
 
-        Self::deposit_event(Event::MessageDeleted { bucket_id, message_id });
+        Self::deposit_event(Event::MessageDeleted { bucket_id, message_id, message: message_details });
 
         Ok(())
     }
