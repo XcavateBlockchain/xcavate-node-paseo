@@ -1,6 +1,7 @@
 use frame_support::{assert_err, assert_noop, assert_ok, sp_runtime::DispatchError};
 use frame_system::RawOrigin;
 
+use crate::types::Status;
 use crate::{mock::*, Error};
 
 #[test]
@@ -31,6 +32,11 @@ fn create_bucket() {
             assert!(events().contains(&crate::Event::BucketCreated {
                 namespace_id: DEFAULT_NAMESPACE_ID,
                 bucket_id: 0,
+                bucket: BucketMock {
+                    metadata: MetadataMock { unique_plus_1: 21 },
+                    status: Status::Locked,
+                    next_message_id: 0,
+                },
                 creator: Some(ACCOUNT_00)
             }));
             assert_eq!(events().len(), 1);
@@ -114,6 +120,7 @@ fn remove_bucket() {
             assert!(events().contains(&crate::Event::BucketDeleted {
                 namespace_id: DEFAULT_NAMESPACE_ID,
                 bucket_id: DEFAULT_BUCKET_ID,
+                bucket: BUCKET_EXAMPLE_LOCKED,
             }));
             assert_eq!(events().len(), 1);
         });

@@ -25,7 +25,13 @@ fn rotate_key() {
             assert!(events().contains(&crate::Event::BucketWritableWithKey {
                 namespace_id: DEFAULT_NAMESPACE_ID,
                 bucket_id: DEFAULT_BUCKET_ID,
-                new_encryption_key: DEFAULT_ENCRYPTION_KEY
+                new_encryption_key: DEFAULT_ENCRYPTION_KEY,
+                bucket: BucketMock {
+                    metadata: MetadataMock { unique_plus_1: 10 },
+                    status: Status::Writable(DEFAULT_ENCRYPTION_KEY),
+                    next_message_id: 2,
+                },
+                caller: Some(ACCOUNT_00)
             }));
         });
 }

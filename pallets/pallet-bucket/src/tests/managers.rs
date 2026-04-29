@@ -77,6 +77,7 @@ fn remove_manager() {
             assert!(events().contains(&crate::Event::ManagerRemoved {
                 namespace_id: DEFAULT_NAMESPACE_ID,
                 manager: ACCOUNT_00,
+                caller: Some(ACCOUNT_00),
             }));
             assert_eq!(events().len(), 1);
         });
