@@ -419,7 +419,7 @@ impl<T: Config> Pallet<T> {
             &namespace_id,
             &bucket_id,
             |bucket| -> Result<BucketDetailsOf<T>, DispatchError> {
-            let Some(bucket) = bucket else {
+            let Some(bucket) = bucket.as_mut() else {
                 return Err(Error::<T>::UnknownBucket.into());
             };
 
@@ -457,9 +457,7 @@ impl<T: Config> Pallet<T> {
             &namespace_id,
             &bucket_id,
             |bucket| -> Result<BucketDetailsOf<T>, DispatchError> {
-            let Some(bucket) = bucket else {
-                return Err(Error::<T>::UnknownBucket.into());
-            };
+            let bucket = bucket.as_mut().ok_or(Error::<T>::UnknownBucket)?;
 
             ensure!(allow_locked || bucket.is_writable(), Error::<T>::BucketIsLocked);
 
