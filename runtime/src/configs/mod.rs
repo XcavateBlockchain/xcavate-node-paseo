@@ -952,7 +952,7 @@ parameter_types! {
     pub const MaxOwnershipPercentage: Perbill = Perbill::from_percent(50);
     pub const MaxCallLen: u32 = 64;
     pub const MaxDelayedCalls: u32 = 10;
-    pub const AcceptedMarketplacePaymentAssets: [u32; 2] = [1337, 1984];
+    pub const AcceptedMarketplacePaymentAssets: [u32; 2] = [1, 10];
 }
 
 /// Configure the pallet-marketplace in pallets/marketplace.
