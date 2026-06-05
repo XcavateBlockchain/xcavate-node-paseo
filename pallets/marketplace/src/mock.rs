@@ -400,14 +400,11 @@ parameter_types! {
     pub const MaximumRelistAttempts: u8 = 1;
     pub const MarketplaceFeePercent: Perbill = Perbill::from_percent(1);
     pub const MaxOwnershipPercentage: Perbill = Perbill::from_percent(50);
-    pub const MaxCallLen: u32 = 64;
-    pub const MaxDelayedCalls: u32 = 15;
 }
 
 /// Configure the pallet-xcavate-staking in pallets/xcavate-staking.
 impl pallet_marketplace::Config for Test {
     type RuntimeEvent = RuntimeEvent;
-    type RuntimeCall = RuntimeCall;
     type WeightInfo = weights::SubstrateWeight<Test>;
     type Balance = u128;
     type NativeCurrency = Balances;
@@ -442,8 +439,6 @@ impl pallet_marketplace::Config for Test {
     type StringLimit = ConstU32<50>;
     type PostcodeLimit = Postcode;
     type MaxOwnershipPercentage = MaxOwnershipPercentage;
-    type MaxCallLen = MaxCallLen;
-    type MaxDelayedCalls = MaxDelayedCalls;
 }
 
 // Build genesis storage according to the mock runtime.

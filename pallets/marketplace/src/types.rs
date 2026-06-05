@@ -23,16 +23,6 @@ use frame_support::{sp_runtime::RuntimeDebug, DefaultNoBound};
 use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-/// Info about a delayed pallet call.
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
-#[scale_info(skip_type_params(T))]
-pub struct DelayedCallInfo<T: Config> {
-    /// Origin that made the call.
-    pub signer: AccountIdOf<T>,
-    /// Scale encoded call
-    pub encoded: EncodedCall<T>,
-}
-
 /// Stores details about a real estate property listing in the marketplace.
 #[derive(Encode, Decode, PartialEq, Eq, MaxEncodedLen, RuntimeDebug, TypeInfo)]
 #[scale_info(skip_type_params(T))]

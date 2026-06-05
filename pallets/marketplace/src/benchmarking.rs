@@ -202,7 +202,7 @@ fn list_and_sell_property<T: Config>(
     ));
     add_buyers_to_listing::<T>(token_amount - 1, payment_asset, property_price, admin.clone());
 
-    assert_ok!(Marketplace::<T>::do_buy_property_token(
+    assert_ok!(Marketplace::<T>::buy_property_token(
         RawOrigin::Signed(buyer.clone()).into(),
         listing_id,
         1,
@@ -215,7 +215,7 @@ fn list_and_sell_property<T: Config>(
         Role::SpvConfirmation
     ));
     assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-    assert_ok!(Marketplace::<T>::do_claim_property_token(
+    assert_ok!(Marketplace::<T>::claim_property_token(
         RawOrigin::Signed(buyer.clone()).into(),
         listing_id,
     ));
@@ -332,7 +332,7 @@ fn add_buyers_to_listing<T: Config>(
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer).into(),
             0,
             1,
@@ -344,7 +344,7 @@ fn add_buyers_to_listing<T: Config>(
 fn claim_buyers_property_token<T: Config>(buyers: u32, listing_id: ListingId) {
     for i in 1..=buyers {
         let buyer: T::AccountId = account("buyer", i, i);
-        assert_ok!(Marketplace::<T>::do_claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_token(
             RawOrigin::Signed(buyer).into(),
             listing_id
         ));
@@ -518,7 +518,7 @@ mod benchmarks {
                     buyer_helper.clone(),
                     Role::RealEstateInvestor
                 ));
-                assert_ok!(Marketplace::<T>::do_buy_property_token(
+                assert_ok!(Marketplace::<T>::buy_property_token(
                     RawOrigin::Signed(buyer_helper.clone()).into(),
                     listing_id,
                     base,
@@ -530,24 +530,14 @@ mod benchmarks {
             amount
         };
 
-        #[block]
-        {
-            Pallet::<T>::buy_property_token(
-                RawOrigin::Signed(buyer.clone()).into(),
-                listing_id,
-                buyer_amount,
-                payment_asset,
-            )
-            .unwrap();
-            Pallet::<T>::do_buy_property_token(
-                RawOrigin::Signed(buyer.clone()).into(),
-                listing_id,
-                buyer_amount,
-                payment_asset,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        buy_property_token(
+            RawOrigin::Signed(buyer.clone()),
+            listing_id,
+            buyer_amount,
+            payment_asset,
+        );
+
 
         assert_eq!(
             OngoingObjectListing::<T>::get(listing_id).unwrap().listed_token_amount,
@@ -610,7 +600,7 @@ mod benchmarks {
                     buyer_helper.clone(),
                     Role::RealEstateInvestor
                 ));
-                assert_ok!(Marketplace::<T>::do_buy_property_token(
+                assert_ok!(Marketplace::<T>::buy_property_token(
                     RawOrigin::Signed(buyer_helper.clone()).into(),
                     listing_id,
                     base,
@@ -622,24 +612,13 @@ mod benchmarks {
             amount
         };
 
-        #[block]
-        {
-            Pallet::<T>::buy_property_token(
-                RawOrigin::Signed(buyer.clone()).into(),
-                listing_id,
-                buyer_amount,
-                payment_asset,
-            )
-            .unwrap();
-            Pallet::<T>::do_buy_property_token(
-                RawOrigin::Signed(buyer.clone()).into(),
-                listing_id,
-                buyer_amount,
-                payment_asset,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        buy_property_token(
+            RawOrigin::Signed(buyer.clone()),
+            listing_id,
+            buyer_amount,
+            payment_asset,
+        );
 
         assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_token_amount, 0);
         //assert!(TokenBuyer::<T>::get(listing_id).contains(&buyer));
@@ -678,7 +657,7 @@ mod benchmarks {
         ));
         add_buyers_to_listing::<T>(token_amount - 1, payment_asset, property_price, admin.clone());
 
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             1,
@@ -693,17 +672,8 @@ mod benchmarks {
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
         claim_buyers_property_token::<T>(token_amount - 1, listing_id);
 
-        #[block]
-        {
-            Pallet::<T>::claim_property_token(RawOrigin::Signed(buyer.clone()).into(), listing_id)
-                .unwrap();
-            Pallet::<T>::do_claim_property_token(
-                RawOrigin::Signed(buyer.clone()).into(),
-                listing_id,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        claim_property_token(RawOrigin::Signed(buyer.clone()), listing_id);
 
         assert!(TokenOwner::<T>::get(&buyer, listing_id).is_none());
         assert_eq!(
@@ -749,7 +719,7 @@ mod benchmarks {
         ));
         add_buyers_to_listing::<T>(token_amount - 1, payment_asset, property_price, admin.clone());
 
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             1,
@@ -771,11 +741,11 @@ mod benchmarks {
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::do_withdraw_unclaimed(
+        assert_ok!(Marketplace::<T>::withdraw_unclaimed(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             1,
@@ -822,7 +792,7 @@ mod benchmarks {
         ));
         add_buyers_to_listing::<T>(token_amount - 1, payment_asset, property_price, admin.clone());
 
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             1,
@@ -853,24 +823,8 @@ mod benchmarks {
         let amount = 1;
         let price = 5_000u32.into();
 
-        #[block]
-        {
-            Pallet::<T>::relist_token(
-                RawOrigin::Signed(token_owner.clone()).into(),
-                asset_id,
-                price,
-                amount,
-            )
-            .unwrap();
-            Pallet::<T>::do_relist_token(
-                RawOrigin::Signed(token_owner.clone()).into(),
-                asset_id,
-                price,
-                amount,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        relist_token(RawOrigin::Signed(token_owner.clone()), asset_id, price, amount);
 
         let listing = TokenListings::<T>::get(1).unwrap();
         assert_eq!(listing.seller, token_owner);
@@ -890,7 +844,7 @@ mod benchmarks {
         let amount = 1;
         let price = 5_000u32.into();
 
-        assert_ok!(Marketplace::<T>::do_relist_token(
+        assert_ok!(Marketplace::<T>::relist_token(
             RawOrigin::Signed(token_owner.clone()).into(),
             asset_id,
             price,
@@ -915,24 +869,8 @@ mod benchmarks {
             Role::RealEstateInvestor
         ));
 
-        #[block]
-        {
-            Pallet::<T>::buy_relisted_token(
-                RawOrigin::Signed(relist_buyer.clone()).into(),
-                1,
-                amount,
-                payment_asset,
-            )
-            .unwrap();
-            Pallet::<T>::do_buy_relisted_token(
-                RawOrigin::Signed(relist_buyer.clone()).into(),
-                1,
-                amount,
-                payment_asset,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        buy_relisted_token(RawOrigin::Signed(relist_buyer.clone()), 1, amount, payment_asset);
 
         assert!(!TokenListings::<T>::contains_key(1));
         assert!(T::PropertyToken::get_property_owner(asset_id).contains(&relist_buyer));
@@ -972,7 +910,7 @@ mod benchmarks {
         ));
         let amount = 1;
 
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             amount,
@@ -982,14 +920,8 @@ mod benchmarks {
         assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_token_amount, 1);
         //assert!(TokenBuyer::<T>::get(listing_id).contains(&buyer));
 
-        #[block]
-        {
-            Pallet::<T>::cancel_property_purchase(RawOrigin::Signed(buyer.clone()).into(), 0)
-                .unwrap();
-            Pallet::<T>::do_cancel_property_purchase(RawOrigin::Signed(buyer.clone()).into(), 0)
-                .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        cancel_property_purchase(RawOrigin::Signed(buyer.clone()), 0);
 
         assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_token_amount, 2);
         //assert!(!TokenBuyer::<T>::get(listing_id).contains(&buyer));
@@ -1006,7 +938,7 @@ mod benchmarks {
         let amount = 1;
         let price = 5_000u32.into();
 
-        assert_ok!(Marketplace::<T>::do_relist_token(
+        assert_ok!(Marketplace::<T>::relist_token(
             RawOrigin::Signed(token_owner.clone()).into(),
             asset_id,
             price,
@@ -1033,26 +965,8 @@ mod benchmarks {
 
         let offer_price = price - 1u32.into();
 
-        #[block]
-        {
-            Pallet::<T>::make_offer(
-                RawOrigin::Signed(offerer.clone()).into(),
-                1,
-                offer_price,
-                amount,
-                payment_asset,
-            )
-            .unwrap();
-            Pallet::<T>::do_make_offer(
-                RawOrigin::Signed(offerer.clone()).into(),
-                1,
-                offer_price,
-                amount,
-                payment_asset,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        make_offer(RawOrigin::Signed(offerer.clone()), 1, offer_price, amount, payment_asset);
 
         assert_eq!(OngoingOffers::<T>::get(1, offerer).unwrap().token_price, offer_price);
     }
@@ -1068,7 +982,7 @@ mod benchmarks {
         let amount = 1;
         let price = 5_000u32.into();
 
-        assert_ok!(Marketplace::<T>::do_relist_token(
+        assert_ok!(Marketplace::<T>::relist_token(
             RawOrigin::Signed(token_owner.clone()).into(),
             asset_id,
             price,
@@ -1095,7 +1009,7 @@ mod benchmarks {
 
         let offer_price = price - 1u32.into();
 
-        assert_ok!(Marketplace::<T>::do_make_offer(
+        assert_ok!(Marketplace::<T>::make_offer(
             RawOrigin::Signed(offerer.clone()).into(),
             1,
             offer_price,
@@ -1103,26 +1017,8 @@ mod benchmarks {
             payment_asset
         ));
 
-        #[block]
-        {
-            Pallet::<T>::handle_offer(
-                RawOrigin::Signed(token_owner.clone()).into(),
-                1,
-                offerer.clone(),
-                Offer::Accept,
-                0,
-            )
-            .unwrap();
-            Pallet::<T>::do_handle_offer(
-                RawOrigin::Signed(token_owner).into(),
-                1,
-                offerer.clone(),
-                Offer::Accept,
-                0,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        handle_offer(RawOrigin::Signed(token_owner), 1, offerer.clone(), Offer::Accept, 0);
 
         assert_eq!(OngoingOffers::<T>::get(1, offerer).is_none(), true);
     }
@@ -1138,7 +1034,7 @@ mod benchmarks {
         let amount = 1;
         let price = 5_000u32.into();
 
-        assert_ok!(Marketplace::<T>::do_relist_token(
+        assert_ok!(Marketplace::<T>::relist_token(
             RawOrigin::Signed(token_owner.clone()).into(),
             asset_id,
             price,
@@ -1165,7 +1061,7 @@ mod benchmarks {
 
         let offer_price = price - 1u32.into();
 
-        assert_ok!(Marketplace::<T>::do_make_offer(
+        assert_ok!(Marketplace::<T>::make_offer(
             RawOrigin::Signed(offerer.clone()).into(),
             1,
             offer_price,
@@ -1173,12 +1069,8 @@ mod benchmarks {
             payment_asset
         ));
 
-        #[block]
-        {
-            Pallet::<T>::cancel_offer(RawOrigin::Signed(offerer.clone()).into(), 1).unwrap();
-            Pallet::<T>::do_cancel_offer(RawOrigin::Signed(offerer.clone()).into(), 1).unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        cancel_offer(RawOrigin::Signed(offerer.clone()), 1);
 
         assert_eq!(OngoingOffers::<T>::get(1, offerer).is_none(), true);
         assert!(TokenListings::<T>::contains_key(1));
@@ -1236,7 +1128,7 @@ mod benchmarks {
                 buyer_helper.clone(),
                 Role::RealEstateInvestor
             ));
-            assert_ok!(Marketplace::<T>::do_buy_property_token(
+            assert_ok!(Marketplace::<T>::buy_property_token(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
                 base,
@@ -1244,7 +1136,7 @@ mod benchmarks {
             ));
         }
         let buyer_amount = base + remainder;
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             buyer_amount,
@@ -1257,15 +1149,15 @@ mod benchmarks {
             Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-        assert_ok!(Marketplace::<T>::do_claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::do_claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_token(
             RawOrigin::Signed(account("buyer_helper", 1, 1)).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::do_claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_token(
             RawOrigin::Signed(account("buyer_helper", 2, 2)).into(),
             listing_id,
         ));
@@ -1298,25 +1190,19 @@ mod benchmarks {
             false
         ));
 
-        assert_ok!(Marketplace::<T>::do_withdraw_rejected(
+        assert_ok!(Marketplace::<T>::withdraw_rejected(
             RawOrigin::Signed(account("buyer_helper", 1, 1)).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::do_withdraw_rejected(
+        assert_ok!(Marketplace::<T>::withdraw_rejected(
             RawOrigin::Signed(account("buyer_helper", 2, 2)).into(),
             listing_id,
         ));
 
         assert!(RefundToken::<T>::get(listing_id).is_some());
 
-        #[block]
-        {
-            Pallet::<T>::withdraw_rejected(RawOrigin::Signed(buyer.clone()).into(), listing_id)
-                .unwrap();
-            Pallet::<T>::do_withdraw_rejected(RawOrigin::Signed(buyer.clone()).into(), listing_id)
-                .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        withdraw_rejected(RawOrigin::Signed(buyer.clone()), listing_id);
 
         //assert_eq!(TokenOwner::<T>::get(&buyer, listing_id).token_amount, 0);
         assert!(RefundToken::<T>::get(listing_id).is_none());
@@ -1374,7 +1260,7 @@ mod benchmarks {
                 buyer_helper.clone(),
                 Role::RealEstateInvestor
             ));
-            assert_ok!(Marketplace::<T>::do_buy_property_token(
+            assert_ok!(Marketplace::<T>::buy_property_token(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
                 base,
@@ -1382,7 +1268,7 @@ mod benchmarks {
             ));
         }
         let buyer_amount = base + remainder;
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             buyer_amount,
@@ -1395,15 +1281,15 @@ mod benchmarks {
             Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-        assert_ok!(Marketplace::<T>::do_claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::do_claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_token(
             RawOrigin::Signed(account("buyer_helper", 1, 1)).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::do_claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_token(
             RawOrigin::Signed(account("buyer_helper", 2, 2)).into(),
             listing_id,
         ));
@@ -1430,31 +1316,19 @@ mod benchmarks {
             frame_system::Pallet::<T>::block_number() + T::ClaimWindow::get() + 1u32.into();
         frame_system::Pallet::<T>::set_block_number(expiry);
 
-        assert_ok!(Marketplace::<T>::do_withdraw_legal_process_expired(
+        assert_ok!(Marketplace::<T>::withdraw_legal_process_expired(
             RawOrigin::Signed(account("buyer_helper", 1, 1)).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::do_withdraw_legal_process_expired(
+        assert_ok!(Marketplace::<T>::withdraw_legal_process_expired(
             RawOrigin::Signed(account("buyer_helper", 2, 2)).into(),
             listing_id,
         ));
 
         assert!(RefundLegalExpired::<T>::get(listing_id).is_some());
 
-        #[block]
-        {
-            Pallet::<T>::withdraw_legal_process_expired(
-                RawOrigin::Signed(buyer.clone()).into(),
-                listing_id,
-            )
-            .unwrap();
-            Pallet::<T>::do_withdraw_legal_process_expired(
-                RawOrigin::Signed(buyer.clone()).into(),
-                listing_id,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        withdraw_legal_process_expired(RawOrigin::Signed(buyer.clone()), listing_id);
 
         assert!(RefundLegalExpired::<T>::get(listing_id).is_none());
         assert!(ListingDeposits::<T>::get(listing_id).is_none());
@@ -1489,7 +1363,7 @@ mod benchmarks {
             Role::RealEstateInvestor
         ));
 
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             10,
@@ -1500,14 +1374,8 @@ mod benchmarks {
             frame_system::Pallet::<T>::block_number() + T::MaxListingDuration::get() + 1u32.into();
         frame_system::Pallet::<T>::set_block_number(expiry);
 
-        #[block]
-        {
-            Pallet::<T>::withdraw_expired(RawOrigin::Signed(buyer.clone()).into(), listing_id)
-                .unwrap();
-            Pallet::<T>::do_withdraw_expired(RawOrigin::Signed(buyer.clone()).into(), listing_id)
-                .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        withdraw_expired(RawOrigin::Signed(buyer.clone()), listing_id);
 
         //assert_eq!(TokenOwner::<T>::get(&buyer, listing_id).token_amount, 0);
         assert!(OngoingObjectListing::<T>::get(listing_id).is_none());
@@ -1533,20 +1401,8 @@ mod benchmarks {
             frame_system::Pallet::<T>::block_number() + T::MaxListingDuration::get() + 1u32.into();
         frame_system::Pallet::<T>::set_block_number(expiry);
 
-        #[block]
-        {
-            Pallet::<T>::withdraw_deposit_unsold(
-                RawOrigin::Signed(seller.clone()).into(),
-                listing_id,
-            )
-            .unwrap();
-            Pallet::<T>::do_withdraw_deposit_unsold(
-                RawOrigin::Signed(seller.clone()).into(),
-                listing_id,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        withdraw_deposit_unsold(RawOrigin::Signed(seller.clone()), listing_id);
 
         assert!(OngoingObjectListing::<T>::get(listing_id).is_none());
         assert!(ListingDeposits::<T>::get(listing_id).is_none());
@@ -1600,7 +1456,7 @@ mod benchmarks {
                 buyer_helper.clone(),
                 Role::RealEstateInvestor
             ));
-            assert_ok!(Marketplace::<T>::do_buy_property_token(
+            assert_ok!(Marketplace::<T>::buy_property_token(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
                 base,
@@ -1608,7 +1464,7 @@ mod benchmarks {
             ));
         }
         let buyer_amount = base + remainder;
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             buyer_amount,
@@ -1623,7 +1479,7 @@ mod benchmarks {
         ));
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
 
-        assert_ok!(Marketplace::<T>::do_claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
         ));
@@ -1639,11 +1495,11 @@ mod benchmarks {
 
         for i in 1..=2 {
             let buyer_helper: T::AccountId = account("buyer_helper", i, i);
-            assert_ok!(Marketplace::<T>::do_withdraw_unclaimed(
+            assert_ok!(Marketplace::<T>::withdraw_unclaimed(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
             ));
-            assert_ok!(Marketplace::<T>::do_buy_property_token(
+            assert_ok!(Marketplace::<T>::buy_property_token(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
                 base,
@@ -1660,20 +1516,8 @@ mod benchmarks {
             listing_id,
         ));
 
-        #[block]
-        {
-            Pallet::<T>::withdraw_claiming_expired(
-                RawOrigin::Signed(buyer.clone()).into(),
-                listing_id,
-            )
-            .unwrap();
-            Pallet::<T>::do_withdraw_claiming_expired(
-                RawOrigin::Signed(buyer.clone()).into(),
-                listing_id,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        withdraw_claiming_expired(RawOrigin::Signed(buyer.clone()), listing_id);
 
         assert!(OngoingObjectListing::<T>::get(listing_id).is_none());
         assert!(T::PropertyToken::get_property_asset_info(0).is_none());
@@ -1725,7 +1569,7 @@ mod benchmarks {
                 buyer_helper.clone(),
                 Role::RealEstateInvestor
             ));
-            assert_ok!(Marketplace::<T>::do_buy_property_token(
+            assert_ok!(Marketplace::<T>::buy_property_token(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
                 base,
@@ -1733,7 +1577,7 @@ mod benchmarks {
             ));
         }
         let buyer_amount = base + remainder;
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             buyer_amount,
@@ -1757,14 +1601,8 @@ mod benchmarks {
             listing_id,
         ));
 
-        #[block]
-        {
-            Pallet::<T>::withdraw_unclaimed(RawOrigin::Signed(buyer.clone()).into(), listing_id)
-                .unwrap();
-            Pallet::<T>::do_withdraw_unclaimed(RawOrigin::Signed(buyer.clone()).into(), listing_id)
-                .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        withdraw_unclaimed(RawOrigin::Signed(buyer.clone()), listing_id);
 
         assert!(TokenOwner::<T>::get(&buyer, listing_id).is_none());
     }
@@ -1803,19 +1641,15 @@ mod benchmarks {
         let amount = 1;
         let price = 5_000u32.into();
 
-        assert_ok!(Marketplace::<T>::do_relist_token(
+        assert_ok!(Marketplace::<T>::relist_token(
             RawOrigin::Signed(token_owner.clone()).into(),
             asset_id,
             price,
             amount
         ));
 
-        #[block]
-        {
-            Pallet::<T>::delist_token(RawOrigin::Signed(token_owner.clone()).into(), 1).unwrap();
-            Pallet::<T>::do_delist_token(RawOrigin::Signed(token_owner.clone()).into(), 1).unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        delist_token(RawOrigin::Signed(token_owner.clone()), 1);
 
         assert!(!TokenListings::<T>::contains_key(1));
         assert!(T::PropertyToken::get_property_owner(asset_id).contains(&token_owner));
@@ -2214,7 +2048,7 @@ mod benchmarks {
                     buyer_helper.clone(),
                     Role::RealEstateInvestor
                 ));
-                assert_ok!(Marketplace::<T>::do_buy_property_token(
+                assert_ok!(Marketplace::<T>::buy_property_token(
                     RawOrigin::Signed(buyer_helper.clone()).into(),
                     listing_id,
                     base,
@@ -2225,7 +2059,7 @@ mod benchmarks {
         } else {
             token_amount - a + 1
         };
-        assert_ok!(Marketplace::<T>::do_buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_token(
             RawOrigin::Signed(token_holder.clone()).into(),
             listing_id,
             buyer_amount,
@@ -2238,7 +2072,7 @@ mod benchmarks {
             Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-        assert_ok!(Marketplace::<T>::do_claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_token(
             RawOrigin::Signed(token_holder.clone()).into(),
             listing_id,
         ));
@@ -2246,7 +2080,7 @@ mod benchmarks {
         if token_amount - a + 1 >= token_amount * 50 / 100 {
             for i in 1..=2 {
                 let buyer_helper: T::AccountId = account("buyer_helper", i, i);
-                assert_ok!(Marketplace::<T>::do_claim_property_token(
+                assert_ok!(Marketplace::<T>::claim_property_token(
                     RawOrigin::Signed(buyer_helper.clone()).into(),
                     listing_id,
                 ));
@@ -2307,24 +2141,13 @@ mod benchmarks {
         let asset_id = 0;
         let token_amount = 1;
 
-        #[block]
-        {
-            Pallet::<T>::send_property_token(
-                RawOrigin::Signed(token_owner.clone()).into(),
-                asset_id,
-                new_owner.clone(),
-                token_amount,
-            )
-            .unwrap();
-            Pallet::<T>::do_send_property_token(
-                RawOrigin::Signed(token_owner.clone()).into(),
-                asset_id,
-                new_owner.clone(),
-                token_amount,
-            )
-            .unwrap();
-            DelayedCalls::<T>::take(); // Account for the storage access that happens in `on_finalize`
-        }
+        #[extrinsic_call]
+        send_property_token(
+            RawOrigin::Signed(token_owner.clone()),
+            asset_id,
+            new_owner.clone(),
+            token_amount,
+        );
 
         assert_eq!(T::PropertyToken::get_token_balance(asset_id, &seller), 0);
         assert_eq!(T::PropertyToken::get_token_balance(asset_id, &new_owner.clone()), token_amount);

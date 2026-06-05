@@ -21,7 +21,6 @@ frame-benchmarking = { workspace = true, optional = true}
 frame-support      = { workspace = true }
 frame-system       = { workspace = true }
 sp-api = { workspace = true }
-sp-runtime = { workspace = true }
 
 pallet-nfts = { workspace = true }
 pallet-balances = { workspace = true }
@@ -58,7 +57,6 @@ std = [
 	"pallet-assets/std",
 	"pallet-nft-fractionalization/std",
 	"sp-api/std",
-	"sp-runtime/std",
 	"primitives/std",
 	"pallet-assets-holder/std",
 	"pallet-assets-freezer/std",

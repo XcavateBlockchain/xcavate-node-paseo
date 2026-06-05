@@ -33,7 +33,6 @@ pub mod weights;
 pub use weights::*;
 
 use frame_support::{
-    dispatch::RawOrigin,
     storage::bounded_btree_map::BoundedBTreeMap,
     traits::{
         fungible::{Inspect, Mutate, MutateHold},
@@ -44,7 +43,7 @@ use frame_support::{
         tokens::{fungible, fungibles, Balance, Precision, WithdrawConsequence},
         EnsureOriginWithArg,
     },
-    transactional, PalletId,
+    PalletId,
 };
 
 use frame_support::sp_runtime::{
@@ -61,15 +60,12 @@ use primitives::{IncomeSettlement, MarketplaceFreezeReason, MarketplaceHoldReaso
 
 use types::*;
 
-use frame_support::dispatch::GetDispatchInfo;
-use frame_support::dispatch::PostDispatchInfo;
 use pallet_real_world_asset::{
     traits::{
         PropertyTokenInspect, PropertyTokenManage, PropertyTokenOwnership, PropertyTokenSpvControl,
     },
     PropertyAssetDetails,
 };
-use sp_runtime::{traits::Dispatchable, BoundedVec};
 
 use pallet_xcavate_whitelist::{Role, RolePermission};
 
@@ -84,8 +80,6 @@ pub type LocalAssetIdOf<T> = <<T as pallet::Config>::LocalCurrency as fungibles:
 pub type ForeignAssetIdOf<T> = <<T as pallet::Config>::ForeignCurrency as fungibles::Inspect<
     <T as frame_system::Config>::AccountId,
 >>::AssetId;
-
-type EncodedCall<T> = BoundedVec<u8, <T as Config>::MaxCallLen>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -107,12 +101,6 @@ pub mod pallet {
     pub trait Config: frame_system::Config + pallet_nft_fractionalization::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
-        /// The aggregated call type.
-        type RuntimeCall: Parameter
-            + Dispatchable<PostInfo = PostDispatchInfo>
-            + GetDispatchInfo
-            + From<crate::Call<Self>>;
 
         /// Type representing the weight of this pallet.
         type WeightInfo: WeightInfo;
@@ -312,234 +300,6 @@ pub mod pallet {
         /// The maximum ownership percentage allowed for any single investor.
         #[pallet::constant]
         type MaxOwnershipPercentage: Get<Perbill>;
-
-        /// Max length of a scale encoded call in bytes.
-        #[pallet::constant]
-        type MaxCallLen: Get<u32>;
-
-        /// Max number of calls that can be delayed.
-        #[pallet::constant]
-        type MaxDelayedCalls: Get<u32>;
-    }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_: BlockNumberFor<T>) {
-            let delayed_calls = DelayedCalls::<T>::take();
-
-            // Each of the delayed call weight is accounted for when calling the extrinsic that
-            // scheduled the delay call.
-            delayed_calls
-                .iter()
-                .filter_map(|dc| {
-                    let mut bytes: &[u8] = dc.encoded.as_slice();
-
-                    Call::<T>::decode(&mut bytes).ok().map(|call| (call, dc.signer.clone()))
-                })
-                .for_each(|(delayed_call, signer)| {
-                    let origin: OriginFor<T> = RawOrigin::Signed(signer.clone()).into();
-                    match delayed_call {
-                        Call::buy_property_token { listing_id, amount, payment_asset } => {
-                            if let Err(e) = Self::do_buy_property_token(
-                                origin,
-                                listing_id,
-                                amount,
-                                payment_asset,
-                            ) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::buy_property_token {
-                                        listing_id,
-                                        amount,
-                                        payment_asset,
-                                    },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::claim_property_token { listing_id } => {
-                            if let Err(e) = Self::do_claim_property_token(origin, listing_id) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::claim_property_token { listing_id },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::relist_token { asset_id, token_price, amount } => {
-                            if let Err(e) =
-                                Self::do_relist_token(origin, asset_id, token_price, amount)
-                            {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::relist_token { asset_id, token_price, amount },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::buy_relisted_token { listing_id, amount, payment_asset } => {
-                            if let Err(e) = Self::do_buy_relisted_token(
-                                origin,
-                                listing_id,
-                                amount,
-                                payment_asset,
-                            ) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::buy_relisted_token {
-                                        listing_id,
-                                        amount,
-                                        payment_asset,
-                                    },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::cancel_property_purchase { listing_id } => {
-                            if let Err(e) = Self::do_cancel_property_purchase(origin, listing_id) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::cancel_property_purchase { listing_id },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::make_offer { listing_id, offer_price, amount, payment_asset } => {
-                            if let Err(e) = Self::do_make_offer(
-                                origin,
-                                listing_id,
-                                offer_price,
-                                amount,
-                                payment_asset,
-                            ) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::make_offer {
-                                        listing_id,
-                                        offer_price,
-                                        amount,
-                                        payment_asset,
-                                    },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::handle_offer { listing_id, offeror, offer, offer_nonce } => {
-                            if let Err(e) = Self::do_handle_offer(
-                                origin,
-                                listing_id,
-                                offeror.clone(),
-                                offer.clone(),
-                                offer_nonce,
-                            ) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::handle_offer {
-                                        listing_id,
-                                        offeror,
-                                        offer,
-                                        offer_nonce,
-                                    },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::cancel_offer { listing_id } => {
-                            if let Err(e) = Self::do_cancel_offer(origin, listing_id) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::cancel_offer { listing_id },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::delist_token { listing_id } => {
-                            if let Err(e) = Self::do_delist_token(origin, listing_id) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::delist_token { listing_id },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::send_property_token { asset_id, receiver, token_amount } => {
-                            if let Err(e) = Self::do_send_property_token(
-                                origin,
-                                asset_id,
-                                receiver.clone(),
-                                token_amount,
-                            ) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::send_property_token {
-                                        asset_id,
-                                        receiver,
-                                        token_amount,
-                                    },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::withdraw_rejected { listing_id } => {
-                            if let Err(e) = Self::do_withdraw_rejected(origin, listing_id) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::withdraw_rejected { listing_id },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::withdraw_legal_process_expired { listing_id } => {
-                            if let Err(e) =
-                                Self::do_withdraw_legal_process_expired(origin, listing_id)
-                            {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::withdraw_legal_process_expired { listing_id },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::withdraw_expired { listing_id } => {
-                            if let Err(e) = Self::do_withdraw_expired(origin, listing_id) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::withdraw_expired { listing_id },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::withdraw_deposit_unsold { listing_id } => {
-                            if let Err(e) = Self::do_withdraw_deposit_unsold(origin, listing_id) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::withdraw_deposit_unsold { listing_id },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::withdraw_claiming_expired { listing_id } => {
-                            if let Err(e) = Self::do_withdraw_claiming_expired(origin, listing_id) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::withdraw_claiming_expired { listing_id },
-                                    error: e,
-                                });
-                            };
-                        }
-                        Call::withdraw_unclaimed { listing_id } => {
-                            if let Err(e) = Self::do_withdraw_unclaimed(origin, listing_id) {
-                                Self::deposit_event(Event::<T>::DelayedExtrinsicFailed {
-                                    signer,
-                                    call: Call::withdraw_unclaimed { listing_id },
-                                    error: e,
-                                });
-                            };
-                        }
-                        _ => {}
-                    }
-                });
-        }
     }
 
     pub type RegionId = u16;
@@ -665,11 +425,6 @@ pub mod pallet {
     /// Counter of proposal ids.
     #[pallet::storage]
     pub type ProposalCounter<T: Config> = StorageValue<_, ProposalId, ValueQuery>;
-
-    /// Delayed extrinsic calls.
-    #[pallet::storage]
-    pub type DelayedCalls<T: Config> =
-        StorageValue<_, BoundedVec<DelayedCallInfo<T>, T::MaxDelayedCalls>, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -873,12 +628,6 @@ pub mod pallet {
         },
         /// A sale has been cancelled due to unclaimed tokens.
         SaleCancelledUnclaimed { listing_id: ListingId, unclaimed_amount: u32 },
-        /// A delayed extrinsic failed.
-        DelayedExtrinsicFailed {
-            signer: AccountIdOf<T>,
-            call: Call<T>,
-            error: sp_runtime::DispatchError,
-        },
     }
 
     // Errors inform users that something went wrong.
@@ -996,10 +745,6 @@ pub mod pallet {
         ZeroVoteAmount,
         /// The nonce does not match the nonce for this offer.
         InvalidOfferNonce,
-        /// The encoded call is larger than `T::MaxCallLen`
-        CallTooLarge,
-        /// There are too many delayed calls.
-        TooManyDelayedCalls,
     }
 
     #[pallet::call]
@@ -1144,8 +889,6 @@ pub mod pallet {
         ///
         /// The origin must be Signed by a compliant RealEstateInvestor and have sufficient funds.
         ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
-        ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to buy token from.
         /// - `amount`: The amount of token that the investor wants to buy.
@@ -1168,25 +911,147 @@ pub mod pallet {
                 &Role::RealEstateInvestor,
             )?;
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::buy_property_token { listing_id, amount, payment_asset };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
+            // Validate input parameters
+            ensure!(amount > 0, Error::<T>::AmountCannotBeZero);
+            let accepted_payment_assets = T::AcceptedAssets::get();
+            ensure!(
+                accepted_payment_assets.contains(&payment_asset),
+                Error::<T>::PaymentAssetNotSupported
+            );
 
-            let delayed_call = DelayedCallInfo { signer, encoded };
+            // Retrieve and validate listing details
+            let mut property_details =
+                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
+            ensure!(
+                property_details.listed_token_amount >= amount,
+                Error::<T>::NotEnoughTokenAvailable
+            );
+            ensure!(
+                property_details.listing_expiry
+                    > <T as pallet::Config>::BlockNumberProvider::current_block_number(),
+                Error::<T>::ListingExpired
+            );
+            let asset_details =
+                T::PropertyToken::get_property_asset_info(property_details.asset_id)
+                    .ok_or(Error::<T>::NoObjectFound)?;
 
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
+            // Calculate fees and taxes
+            let fee_percent = T::MarketplaceFeePercentage::get();
+            ensure!(fee_percent < Perbill::from_percent(100), Error::<T>::InvalidFeePercentage);
+            let tax_percent = property_details.tax;
+            let total_supply = property_details.token_amount;
+            let max_tokens = T::MaxOwnershipPercentage::get().mul_floor(total_supply);
+            let transfer_price = property_details
+                .token_price
+                .checked_mul(&((amount as u128).into()))
+                .ok_or(Error::<T>::MultiplyError)?;
+            // Rounding up to not undercharge for protocol fees.
+            let fee = fee_percent.mul_ceil(transfer_price);
+            // Rounding up to not undercharge for property tax.
+            let tax = tax_percent.mul_ceil(transfer_price);
+
+            let base_price =
+                transfer_price.checked_add(&fee).ok_or(Error::<T>::ArithmeticOverflow)?;
+            let total_transfer_price = if property_details.tax_paid_by_developer {
+                base_price
+            } else {
+                base_price.checked_add(&tax).ok_or(Error::<T>::ArithmeticOverflow)?
+            };
+
+            // Hold funds for the purchase
+            T::ForeignAssetsHolder::hold(
+                payment_asset,
+                &MarketplaceHoldReason::Marketplace,
+                &signer,
+                total_transfer_price,
+            )?;
+
+            // Update token amounts in listing
+            property_details.listed_token_amount = property_details
+                .listed_token_amount
+                .checked_sub(amount)
+                .ok_or(Error::<T>::ArithmeticUnderflow)?;
+            property_details.unclaimed_token_amount = property_details
+                .unclaimed_token_amount
+                .checked_add(amount)
+                .ok_or(Error::<T>::ArithmeticOverflow)?;
+            // Update or create token owner details
+            TokenOwner::<T>::try_mutate_exists(&signer, listing_id, |maybe_token_owner_details| {
+                if maybe_token_owner_details.is_none() {
+                    let initial_funds = Self::create_initial_funds()?;
+                    *maybe_token_owner_details = Some(TokenOwnerDetails {
+                        token_amount: 0,
+                        paid_funds: initial_funds.clone(),
+                        paid_tax: initial_funds,
+                        relist_count: property_details.relist_count,
+                    });
+                }
+                let token_owner_details =
+                    maybe_token_owner_details.as_mut().ok_or(Error::<T>::TokenOwnerNotFound)?;
+                // Check that the relist count matches to prevent buying tokens if he still has unclaimed tokens
+                ensure!(
+                    token_owner_details.relist_count == property_details.relist_count,
+                    Error::<T>::StillHasUnclaimedToken
+                );
+                // Ensure max ownership token is not exceeded
+                let claimed_token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
+                    property_details.asset_id,
+                    &signer,
+                );
+                let new_token_amount = token_owner_details
+                    .token_amount
+                    .checked_add(amount)
+                    .ok_or(Error::<T>::ArithmeticOverflow)?;
+                let total_investor_token_amount = new_token_amount
+                    .checked_add(claimed_token_amount)
+                    .ok_or(Error::<T>::ArithmeticOverflow)?;
+                ensure!(total_investor_token_amount < max_tokens, Error::<T>::ExceedsMaxOwnership);
+                token_owner_details.token_amount = new_token_amount;
+                // Update paid funds and tax
+                Self::update_map(
+                    &mut token_owner_details.paid_funds,
+                    payment_asset,
+                    transfer_price,
+                )?;
+
+                if !property_details.tax_paid_by_developer {
+                    Self::update_map(&mut token_owner_details.paid_tax, payment_asset, tax)?;
+                }
+
+                Ok::<(), DispatchError>(())
             })?;
 
+            // Handle sold-out case
+            let asset_id = property_details.asset_id;
+            let tax_paid_by_developer = property_details.tax_paid_by_developer;
+            let listed_token = property_details.listed_token_amount;
+            if listed_token == 0 {
+                if asset_details.spv_created {
+                    let current_block_number =
+                        <T as pallet::Config>::BlockNumberProvider::current_block_number();
+                    let expiry_block = current_block_number.saturating_add(T::ClaimWindow::get());
+                    property_details.claim_expiry = Some(expiry_block);
+                }
+                Self::deposit_event(Event::<T>::PrimarySaleSoldOut { listing_id, asset_id });
+            }
+
+            OngoingObjectListing::<T>::insert(listing_id, &property_details);
+            Self::deposit_event(Event::<T>::PropertyTokenBought {
+                listing_index: listing_id,
+                asset_id,
+                buyer: signer,
+                amount_purchased: amount,
+                price_paid: transfer_price,
+                tax_paid: if !tax_paid_by_developer { tax } else { 0u128.into() },
+                payment_asset,
+                new_tokens_remaining: listed_token,
+            });
             Ok(())
         }
 
         /// Claim purchased property token once all token are sold.
         ///
         /// The origin must be Signed by a compliant RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to claim token from.
@@ -1199,18 +1064,161 @@ pub mod pallet {
                 origin,
                 &Role::RealEstateInvestor,
             )?;
+            let mut property_details =
+                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+            // Ensure SPV has been created for this property before allowing claims
+            T::PropertyToken::ensure_spv_created(property_details.asset_id)?;
+            let claim_expiry = property_details.claim_expiry.ok_or(Error::<T>::NoClaimWindow)?;
+            let current_block_number =
+                <T as pallet::Config>::BlockNumberProvider::current_block_number();
+            ensure!(current_block_number < claim_expiry, Error::<T>::ClaimWindowExpired);
+            // Retrieve token details for this investor and ensure they are eligible to claim
+            let token_details =
+                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
+            ensure!(
+                token_details.relist_count == property_details.relist_count,
+                Error::<T>::NoValidTokenToClaim
+            );
+            let property_account = Self::property_account_id(property_details.asset_id);
+            let fee_percent = T::MarketplaceFeePercentage::get();
+            ensure!(fee_percent < Perbill::from_percent(100), Error::<T>::InvalidFeePercentage);
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::claim_property_token { listing_id };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
+            let tax_percent = if property_details.tax_paid_by_developer {
+                property_details.tax
+            } else {
+                Permill::zero()
+            };
 
-            let delayed_call = DelayedCallInfo { signer, encoded };
+            // Process each payment asset
+            for (asset, paid_funds) in
+                token_details.paid_funds.iter().filter(|(_, funds)| !funds.is_zero())
+            {
+                let default = Zero::zero();
+                let paid_tax = token_details.paid_tax.get(asset).copied().unwrap_or(default);
+                // Calculate investor's fee as 1% of paid_funds, rounding up to prevent undercharging
+                let investor_fee = fee_percent.mul_ceil(*paid_funds);
 
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
+                // Update collected funds, fees, and tax in property details
+                Self::update_map(&mut property_details.collected_funds, *asset, *paid_funds)?;
+                Self::update_map(&mut property_details.collected_fees, *asset, investor_fee)?;
+                if !property_details.tax_paid_by_developer {
+                    Self::update_map(&mut property_details.collected_tax, *asset, paid_tax)?;
+                } else {
+                    let tax = tax_percent.mul_ceil(*paid_funds);
+                    Self::update_map(&mut property_details.collected_tax, *asset, tax)?;
+                }
 
+                // Total amount to unfreeze (paid_funds + fee + tax)
+                let total_investor_amount = paid_funds
+                    .checked_add(&investor_fee)
+                    .ok_or(Error::<T>::ArithmeticOverflow)?
+                    .checked_add(&paid_tax)
+                    .ok_or(Error::<T>::ArithmeticOverflow)?;
+
+                // Release held funds
+                T::ForeignAssetsHolder::release(
+                    *asset,
+                    &MarketplaceHoldReason::Marketplace,
+                    &signer,
+                    total_investor_amount,
+                    Precision::Exact,
+                )?;
+
+                // Transfer funds to property account
+                Self::transfer_funds(&signer, &property_account, total_investor_amount, *asset)?;
+
+                // Track net contribution (price + tax) for final settlement
+                let investor_net_contribution =
+                    paid_funds.checked_add(&paid_tax).ok_or(Error::<T>::ArithmeticOverflow)?;
+
+                // Update or insert investor funds in property details
+                match property_details.investor_funds.get_mut(&signer) {
+                    Some(token_funds) => {
+                        let paid_funds = &mut token_funds.paid_funds;
+                        if let Some(existing) = paid_funds.get_mut(asset) {
+                            *existing = existing
+                                .checked_add(&investor_net_contribution)
+                                .ok_or(Error::<T>::ArithmeticOverflow)?;
+                        } else {
+                            paid_funds
+                                .try_insert(*asset, investor_net_contribution)
+                                .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
+                        }
+                        let paid_fee = &mut token_funds.paid_fee;
+                        if let Some(existing) = paid_fee.get_mut(asset) {
+                            *existing = existing
+                                .checked_add(&investor_fee)
+                                .ok_or(Error::<T>::ArithmeticOverflow)?;
+                        } else {
+                            paid_fee
+                                .try_insert(*asset, investor_fee)
+                                .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
+                        }
+                    }
+                    None => {
+                        let mut paid_funds = BoundedBTreeMap::new();
+                        paid_funds
+                            .try_insert(*asset, investor_net_contribution)
+                            .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
+                        let mut paid_fee = BoundedBTreeMap::new();
+                        paid_fee
+                            .try_insert(*asset, investor_fee)
+                            .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
+
+                        let new_entry = TokenOwnerFunds { paid_funds, paid_fee };
+                        property_details
+                            .investor_funds
+                            .try_insert(signer.clone(), new_entry)
+                            .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
+                    }
+                }
+            }
+
+            // Distribute property tokens
+            let token_amount = token_details.token_amount;
+            let asset_id = property_details.asset_id;
+
+            T::PropertyToken::distribute_property_token_to_owner(asset_id, &signer, token_amount)?;
+            property_details.unclaimed_token_amount = property_details
+                .unclaimed_token_amount
+                .checked_sub(token_amount)
+                .ok_or(Error::<T>::ArithmeticUnderflow)?;
+
+            // If all tokens have been claimed, trigger legal process setup.
+            if property_details.unclaimed_token_amount.is_zero() {
+                ensure!(
+                    PropertyLawyer::<T>::get(listing_id).is_none(),
+                    Error::<T>::LegalProcessOngoing
+                );
+                // Initialize legal process funds and set expiry time.
+                let initial_funds = Self::create_initial_funds()?;
+                let expiry_block = current_block_number.saturating_add(T::LegalProcessTime::get());
+                let property_lawyer_details = PropertyLawyerDetails {
+                    real_estate_developer_lawyer: None,
+                    spv_lawyer: None,
+                    real_estate_developer_status: DocumentStatus::Pending,
+                    spv_status: DocumentStatus::Pending,
+                    real_estate_developer_lawyer_costs: initial_funds.clone(),
+                    spv_lawyer_costs: initial_funds,
+                    legal_process_expiry: expiry_block,
+                    second_attempt: false,
+                };
+                property_details.claim_expiry = None;
+                PropertyLawyer::<T>::insert(listing_id, property_lawyer_details);
+                Self::deposit_event(Event::<T>::AllPropertyTokenClaimed {
+                    listing_id,
+                    asset_id,
+                    legal_process_expiry_block: expiry_block,
+                });
+            }
+
+            OngoingObjectListing::<T>::insert(listing_id, property_details);
+            Self::deposit_event(Event::<T>::PropertyTokenClaimed {
+                listing_id,
+                asset_id,
+                owner: signer,
+                amount: token_amount,
+            });
             Ok(())
         }
 
@@ -1324,8 +1332,6 @@ pub mod pallet {
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
         ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
-        ///
         /// Parameters:
         /// - `region`: The region where the object is located.
         /// - `item_id`: The item id of the nft.
@@ -1346,25 +1352,50 @@ pub mod pallet {
                 &Role::RealEstateInvestor,
             )?;
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::relist_token { asset_id, token_price, amount };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
+            // Validate input parameters
+            ensure!(amount > 0, Error::<T>::AmountCannotBeZero);
+            ensure!(!token_price.is_zero(), Error::<T>::InvalidTokenPrice);
 
-            let delayed_call = DelayedCallInfo { signer, encoded };
+            // Ensure property is finalized and get details
+            let asset_details = T::PropertyToken::get_if_property_finalized(asset_id)?;
 
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
+            // Transfer tokens from seller to property account to hold during listing
+            let property_account = Self::property_account_id(asset_id);
+            <T as pallet::Config>::LocalCurrency::transfer(
+                asset_id,
+                &signer,
+                &property_account,
+                amount.into(),
+                Preservation::Expendable,
+            )?;
 
+            // Create new listing
+            let listing_id = NextListingId::<T>::get();
+            let token_listing = TokenListingDetails {
+                seller: signer.clone(),
+                token_price,
+                asset_id,
+                item_id: asset_details.item_id,
+                collection_id: asset_details.collection_id,
+                amount,
+            };
+            TokenListings::<T>::insert(listing_id, token_listing);
+            let next_listing_id = Self::next_listing_id(listing_id)?;
+            NextListingId::<T>::put(next_listing_id);
+
+            Self::deposit_event(Event::<T>::TokenRelisted {
+                listing_index: listing_id,
+                asset_id,
+                price: token_price,
+                token_amount: amount,
+                seller: signer,
+            });
             Ok(())
         }
 
         /// Buy token from the marketplace.
         ///
         /// The origin must be Signed by a compliant RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to buy from.
@@ -1380,30 +1411,47 @@ pub mod pallet {
             amount: u32,
             payment_asset: u32,
         ) -> DispatchResult {
-            let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
+            let buyer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
                 origin,
                 &Role::RealEstateInvestor,
             )?;
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::buy_relisted_token { listing_id, amount, payment_asset };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
+            // Validate input parameters
+            ensure!(
+                T::AcceptedAssets::get().contains(&payment_asset),
+                Error::<T>::PaymentAssetNotSupported
+            );
+            ensure!(amount > 0, Error::<T>::AmountCannotBeZero);
 
-            let delayed_call = DelayedCallInfo { signer, encoded };
+            // Retrieve and validate listing details
+            let listing_details =
+                TokenListings::<T>::take(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
+            ensure!(listing_details.amount >= amount, Error::<T>::NotEnoughTokenAvailable);
 
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
+            // Restrict ownership to prevent exceeding limits
+            Self::restrict_ownership(listing_details.asset_id, &buyer, amount)?;
 
+            // Calculate total price
+            let price = listing_details
+                .token_price
+                .checked_mul(&((amount as u128).into()))
+                .ok_or(Error::<T>::MultiplyError)?;
+            // Process the token purchase
+            Self::buying_token_process(
+                listing_id,
+                &buyer,
+                &buyer,
+                listing_details,
+                price,
+                amount,
+                payment_asset,
+            )?;
             Ok(())
         }
 
         /// Lets a investor cancel the property token purchase.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to buy from.
@@ -1419,26 +1467,48 @@ pub mod pallet {
                 origin,
                 &Role::RealEstateInvestor,
             )?;
+            let mut property_details =
+                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+            // Ensure the listing has not expired (investor can only cancel while active).
+            ensure!(
+                property_details.listing_expiry
+                    > <T as pallet::Config>::BlockNumberProvider::current_block_number(),
+                Error::<T>::ListingExpired
+            );
+            // Ensure there are still tokens available (cannot cancel after all are sold).
+            ensure!(
+                !property_details.listed_token_amount.is_zero(),
+                Error::<T>::PropertyAlreadySold
+            );
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::cancel_property_purchase { listing_id };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
+            // Retrieve token details for this investor and ensure they have tokens to cancel.
+            let token_details: TokenOwnerDetails<T> =
+                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
+            ensure!(!token_details.token_amount.is_zero(), Error::<T>::NoTokenBought);
 
-            let delayed_call = DelayedCallInfo { signer, encoded };
+            // Process refunds
+            let refunds = Self::unfreeze_token_with_refunds(&token_details, &signer)?;
+            // Add the cancelled token amount back to the listing so others can buy them.
+            property_details.listed_token_amount = property_details
+                .listed_token_amount
+                .checked_add(token_details.token_amount)
+                .ok_or(Error::<T>::ArithmeticOverflow)?;
 
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
+            OngoingObjectListing::<T>::insert(listing_id, &property_details);
 
+            Self::deposit_event(Event::<T>::InvestmentCancelled {
+                listing_id,
+                investor: signer,
+                amount_returned: token_details.token_amount,
+                new_tokens_remaining: property_details.listed_token_amount,
+                refunds,
+            });
             Ok(())
         }
 
         /// Created an offer for a token listing.
         ///
         /// The origin must be Signed by a compliant RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to buy from.
@@ -1461,25 +1531,61 @@ pub mod pallet {
                 &Role::RealEstateInvestor,
             )?;
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::make_offer { listing_id, offer_price, amount, payment_asset };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
+            // Validate input parameters
+            ensure!(amount > 0, Error::<T>::AmountCannotBeZero);
+            ensure!(!offer_price.is_zero(), Error::<T>::InvalidTokenPrice);
+            ensure!(
+                T::AcceptedAssets::get().contains(&payment_asset),
+                Error::<T>::PaymentAssetNotSupported
+            );
+            // Prevent duplicate offers from the same user for the same listing.
+            ensure!(
+                OngoingOffers::<T>::get(listing_id, &signer).is_none(),
+                Error::<T>::OnlyOneOfferPerUser
+            );
 
-            let delayed_call = DelayedCallInfo { signer, encoded };
+            // Retrieve and validate listing details
+            let listing_details =
+                TokenListings::<T>::get(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
+            ensure!(listing_details.amount >= amount, Error::<T>::NotEnoughTokenAvailable);
+            let offer_nonce = NextOfferNonce::<T>::get();
+            let price = offer_price
+                .checked_mul(&((amount as u128).into()))
+                .ok_or(Error::<T>::MultiplyError)?;
 
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
+            // Hold funds from the investor’s account until the offer is accepted/rejected or cancelled.
+            T::ForeignAssetsHolder::hold(
+                payment_asset,
+                &MarketplaceHoldReason::Marketplace,
+                &signer,
+                price,
+            )?;
 
+            // Generate unique nonce and store offer
+            let offer_details = OfferDetails {
+                token_price: offer_price,
+                amount,
+                payment_assets: payment_asset,
+                nonce: offer_nonce,
+            };
+            let next_offer_nonce =
+                offer_nonce.checked_add(1).ok_or(Error::<T>::ArithmeticOverflow)?;
+            NextOfferNonce::<T>::put(next_offer_nonce);
+            OngoingOffers::<T>::insert(listing_id, &signer, offer_details);
+
+            Self::deposit_event(Event::<T>::OfferCreated {
+                listing_id,
+                offeror: signer,
+                price: offer_price,
+                amount,
+                payment_asset,
+            });
             Ok(())
         }
 
         /// Lets the investor handle an offer.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to buy from.
@@ -1502,25 +1608,67 @@ pub mod pallet {
                 &Role::RealEstateInvestor,
             )?;
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::handle_offer { listing_id, offeror, offer, offer_nonce };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
-
-            let delayed_call = DelayedCallInfo { signer, encoded };
-
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
-
+            // Retrieve and verify ownership
+            let listing_details =
+                TokenListings::<T>::get(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
+            ensure!(listing_details.seller == signer, Error::<T>::NoPermission);
+            let offer_details = OngoingOffers::<T>::take(listing_id, offeror.clone())
+                .ok_or(Error::<T>::OfferNotFound)?;
+            // Validate offer nonce to prevent front-running attacks.
+            ensure!(offer_details.nonce == offer_nonce, Error::<T>::InvalidOfferNonce);
+            ensure!(
+                listing_details.amount >= offer_details.amount,
+                Error::<T>::NotEnoughTokenAvailable
+            );
+            let price = offer_details.get_total_amount()?;
+            // Release the held funds from the investor’s account.
+            T::ForeignAssetsHolder::release(
+                offer_details.payment_assets,
+                &MarketplaceHoldReason::Marketplace,
+                &offeror,
+                price,
+                Precision::Exact,
+            )?;
+            match offer {
+                Offer::Accept => {
+                    // Restrict ownership to prevent exceeding limits
+                    Self::restrict_ownership(
+                        listing_details.asset_id,
+                        &offeror,
+                        offer_details.amount,
+                    )?;
+                    // Process the token purchase.
+                    Self::buying_token_process(
+                        listing_id,
+                        &offeror,
+                        &offeror,
+                        listing_details,
+                        price,
+                        offer_details.amount,
+                        offer_details.payment_assets,
+                    )?;
+                    Self::deposit_event(Event::<T>::OfferAccepted {
+                        listing_id,
+                        offeror,
+                        amount: offer_details.amount,
+                        price,
+                    });
+                }
+                Offer::Reject => {
+                    Self::deposit_event(Event::<T>::OfferRejected {
+                        listing_id,
+                        offeror,
+                        amount: offer_details.amount,
+                        price,
+                    });
+                }
+            }
             Ok(())
         }
 
         /// Lets the investor cancel an offer.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to buy from.
@@ -1533,25 +1681,25 @@ pub mod pallet {
                 origin,
                 &Role::RealEstateInvestor,
             )?;
-
-            let call: crate::pallet::Call<T> = crate::pallet::Call::cancel_offer { listing_id };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
-
-            let delayed_call = DelayedCallInfo { signer, encoded };
-
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
-
+            // Retrieve and remove the offer details.
+            let offer_details =
+                OngoingOffers::<T>::take(listing_id, &signer).ok_or(Error::<T>::OfferNotFound)?;
+            let price = offer_details.get_total_amount()?;
+            // Release the held funds back to the investor since the offer is being cancelled.
+            T::ForeignAssetsHolder::release(
+                offer_details.payment_assets,
+                &MarketplaceHoldReason::Marketplace,
+                &signer,
+                price,
+                Precision::Exact,
+            )?;
+            Self::deposit_event(Event::<T>::OfferCancelled { listing_id, account_id: signer });
             Ok(())
         }
 
         /// Lets the investor withdraw his funds after a property deal was unsuccessful.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to withdraw from.
@@ -1564,26 +1712,84 @@ pub mod pallet {
                 origin,
                 &Role::RealEstateInvestor,
             )?;
+            // Retrieve refund info and listing details
+            let mut refund_infos =
+                RefundToken::<T>::get(listing_id).ok_or(Error::<T>::TokenNotRefunded)?;
+            let property_details =
+                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+            let property_account = Self::property_account_id(property_details.asset_id);
+            // Get investor's current token balance for this listing.
+            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
+                property_details.asset_id,
+                &signer,
+            );
+            ensure!(!token_amount.is_zero(), Error::<T>::NoTokensOwned);
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::withdraw_rejected { listing_id };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
+            // Update refund tracker
+            refund_infos.refund_amount = refund_infos
+                .refund_amount
+                .checked_sub(token_amount)
+                .ok_or(Error::<T>::InsufficientRefundableTokens)?;
 
-            let delayed_call = DelayedCallInfo { signer, encoded };
-
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
-
+            // Refund payments in all accepted assets (USDC, USDT, etc.)
+            for &asset in T::AcceptedAssets::get().iter() {
+                if let Some(investor_funds) = property_details.investor_funds.get(&signer).cloned()
+                {
+                    if let Some(paid_funds) = investor_funds.paid_funds.get(&asset).copied() {
+                        // Transfer funds to owner account
+                        Self::transfer_funds(&property_account, &signer, paid_funds, asset)?;
+                    }
+                }
+            }
+            // Transfer property tokens back from investor to property account (burn preparation).
+            <T as pallet::Config>::LocalCurrency::transfer(
+                property_details.asset_id,
+                &signer,
+                &property_account,
+                token_amount.into(),
+                Preservation::Expendable,
+            )?;
+            // If all tokens have been refunded, burn the property token/nft and clean up storage.
+            if refund_infos.refund_amount == 0 {
+                T::PropertyToken::burn_property_token(property_details.asset_id)?;
+                Self::refund_investors_with_fees(
+                    &property_details,
+                    refund_infos.property_lawyer_details,
+                )?;
+                // Release the listing deposit back to the real estate developer.
+                let (depositor, deposit_amount) =
+                    ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+                <T as pallet::Config>::NativeCurrency::release(
+                    &HoldReason::ListingDepositReserve.into(),
+                    &depositor,
+                    deposit_amount,
+                    Precision::Exact,
+                )?;
+                // If property account still holds native currency, transfer it to the developer.
+                let native_balance =
+                    <T as pallet::Config>::NativeCurrency::balance(&property_account);
+                if !native_balance.is_zero() {
+                    <T as pallet::Config>::NativeCurrency::transfer(
+                        &property_account,
+                        &property_details.real_estate_developer,
+                        native_balance,
+                        Preservation::Expendable,
+                    )?;
+                }
+                OngoingObjectListing::<T>::remove(listing_id);
+                RefundToken::<T>::remove(listing_id);
+            } else {
+                RefundToken::<T>::insert(listing_id, refund_infos);
+            }
+            // Remove ownership record
+            T::PropertyToken::remove_property_token_ownership(property_details.asset_id, &signer)?;
+            Self::deposit_event(Event::<T>::RejectedFundsWithdrawn { signer, listing_id });
             Ok(())
         }
 
         /// Lets the investor withdraw his funds after a property deal expired.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to withdraw from.
@@ -1599,26 +1805,122 @@ pub mod pallet {
                 origin,
                 &Role::RealEstateInvestor,
             )?;
+            let property_details =
+                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+            let property_account = Self::property_account_id(property_details.asset_id);
+            // Get investor's token balance for this listing.
+            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
+                property_details.asset_id,
+                &signer,
+            );
+            ensure!(!token_amount.is_zero(), Error::<T>::NoTokensOwned);
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::withdraw_legal_process_expired { listing_id };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
+            // Determine refundable amount, initializing if this is the first withdrawal.
+            let mut refund_infos = match RefundLegalExpired::<T>::get(listing_id) {
+                Some(refund_infos) => refund_infos,
+                None => {
+                    let property_lawyer_details =
+                        PropertyLawyer::<T>::get(listing_id).ok_or(Error::<T>::TokenNotRefunded)?;
+                    let current_block_number =
+                        <T as pallet::Config>::BlockNumberProvider::current_block_number();
+                    ensure!(
+                        property_lawyer_details.legal_process_expiry < current_block_number,
+                        Error::<T>::LegalProcessOngoing
+                    );
 
-            let delayed_call = DelayedCallInfo { signer, encoded };
+                    // Decrement active cases for assigned lawyers.
+                    if let Some(real_estate_developer_lawyer_id) =
+                        property_lawyer_details.real_estate_developer_lawyer
+                    {
+                        <T as pallet::Config>::RegionProvider::decrement_active_cases(
+                            &real_estate_developer_lawyer_id,
+                        )?;
+                    }
+                    if let Some(spv_lawyer_id) = property_lawyer_details.spv_lawyer {
+                        <T as pallet::Config>::RegionProvider::decrement_active_cases(
+                            &spv_lawyer_id,
+                        )?;
+                    }
 
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
+                    PropertyLawyer::<T>::remove(listing_id);
+                    RefundLegalExpired::<T>::insert(listing_id, property_details.token_amount);
+                    property_details.token_amount
+                }
+            };
 
+            refund_infos = refund_infos
+                .checked_sub(token_amount)
+                .ok_or(Error::<T>::InsufficientRefundableTokens)?;
+
+            // Refund payments in all accepted assets (USDC, USDT, etc.)
+            for &asset in T::AcceptedAssets::get().iter() {
+                if let Some(investor_funds) = property_details.investor_funds.get(&signer).cloned()
+                {
+                    if let Some(paid_funds) = investor_funds.paid_funds.get(&asset).copied() {
+                        if let Some(paid_fee) = investor_funds.paid_fee.get(&asset).copied() {
+                            // Refund both funds + paid fees.
+                            let transfer_amount = paid_funds
+                                .checked_add(&paid_fee)
+                                .ok_or(Error::<T>::ArithmeticOverflow)?;
+                            Self::transfer_funds(
+                                &property_account,
+                                &signer,
+                                transfer_amount,
+                                asset,
+                            )?;
+                        } else {
+                            // Refund only paid funds (no fees).
+                            Self::transfer_funds(&property_account, &signer, paid_funds, asset)?;
+                        }
+                    }
+                }
+            }
+            // Transfer property tokens back from investor to property account (burn preparation).
+            <T as pallet::Config>::LocalCurrency::transfer(
+                property_details.asset_id,
+                &signer,
+                &property_account,
+                token_amount.into(),
+                Preservation::Expendable,
+            )?;
+            // If all tokens have been refunded, burn the property token/nft and clean up storage.
+            if refund_infos == 0 {
+                T::PropertyToken::burn_property_token(property_details.asset_id)?;
+                T::PropertyToken::clear_token_owners(property_details.asset_id)?;
+                // Refund the original listing deposit back to the real estate developer.
+                let (depositor, deposit_amount) =
+                    ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+                <T as pallet::Config>::NativeCurrency::release(
+                    &HoldReason::ListingDepositReserve.into(),
+                    &depositor,
+                    deposit_amount,
+                    Precision::Exact,
+                )?;
+                // If property account still holds native currency, transfer it to the developer.
+                let native_balance =
+                    <T as pallet::Config>::NativeCurrency::balance(&property_account);
+                if !native_balance.is_zero() {
+                    <T as pallet::Config>::NativeCurrency::transfer(
+                        &property_account,
+                        &property_details.real_estate_developer,
+                        native_balance,
+                        Preservation::Expendable,
+                    )?;
+                }
+                OngoingObjectListing::<T>::remove(listing_id);
+                RefundLegalExpired::<T>::remove(listing_id);
+            } else {
+                RefundLegalExpired::<T>::insert(listing_id, refund_infos);
+            }
+            // Remove ownership record
+            T::PropertyToken::remove_property_token_ownership(property_details.asset_id, &signer)?;
+            Self::deposit_event(Event::<T>::ExpiredFundsWithdrawn { signer, listing_id });
             Ok(())
         }
 
         /// Lets the investor unfreeze his funds after a property listing expired.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to buy from.
@@ -1631,25 +1933,71 @@ pub mod pallet {
                 origin,
                 &Role::RealEstateInvestor,
             )?;
+            let mut property_details =
+                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+            // Ensure the listing has expired.
+            ensure!(
+                property_details.listing_expiry
+                    < <T as pallet::Config>::BlockNumberProvider::current_block_number(),
+                Error::<T>::ListingNotExpired
+            );
 
-            let call: crate::pallet::Call<T> = crate::pallet::Call::withdraw_expired { listing_id };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
+            // Ensure that tokens were not fully sold already (if they are, listing is no longer refundable).
+            ensure!(
+                !property_details.listed_token_amount.is_zero(),
+                Error::<T>::PropertyAlreadySold
+            );
 
-            let delayed_call = DelayedCallInfo { signer, encoded };
+            // Retrieve investor's purchase record
+            let token_details =
+                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
+            ensure!(!token_details.token_amount.is_zero(), Error::<T>::NoTokenBought,);
 
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
+            // Unfreeze investor's funds for this listing (refund for paid assets like USDT/USDC).
+            Self::unfreeze_token(&token_details, &signer)?;
 
+            // Add the withdrawn token amount back to the listing.
+            property_details.listed_token_amount = property_details
+                .listed_token_amount
+                .checked_add(token_details.token_amount)
+                .ok_or(Error::<T>::ArithmeticOverflow)?;
+
+            // Check if all tokens are returned
+            if property_details.listed_token_amount >= property_details.token_amount {
+                // Burn all property tokens since listing is over.
+                T::PropertyToken::burn_property_token(property_details.asset_id)?;
+                // Refund original deposit to the listing creator.
+                let (depositor, deposit_amount) =
+                    ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+                <T as pallet::Config>::NativeCurrency::release(
+                    &HoldReason::ListingDepositReserve.into(),
+                    &depositor,
+                    deposit_amount,
+                    Precision::Exact,
+                )?;
+                // Transfer any remaining native currency from property account back to developer.
+                let property_account = Self::property_account_id(property_details.asset_id);
+                let native_balance =
+                    <T as pallet::Config>::NativeCurrency::balance(&property_account);
+                if !native_balance.is_zero() {
+                    <T as pallet::Config>::NativeCurrency::transfer(
+                        &property_account,
+                        &property_details.real_estate_developer,
+                        native_balance,
+                        Preservation::Expendable,
+                    )?;
+                }
+                OngoingObjectListing::<T>::remove(listing_id);
+            } else {
+                OngoingObjectListing::<T>::insert(listing_id, &property_details);
+            }
+            Self::deposit_event(Event::<T>::ExpiredFundsWithdrawn { signer, listing_id });
             Ok(())
         }
 
         /// Lets the real estate developer withdraw his deposit in case no token have been sold.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the caller wants to withdraw the deposit from.
@@ -1665,26 +2013,60 @@ pub mod pallet {
                 origin,
                 &Role::RealEstateDeveloper,
             )?;
+            let property_details =
+                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+            // Ensure that the caller is the real estate developer.
+            ensure!(property_details.real_estate_developer == signer, Error::<T>::NoPermission);
+            // Ensure the listing has expired.
+            ensure!(
+                property_details.listing_expiry
+                    < <T as pallet::Config>::BlockNumberProvider::current_block_number(),
+                Error::<T>::ListingNotExpired
+            );
+            ensure!(
+                !property_details.listed_token_amount.is_zero(),
+                Error::<T>::PropertyAlreadySold
+            );
+            // Ensure that ALL tokens have been returned to the pool (no partial sales).
+            ensure!(
+                property_details.listed_token_amount >= property_details.token_amount,
+                Error::<T>::TokenNotReturned
+            );
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::withdraw_deposit_unsold { listing_id };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
-
-            let delayed_call = DelayedCallInfo { signer, encoded };
-
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
-
+            // Burn property tokens since the entire listing was unsold and is now closed.
+            T::PropertyToken::burn_property_token(property_details.asset_id)?;
+            // Release developer's deposit that was initially locked for the listing.
+            let (depositor, deposit_amount) =
+                ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+            <T as pallet::Config>::NativeCurrency::release(
+                &HoldReason::ListingDepositReserve.into(),
+                &depositor,
+                deposit_amount,
+                Precision::Exact,
+            )?;
+            // If the property account still has native currency, transfer it back to the developer.
+            let property_account = Self::property_account_id(property_details.asset_id);
+            let native_balance = <T as pallet::Config>::NativeCurrency::balance(&property_account);
+            if !native_balance.is_zero() {
+                <T as pallet::Config>::NativeCurrency::transfer(
+                    &property_account,
+                    &property_details.real_estate_developer,
+                    native_balance,
+                    Preservation::Expendable,
+                )?;
+            }
+            OngoingObjectListing::<T>::remove(listing_id);
+            Self::deposit_event(Event::<T>::DeveloperDepositReturned {
+                listing_id,
+                developer: signer,
+                amount: deposit_amount,
+            });
             Ok(())
         }
 
         /// Lets the real estate investor withdraw his funds in case the sale is cancelled.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the caller wants to withdraw the funds from.
@@ -1696,30 +2078,81 @@ pub mod pallet {
             origin: OriginFor<T>,
             listing_id: ListingId,
         ) -> DispatchResult {
-            let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
+            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
                 origin,
                 &Role::RealEstateInvestor,
             )?;
-
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::withdraw_claiming_expired { listing_id };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
-
-            let delayed_call = DelayedCallInfo { signer, encoded };
-
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
-
+            let mut refund_amount =
+                RefundClaimedToken::<T>::get(listing_id).ok_or(Error::<T>::TokenNotRefunded)?;
+            let property_details =
+                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+            let property_account = Self::property_account_id(property_details.asset_id);
+            // Get investor's token balance for this listing.
+            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
+                property_details.asset_id,
+                &signer,
+            );
+            ensure!(!token_amount.is_zero(), Error::<T>::NoTokensOwned);
+            // Update refund tracker.
+            refund_amount = refund_amount
+                .checked_sub(token_amount)
+                .ok_or(Error::<T>::InsufficientRefundableTokens)?;
+            // Refund payments in all accepted assets (USDC, USDT, etc.) including any paid fees.
+            if let Some(investor_funds) = property_details.investor_funds.get(&signer) {
+                for (asset, paid_funds) in investor_funds.paid_funds.iter() {
+                    let paid_fees = investor_funds.paid_fee.get(asset).copied().unwrap_or_default();
+                    let transfer_amount =
+                        paid_funds.checked_add(&paid_fees).ok_or(Error::<T>::ArithmeticOverflow)?;
+                    // Transfer funds back from property account to investor.
+                    Self::transfer_funds(&property_account, &signer, transfer_amount, *asset)?;
+                }
+            }
+            // Transfer property tokens back from investor to property account (burn preparation).
+            <T as pallet::Config>::LocalCurrency::transfer(
+                property_details.asset_id,
+                &signer,
+                &property_account,
+                token_amount.into(),
+                Preservation::Expendable,
+            )?;
+            // If all tokens have been refunded, burn the property token/nft and clean up storage.
+            if refund_amount == 0 {
+                T::PropertyToken::burn_property_token(property_details.asset_id)?;
+                T::PropertyToken::clear_token_owners(property_details.asset_id)?;
+                // Refund the original listing deposit back to the real estate developer.
+                let (depositor, deposit_amount) =
+                    ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
+                <T as pallet::Config>::NativeCurrency::release(
+                    &HoldReason::ListingDepositReserve.into(),
+                    &depositor,
+                    deposit_amount,
+                    Precision::Exact,
+                )?;
+                // If property account still holds native currency, transfer it to the developer.
+                let native_balance =
+                    <T as pallet::Config>::NativeCurrency::balance(&property_account);
+                if !native_balance.is_zero() {
+                    <T as pallet::Config>::NativeCurrency::transfer(
+                        &property_account,
+                        &property_details.real_estate_developer,
+                        native_balance,
+                        Preservation::Expendable,
+                    )?;
+                }
+                OngoingObjectListing::<T>::remove(listing_id);
+                RefundClaimedToken::<T>::remove(listing_id);
+            } else {
+                RefundClaimedToken::<T>::insert(listing_id, refund_amount);
+            }
+            // Remove ownership record
+            T::PropertyToken::remove_property_token_ownership(property_details.asset_id, &signer)?;
+            Self::deposit_event(Event::<T>::RejectedFundsWithdrawn { signer, listing_id });
             Ok(())
         }
 
         /// Lets the real estate investor unfreeze his funds in case the claiming window expired.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
-        ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the caller wants to unfreeze the funds from.
@@ -1728,22 +2161,31 @@ pub mod pallet {
         #[pallet::call_index(16)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::withdraw_unclaimed())]
         pub fn withdraw_unclaimed(origin: OriginFor<T>, listing_id: ListingId) -> DispatchResult {
-            let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
+            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
                 origin,
                 &Role::RealEstateInvestor,
             )?;
+            // Retrieve investor's purchase record.
+            let token_details: TokenOwnerDetails<T> =
+                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
+            ensure!(!token_details.token_amount.is_zero(), Error::<T>::NoTokenBought);
+            // If property listing still exists, ensure it has been relisted at least once
+            // since this investor's original purchase attempt (otherwise withdrawal is not allowed).
+            if let Some(property_details) = OngoingObjectListing::<T>::get(listing_id) {
+                ensure!(
+                    property_details.relist_count > token_details.relist_count,
+                    Error::<T>::NoPermission
+                );
+            }
 
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::withdraw_unclaimed { listing_id };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
+            // Unfreeze investor's funds for this listing (refund for paid assets like USDT/USDC).
+            let refunds = Self::unfreeze_token_with_refunds(&token_details, &signer)?;
 
-            let delayed_call = DelayedCallInfo { signer, encoded };
-
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
-
+            Self::deposit_event(Event::<T>::UnclaimedTokenWithdrawn {
+                listing_id,
+                investor: signer,
+                refunds,
+            });
             Ok(())
         }
 
@@ -1801,8 +2243,6 @@ pub mod pallet {
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
         ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
-        ///
         /// Parameters:
         /// - `listing_id`: The listing that the seller wants to delist.
         ///
@@ -1814,17 +2254,23 @@ pub mod pallet {
                 origin,
                 &Role::RealEstateInvestor,
             )?;
-
-            let call: crate::pallet::Call<T> = crate::pallet::Call::delist_token { listing_id };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
-
-            let delayed_call = DelayedCallInfo { signer, encoded };
-
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
-
+            // Retrieve and remove the listing details.
+            let listing_details =
+                TokenListings::<T>::take(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
+            // Ensure that the caller is the original seller.
+            ensure!(listing_details.seller == signer, Error::<T>::NoPermission);
+            let token_amount = listing_details.amount.into();
+            // Get the property account (escrow account holding the tokens).
+            let property_account = Self::property_account_id(listing_details.asset_id);
+            // Transfer the tokens back from the property account to the investor.
+            <T as pallet::Config>::LocalCurrency::transfer(
+                listing_details.asset_id,
+                &property_account,
+                &signer,
+                token_amount,
+                Preservation::Expendable,
+            )?;
+            Self::deposit_event(Event::<T>::ListingDelisted { listing_index: listing_id });
             Ok(())
         }
 
@@ -2457,8 +2903,6 @@ pub mod pallet {
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
         ///
-        /// The call will be delayed because of: https://github.com/XcavateBlockchain/xcavate-node-audit/issues/3
-        ///
         /// Parameters:
         /// - `asset_id`: The asset id of the property.
         /// - `receiver`: AccountId of the person that the seller wants to handle the offer from.
@@ -2468,701 +2912,6 @@ pub mod pallet {
         #[pallet::call_index(26)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::send_property_token())]
         pub fn send_property_token(
-            origin: OriginFor<T>,
-            asset_id: u32,
-            receiver: AccountIdOf<T>,
-            token_amount: u32,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-
-            let call: crate::pallet::Call<T> =
-                crate::pallet::Call::send_property_token { asset_id, receiver, token_amount };
-            let encoded: EncodedCall<T> =
-                call.encode().try_into().map_err(|_| Error::<T>::CallTooLarge)?;
-
-            let delayed_call = DelayedCallInfo { signer, encoded };
-
-            DelayedCalls::<T>::mutate(|v| {
-                v.try_push(delayed_call).map_err(|_| Error::<T>::TooManyDelayedCalls)
-            })?;
-
-            Ok(())
-        }
-    }
-
-    impl<T: Config> Pallet<T> {
-        /// Returns the account ID of the pallet.
-        pub fn account_id() -> AccountIdOf<T> {
-            <T as pallet::Config>::PalletId::get().into_account_truncating()
-        }
-
-        /// Returns the account ID for a specific property based on its asset ID.
-        pub fn property_account_id(asset_id: u32) -> AccountIdOf<T> {
-            <T as pallet::Config>::PalletId::get().into_sub_account_truncating(("pr", asset_id))
-        }
-
-        /// Returns the account ID of the treasury pallet.
-        pub fn treasury_account_id() -> AccountIdOf<T> {
-            <T as pallet::Config>::TreasuryId::get().into_account_truncating()
-        }
-
-        /// Calculates the next listing ID by incrementing the provided ID.
-        pub fn next_listing_id(listing_id: ListingId) -> Result<ListingId, Error<T>> {
-            listing_id.checked_add(1).ok_or(Error::<T>::ArithmeticOverflow)
-        }
-
-        #[transactional]
-        pub fn do_buy_property_token(
-            origin: OriginFor<T>,
-            listing_id: ListingId,
-            amount: u32,
-            payment_asset: u32,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-
-            // Validate input parameters
-            ensure!(amount > 0, Error::<T>::AmountCannotBeZero);
-            let accepted_payment_assets = T::AcceptedAssets::get();
-            ensure!(
-                accepted_payment_assets.contains(&payment_asset),
-                Error::<T>::PaymentAssetNotSupported
-            );
-
-            // Retrieve and validate listing details
-            let mut property_details =
-                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
-            ensure!(
-                property_details.listed_token_amount >= amount,
-                Error::<T>::NotEnoughTokenAvailable
-            );
-            ensure!(
-                property_details.listing_expiry
-                    > <T as pallet::Config>::BlockNumberProvider::current_block_number(),
-                Error::<T>::ListingExpired
-            );
-            let asset_details =
-                T::PropertyToken::get_property_asset_info(property_details.asset_id)
-                    .ok_or(Error::<T>::NoObjectFound)?;
-
-            // Calculate fees and taxes
-            let fee_percent = T::MarketplaceFeePercentage::get();
-            ensure!(fee_percent < Perbill::from_percent(100), Error::<T>::InvalidFeePercentage);
-            let tax_percent = property_details.tax;
-            let total_supply = property_details.token_amount;
-            let max_tokens = T::MaxOwnershipPercentage::get().mul_floor(total_supply);
-            let transfer_price = property_details
-                .token_price
-                .checked_mul(&((amount as u128).into()))
-                .ok_or(Error::<T>::MultiplyError)?;
-            // Rounding up to not undercharge for protocol fees.
-            let fee = fee_percent.mul_ceil(transfer_price);
-            // Rounding up to not undercharge for property tax.
-            let tax = tax_percent.mul_ceil(transfer_price);
-
-            let base_price =
-                transfer_price.checked_add(&fee).ok_or(Error::<T>::ArithmeticOverflow)?;
-            let total_transfer_price = if property_details.tax_paid_by_developer {
-                base_price
-            } else {
-                base_price.checked_add(&tax).ok_or(Error::<T>::ArithmeticOverflow)?
-            };
-
-            // Hold funds for the purchase
-            T::ForeignAssetsHolder::hold(
-                payment_asset,
-                &MarketplaceHoldReason::Marketplace,
-                &signer,
-                total_transfer_price,
-            )?;
-
-            // Update token amounts in listing
-            property_details.listed_token_amount = property_details
-                .listed_token_amount
-                .checked_sub(amount)
-                .ok_or(Error::<T>::ArithmeticUnderflow)?;
-            property_details.unclaimed_token_amount = property_details
-                .unclaimed_token_amount
-                .checked_add(amount)
-                .ok_or(Error::<T>::ArithmeticOverflow)?;
-            // Update or create token owner details
-            TokenOwner::<T>::try_mutate_exists(&signer, listing_id, |maybe_token_owner_details| {
-                if maybe_token_owner_details.is_none() {
-                    let initial_funds = Self::create_initial_funds()?;
-                    *maybe_token_owner_details = Some(TokenOwnerDetails {
-                        token_amount: 0,
-                        paid_funds: initial_funds.clone(),
-                        paid_tax: initial_funds,
-                        relist_count: property_details.relist_count,
-                    });
-                }
-                let token_owner_details =
-                    maybe_token_owner_details.as_mut().ok_or(Error::<T>::TokenOwnerNotFound)?;
-                // Check that the relist count matches to prevent buying tokens if he still has unclaimed tokens
-                ensure!(
-                    token_owner_details.relist_count == property_details.relist_count,
-                    Error::<T>::StillHasUnclaimedToken
-                );
-                // Ensure max ownership token is not exceeded
-                let claimed_token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
-                    property_details.asset_id,
-                    &signer,
-                );
-                let new_token_amount = token_owner_details
-                    .token_amount
-                    .checked_add(amount)
-                    .ok_or(Error::<T>::ArithmeticOverflow)?;
-                let total_investor_token_amount = new_token_amount
-                    .checked_add(claimed_token_amount)
-                    .ok_or(Error::<T>::ArithmeticOverflow)?;
-                ensure!(total_investor_token_amount < max_tokens, Error::<T>::ExceedsMaxOwnership);
-                token_owner_details.token_amount = new_token_amount;
-                // Update paid funds and tax
-                Self::update_map(
-                    &mut token_owner_details.paid_funds,
-                    payment_asset,
-                    transfer_price,
-                )?;
-
-                if !property_details.tax_paid_by_developer {
-                    Self::update_map(&mut token_owner_details.paid_tax, payment_asset, tax)?;
-                }
-
-                Ok::<(), DispatchError>(())
-            })?;
-
-            // Handle sold-out case
-            let asset_id = property_details.asset_id;
-            let tax_paid_by_developer = property_details.tax_paid_by_developer;
-            let listed_token = property_details.listed_token_amount;
-            if listed_token == 0 {
-                if asset_details.spv_created {
-                    let current_block_number =
-                        <T as pallet::Config>::BlockNumberProvider::current_block_number();
-                    let expiry_block = current_block_number.saturating_add(T::ClaimWindow::get());
-                    property_details.claim_expiry = Some(expiry_block);
-                }
-                Self::deposit_event(Event::<T>::PrimarySaleSoldOut { listing_id, asset_id });
-            }
-
-            OngoingObjectListing::<T>::insert(listing_id, &property_details);
-            Self::deposit_event(Event::<T>::PropertyTokenBought {
-                listing_index: listing_id,
-                asset_id,
-                buyer: signer,
-                amount_purchased: amount,
-                price_paid: transfer_price,
-                tax_paid: if !tax_paid_by_developer { tax } else { 0u128.into() },
-                payment_asset,
-                new_tokens_remaining: listed_token,
-            });
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_claim_property_token(
-            origin: OriginFor<T>,
-            listing_id: ListingId,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-            let mut property_details =
-                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-            // Ensure SPV has been created for this property before allowing claims
-            T::PropertyToken::ensure_spv_created(property_details.asset_id)?;
-            let claim_expiry = property_details.claim_expiry.ok_or(Error::<T>::NoClaimWindow)?;
-            let current_block_number =
-                <T as pallet::Config>::BlockNumberProvider::current_block_number();
-            ensure!(current_block_number < claim_expiry, Error::<T>::ClaimWindowExpired);
-            // Retrieve token details for this investor and ensure they are eligible to claim
-            let token_details =
-                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
-            ensure!(
-                token_details.relist_count == property_details.relist_count,
-                Error::<T>::NoValidTokenToClaim
-            );
-            let property_account = Self::property_account_id(property_details.asset_id);
-            let fee_percent = T::MarketplaceFeePercentage::get();
-            ensure!(fee_percent < Perbill::from_percent(100), Error::<T>::InvalidFeePercentage);
-
-            let tax_percent = if property_details.tax_paid_by_developer {
-                property_details.tax
-            } else {
-                Permill::zero()
-            };
-
-            // Process each payment asset
-            for (asset, paid_funds) in
-                token_details.paid_funds.iter().filter(|(_, funds)| !funds.is_zero())
-            {
-                let default = Zero::zero();
-                let paid_tax = token_details.paid_tax.get(asset).copied().unwrap_or(default);
-                // Calculate investor's fee as 1% of paid_funds, rounding up to prevent undercharging
-                let investor_fee = fee_percent.mul_ceil(*paid_funds);
-
-                // Update collected funds, fees, and tax in property details
-                Self::update_map(&mut property_details.collected_funds, *asset, *paid_funds)?;
-                Self::update_map(&mut property_details.collected_fees, *asset, investor_fee)?;
-                if !property_details.tax_paid_by_developer {
-                    Self::update_map(&mut property_details.collected_tax, *asset, paid_tax)?;
-                } else {
-                    let tax = tax_percent.mul_ceil(*paid_funds);
-                    Self::update_map(&mut property_details.collected_tax, *asset, tax)?;
-                }
-
-                // Total amount to unfreeze (paid_funds + fee + tax)
-                let total_investor_amount = paid_funds
-                    .checked_add(&investor_fee)
-                    .ok_or(Error::<T>::ArithmeticOverflow)?
-                    .checked_add(&paid_tax)
-                    .ok_or(Error::<T>::ArithmeticOverflow)?;
-
-                // Release held funds
-                T::ForeignAssetsHolder::release(
-                    *asset,
-                    &MarketplaceHoldReason::Marketplace,
-                    &signer,
-                    total_investor_amount,
-                    Precision::Exact,
-                )?;
-
-                // Transfer funds to property account
-                Self::transfer_funds(&signer, &property_account, total_investor_amount, *asset)?;
-
-                // Track net contribution (price + tax) for final settlement
-                let investor_net_contribution =
-                    paid_funds.checked_add(&paid_tax).ok_or(Error::<T>::ArithmeticOverflow)?;
-
-                // Update or insert investor funds in property details
-                match property_details.investor_funds.get_mut(&signer) {
-                    Some(token_funds) => {
-                        let paid_funds = &mut token_funds.paid_funds;
-                        if let Some(existing) = paid_funds.get_mut(asset) {
-                            *existing = existing
-                                .checked_add(&investor_net_contribution)
-                                .ok_or(Error::<T>::ArithmeticOverflow)?;
-                        } else {
-                            paid_funds
-                                .try_insert(*asset, investor_net_contribution)
-                                .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
-                        }
-                        let paid_fee = &mut token_funds.paid_fee;
-                        if let Some(existing) = paid_fee.get_mut(asset) {
-                            *existing = existing
-                                .checked_add(&investor_fee)
-                                .ok_or(Error::<T>::ArithmeticOverflow)?;
-                        } else {
-                            paid_fee
-                                .try_insert(*asset, investor_fee)
-                                .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
-                        }
-                    }
-                    None => {
-                        let mut paid_funds = BoundedBTreeMap::new();
-                        paid_funds
-                            .try_insert(*asset, investor_net_contribution)
-                            .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
-                        let mut paid_fee = BoundedBTreeMap::new();
-                        paid_fee
-                            .try_insert(*asset, investor_fee)
-                            .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
-
-                        let new_entry = TokenOwnerFunds { paid_funds, paid_fee };
-                        property_details
-                            .investor_funds
-                            .try_insert(signer.clone(), new_entry)
-                            .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
-                    }
-                }
-            }
-
-            // Distribute property tokens
-            let token_amount = token_details.token_amount;
-            let asset_id = property_details.asset_id;
-
-            T::PropertyToken::distribute_property_token_to_owner(asset_id, &signer, token_amount)?;
-            property_details.unclaimed_token_amount = property_details
-                .unclaimed_token_amount
-                .checked_sub(token_amount)
-                .ok_or(Error::<T>::ArithmeticUnderflow)?;
-
-            // If all tokens have been claimed, trigger legal process setup.
-            if property_details.unclaimed_token_amount.is_zero() {
-                ensure!(
-                    PropertyLawyer::<T>::get(listing_id).is_none(),
-                    Error::<T>::LegalProcessOngoing
-                );
-                // Initialize legal process funds and set expiry time.
-                let initial_funds = Self::create_initial_funds()?;
-                let expiry_block = current_block_number.saturating_add(T::LegalProcessTime::get());
-                let property_lawyer_details = PropertyLawyerDetails {
-                    real_estate_developer_lawyer: None,
-                    spv_lawyer: None,
-                    real_estate_developer_status: DocumentStatus::Pending,
-                    spv_status: DocumentStatus::Pending,
-                    real_estate_developer_lawyer_costs: initial_funds.clone(),
-                    spv_lawyer_costs: initial_funds,
-                    legal_process_expiry: expiry_block,
-                    second_attempt: false,
-                };
-                property_details.claim_expiry = None;
-                PropertyLawyer::<T>::insert(listing_id, property_lawyer_details);
-                Self::deposit_event(Event::<T>::AllPropertyTokenClaimed {
-                    listing_id,
-                    asset_id,
-                    legal_process_expiry_block: expiry_block,
-                });
-            }
-
-            OngoingObjectListing::<T>::insert(listing_id, property_details);
-            Self::deposit_event(Event::<T>::PropertyTokenClaimed {
-                listing_id,
-                asset_id,
-                owner: signer,
-                amount: token_amount,
-            });
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_relist_token(
-            origin: OriginFor<T>,
-            asset_id: u32,
-            token_price: <T as pallet::Config>::Balance,
-            amount: u32,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-
-            // Validate input parameters
-            ensure!(amount > 0, Error::<T>::AmountCannotBeZero);
-            ensure!(!token_price.is_zero(), Error::<T>::InvalidTokenPrice);
-
-            // Ensure property is finalized and get details
-            let asset_details = T::PropertyToken::get_if_property_finalized(asset_id)?;
-
-            // Transfer tokens from seller to property account to hold during listing
-            let property_account = Self::property_account_id(asset_id);
-            <T as pallet::Config>::LocalCurrency::transfer(
-                asset_id,
-                &signer,
-                &property_account,
-                amount.into(),
-                Preservation::Expendable,
-            )?;
-
-            // Create new listing
-            let listing_id = NextListingId::<T>::get();
-            let token_listing = TokenListingDetails {
-                seller: signer.clone(),
-                token_price,
-                asset_id,
-                item_id: asset_details.item_id,
-                collection_id: asset_details.collection_id,
-                amount,
-            };
-            TokenListings::<T>::insert(listing_id, token_listing);
-            let next_listing_id = Self::next_listing_id(listing_id)?;
-            NextListingId::<T>::put(next_listing_id);
-
-            Self::deposit_event(Event::<T>::TokenRelisted {
-                listing_index: listing_id,
-                asset_id,
-                price: token_price,
-                token_amount: amount,
-                seller: signer,
-            });
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_buy_relisted_token(
-            origin: OriginFor<T>,
-            listing_id: ListingId,
-            amount: u32,
-            payment_asset: u32,
-        ) -> DispatchResult {
-            let buyer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-
-            // Validate input parameters
-            ensure!(
-                T::AcceptedAssets::get().contains(&payment_asset),
-                Error::<T>::PaymentAssetNotSupported
-            );
-            ensure!(amount > 0, Error::<T>::AmountCannotBeZero);
-
-            // Retrieve and validate listing details
-            let listing_details =
-                TokenListings::<T>::take(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
-            ensure!(listing_details.amount >= amount, Error::<T>::NotEnoughTokenAvailable);
-
-            // Restrict ownership to prevent exceeding limits
-            Self::restrict_ownership(listing_details.asset_id, &buyer, amount)?;
-
-            // Calculate total price
-            let price = listing_details
-                .token_price
-                .checked_mul(&((amount as u128).into()))
-                .ok_or(Error::<T>::MultiplyError)?;
-            // Process the token purchase
-            Self::buying_token_process(
-                listing_id,
-                &buyer,
-                &buyer,
-                listing_details,
-                price,
-                amount,
-                payment_asset,
-            )?;
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_cancel_property_purchase(
-            origin: OriginFor<T>,
-            listing_id: ListingId,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-            let mut property_details =
-                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-            // Ensure the listing has not expired (investor can only cancel while active).
-            ensure!(
-                property_details.listing_expiry
-                    > <T as pallet::Config>::BlockNumberProvider::current_block_number(),
-                Error::<T>::ListingExpired
-            );
-            // Ensure there are still tokens available (cannot cancel after all are sold).
-            ensure!(
-                !property_details.listed_token_amount.is_zero(),
-                Error::<T>::PropertyAlreadySold
-            );
-
-            // Retrieve token details for this investor and ensure they have tokens to cancel.
-            let token_details: TokenOwnerDetails<T> =
-                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
-            ensure!(!token_details.token_amount.is_zero(), Error::<T>::NoTokenBought);
-
-            // Process refunds
-            let refunds = Self::unfreeze_token_with_refunds(&token_details, &signer)?;
-            // Add the cancelled token amount back to the listing so others can buy them.
-            property_details.listed_token_amount = property_details
-                .listed_token_amount
-                .checked_add(token_details.token_amount)
-                .ok_or(Error::<T>::ArithmeticOverflow)?;
-
-            OngoingObjectListing::<T>::insert(listing_id, &property_details);
-
-            Self::deposit_event(Event::<T>::InvestmentCancelled {
-                listing_id,
-                investor: signer,
-                amount_returned: token_details.token_amount,
-                new_tokens_remaining: property_details.listed_token_amount,
-                refunds,
-            });
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_make_offer(
-            origin: OriginFor<T>,
-            listing_id: ListingId,
-            offer_price: <T as pallet::Config>::Balance,
-            amount: u32,
-            payment_asset: u32,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-
-            // Validate input parameters
-            ensure!(amount > 0, Error::<T>::AmountCannotBeZero);
-            ensure!(!offer_price.is_zero(), Error::<T>::InvalidTokenPrice);
-            ensure!(
-                T::AcceptedAssets::get().contains(&payment_asset),
-                Error::<T>::PaymentAssetNotSupported
-            );
-            // Prevent duplicate offers from the same user for the same listing.
-            ensure!(
-                OngoingOffers::<T>::get(listing_id, &signer).is_none(),
-                Error::<T>::OnlyOneOfferPerUser
-            );
-
-            // Retrieve and validate listing details
-            let listing_details =
-                TokenListings::<T>::get(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
-            ensure!(listing_details.amount >= amount, Error::<T>::NotEnoughTokenAvailable);
-            let offer_nonce = NextOfferNonce::<T>::get();
-            let price = offer_price
-                .checked_mul(&((amount as u128).into()))
-                .ok_or(Error::<T>::MultiplyError)?;
-
-            // Hold funds from the investor’s account until the offer is accepted/rejected or cancelled.
-            T::ForeignAssetsHolder::hold(
-                payment_asset,
-                &MarketplaceHoldReason::Marketplace,
-                &signer,
-                price,
-            )?;
-
-            // Generate unique nonce and store offer
-            let offer_details = OfferDetails {
-                token_price: offer_price,
-                amount,
-                payment_assets: payment_asset,
-                nonce: offer_nonce,
-            };
-            let next_offer_nonce =
-                offer_nonce.checked_add(1).ok_or(Error::<T>::ArithmeticOverflow)?;
-            NextOfferNonce::<T>::put(next_offer_nonce);
-            OngoingOffers::<T>::insert(listing_id, &signer, offer_details);
-
-            Self::deposit_event(Event::<T>::OfferCreated {
-                listing_id,
-                offeror: signer,
-                price: offer_price,
-                amount,
-                payment_asset,
-            });
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_handle_offer(
-            origin: OriginFor<T>,
-            listing_id: ListingId,
-            offeror: AccountIdOf<T>,
-            offer: Offer,
-            offer_nonce: u64,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-
-            // Retrieve and verify ownership
-            let listing_details =
-                TokenListings::<T>::get(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
-            ensure!(listing_details.seller == signer, Error::<T>::NoPermission);
-            let offer_details = OngoingOffers::<T>::take(listing_id, offeror.clone())
-                .ok_or(Error::<T>::OfferNotFound)?;
-            // Validate offer nonce to prevent front-running attacks.
-            ensure!(offer_details.nonce == offer_nonce, Error::<T>::InvalidOfferNonce);
-            ensure!(
-                listing_details.amount >= offer_details.amount,
-                Error::<T>::NotEnoughTokenAvailable
-            );
-            let price = offer_details.get_total_amount()?;
-            // Release the held funds from the investor’s account.
-            T::ForeignAssetsHolder::release(
-                offer_details.payment_assets,
-                &MarketplaceHoldReason::Marketplace,
-                &offeror,
-                price,
-                Precision::Exact,
-            )?;
-            match offer {
-                Offer::Accept => {
-                    // Restrict ownership to prevent exceeding limits
-                    Self::restrict_ownership(
-                        listing_details.asset_id,
-                        &offeror,
-                        offer_details.amount,
-                    )?;
-                    // Process the token purchase.
-                    Self::buying_token_process(
-                        listing_id,
-                        &offeror,
-                        &offeror,
-                        listing_details,
-                        price,
-                        offer_details.amount,
-                        offer_details.payment_assets,
-                    )?;
-                    Self::deposit_event(Event::<T>::OfferAccepted {
-                        listing_id,
-                        offeror,
-                        amount: offer_details.amount,
-                        price,
-                    });
-                }
-                Offer::Reject => {
-                    Self::deposit_event(Event::<T>::OfferRejected {
-                        listing_id,
-                        offeror,
-                        amount: offer_details.amount,
-                        price,
-                    });
-                }
-            }
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_cancel_offer(origin: OriginFor<T>, listing_id: ListingId) -> DispatchResult {
-            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-            // Retrieve and remove the offer details.
-            let offer_details =
-                OngoingOffers::<T>::take(listing_id, &signer).ok_or(Error::<T>::OfferNotFound)?;
-            let price = offer_details.get_total_amount()?;
-            // Release the held funds back to the investor since the offer is being cancelled.
-            T::ForeignAssetsHolder::release(
-                offer_details.payment_assets,
-                &MarketplaceHoldReason::Marketplace,
-                &signer,
-                price,
-                Precision::Exact,
-            )?;
-            Self::deposit_event(Event::<T>::OfferCancelled { listing_id, account_id: signer });
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_delist_token(origin: OriginFor<T>, listing_id: ListingId) -> DispatchResult {
-            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-            // Retrieve and remove the listing details.
-            let listing_details =
-                TokenListings::<T>::take(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
-            // Ensure that the caller is the original seller.
-            ensure!(listing_details.seller == signer, Error::<T>::NoPermission);
-            let token_amount = listing_details.amount.into();
-            // Get the property account (escrow account holding the tokens).
-            let property_account = Self::property_account_id(listing_details.asset_id);
-            // Transfer the tokens back from the property account to the investor.
-            <T as pallet::Config>::LocalCurrency::transfer(
-                listing_details.asset_id,
-                &property_account,
-                &signer,
-                token_amount,
-                Preservation::Expendable,
-            )?;
-            Self::deposit_event(Event::<T>::ListingDelisted { listing_index: listing_id });
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_send_property_token(
             origin: OriginFor<T>,
             asset_id: u32,
             receiver: AccountIdOf<T>,
@@ -3200,446 +2949,27 @@ pub mod pallet {
             });
             Ok(())
         }
+    }
 
-        #[transactional]
-        pub fn do_withdraw_rejected(origin: OriginFor<T>, listing_id: ListingId) -> DispatchResult {
-            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-            // Retrieve refund info and listing details
-            let mut refund_infos =
-                RefundToken::<T>::get(listing_id).ok_or(Error::<T>::TokenNotRefunded)?;
-            let property_details =
-                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-            let property_account = Self::property_account_id(property_details.asset_id);
-            // Get investor's current token balance for this listing.
-            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
-                property_details.asset_id,
-                &signer,
-            );
-            ensure!(!token_amount.is_zero(), Error::<T>::NoTokensOwned);
-
-            // Update refund tracker
-            refund_infos.refund_amount = refund_infos
-                .refund_amount
-                .checked_sub(token_amount)
-                .ok_or(Error::<T>::InsufficientRefundableTokens)?;
-
-            // Refund payments in all accepted assets (USDC, USDT, etc.)
-            for &asset in T::AcceptedAssets::get().iter() {
-                if let Some(investor_funds) = property_details.investor_funds.get(&signer).cloned()
-                {
-                    if let Some(paid_funds) = investor_funds.paid_funds.get(&asset).copied() {
-                        // Transfer funds to owner account
-                        Self::transfer_funds(&property_account, &signer, paid_funds, asset)?;
-                    }
-                }
-            }
-            // Transfer property tokens back from investor to property account (burn preparation).
-            <T as pallet::Config>::LocalCurrency::transfer(
-                property_details.asset_id,
-                &signer,
-                &property_account,
-                token_amount.into(),
-                Preservation::Expendable,
-            )?;
-            // If all tokens have been refunded, burn the property token/nft and clean up storage.
-            if refund_infos.refund_amount == 0 {
-                T::PropertyToken::burn_property_token(property_details.asset_id)?;
-                Self::refund_investors_with_fees(
-                    &property_details,
-                    refund_infos.property_lawyer_details,
-                )?;
-                // Release the listing deposit back to the real estate developer.
-                let (depositor, deposit_amount) =
-                    ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-                <T as pallet::Config>::NativeCurrency::release(
-                    &HoldReason::ListingDepositReserve.into(),
-                    &depositor,
-                    deposit_amount,
-                    Precision::Exact,
-                )?;
-                // If property account still holds native currency, transfer it to the developer.
-                let native_balance =
-                    <T as pallet::Config>::NativeCurrency::balance(&property_account);
-                if !native_balance.is_zero() {
-                    <T as pallet::Config>::NativeCurrency::transfer(
-                        &property_account,
-                        &property_details.real_estate_developer,
-                        native_balance,
-                        Preservation::Expendable,
-                    )?;
-                }
-                OngoingObjectListing::<T>::remove(listing_id);
-                RefundToken::<T>::remove(listing_id);
-            } else {
-                RefundToken::<T>::insert(listing_id, refund_infos);
-            }
-            // Remove ownership record
-            T::PropertyToken::remove_property_token_ownership(property_details.asset_id, &signer)?;
-            Self::deposit_event(Event::<T>::RejectedFundsWithdrawn { signer, listing_id });
-            Ok(())
+    impl<T: Config> Pallet<T> {
+        /// Returns the account ID of the pallet.
+        pub fn account_id() -> AccountIdOf<T> {
+            <T as pallet::Config>::PalletId::get().into_account_truncating()
         }
 
-        #[transactional]
-        pub fn do_withdraw_legal_process_expired(
-            origin: OriginFor<T>,
-            listing_id: ListingId,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-            let property_details =
-                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-            let property_account = Self::property_account_id(property_details.asset_id);
-            // Get investor's token balance for this listing.
-            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
-                property_details.asset_id,
-                &signer,
-            );
-            ensure!(!token_amount.is_zero(), Error::<T>::NoTokensOwned);
-
-            // Determine refundable amount, initializing if this is the first withdrawal.
-            let mut refund_infos = match RefundLegalExpired::<T>::get(listing_id) {
-                Some(refund_infos) => refund_infos,
-                None => {
-                    let property_lawyer_details =
-                        PropertyLawyer::<T>::get(listing_id).ok_or(Error::<T>::TokenNotRefunded)?;
-                    let current_block_number =
-                        <T as pallet::Config>::BlockNumberProvider::current_block_number();
-                    ensure!(
-                        property_lawyer_details.legal_process_expiry < current_block_number,
-                        Error::<T>::LegalProcessOngoing
-                    );
-
-                    // Decrement active cases for assigned lawyers.
-                    if let Some(real_estate_developer_lawyer_id) =
-                        property_lawyer_details.real_estate_developer_lawyer
-                    {
-                        <T as pallet::Config>::RegionProvider::decrement_active_cases(
-                            &real_estate_developer_lawyer_id,
-                        )?;
-                    }
-                    if let Some(spv_lawyer_id) = property_lawyer_details.spv_lawyer {
-                        <T as pallet::Config>::RegionProvider::decrement_active_cases(
-                            &spv_lawyer_id,
-                        )?;
-                    }
-
-                    PropertyLawyer::<T>::remove(listing_id);
-                    RefundLegalExpired::<T>::insert(listing_id, property_details.token_amount);
-                    property_details.token_amount
-                }
-            };
-
-            refund_infos = refund_infos
-                .checked_sub(token_amount)
-                .ok_or(Error::<T>::InsufficientRefundableTokens)?;
-
-            // Refund payments in all accepted assets (USDC, USDT, etc.)
-            for &asset in T::AcceptedAssets::get().iter() {
-                if let Some(investor_funds) = property_details.investor_funds.get(&signer).cloned()
-                {
-                    if let Some(paid_funds) = investor_funds.paid_funds.get(&asset).copied() {
-                        if let Some(paid_fee) = investor_funds.paid_fee.get(&asset).copied() {
-                            // Refund both funds + paid fees.
-                            let transfer_amount = paid_funds
-                                .checked_add(&paid_fee)
-                                .ok_or(Error::<T>::ArithmeticOverflow)?;
-                            Self::transfer_funds(
-                                &property_account,
-                                &signer,
-                                transfer_amount,
-                                asset,
-                            )?;
-                        } else {
-                            // Refund only paid funds (no fees).
-                            Self::transfer_funds(&property_account, &signer, paid_funds, asset)?;
-                        }
-                    }
-                }
-            }
-            // Transfer property tokens back from investor to property account (burn preparation).
-            <T as pallet::Config>::LocalCurrency::transfer(
-                property_details.asset_id,
-                &signer,
-                &property_account,
-                token_amount.into(),
-                Preservation::Expendable,
-            )?;
-            // If all tokens have been refunded, burn the property token/nft and clean up storage.
-            if refund_infos == 0 {
-                T::PropertyToken::burn_property_token(property_details.asset_id)?;
-                T::PropertyToken::clear_token_owners(property_details.asset_id)?;
-                // Refund the original listing deposit back to the real estate developer.
-                let (depositor, deposit_amount) =
-                    ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-                <T as pallet::Config>::NativeCurrency::release(
-                    &HoldReason::ListingDepositReserve.into(),
-                    &depositor,
-                    deposit_amount,
-                    Precision::Exact,
-                )?;
-                // If property account still holds native currency, transfer it to the developer.
-                let native_balance =
-                    <T as pallet::Config>::NativeCurrency::balance(&property_account);
-                if !native_balance.is_zero() {
-                    <T as pallet::Config>::NativeCurrency::transfer(
-                        &property_account,
-                        &property_details.real_estate_developer,
-                        native_balance,
-                        Preservation::Expendable,
-                    )?;
-                }
-                OngoingObjectListing::<T>::remove(listing_id);
-                RefundLegalExpired::<T>::remove(listing_id);
-            } else {
-                RefundLegalExpired::<T>::insert(listing_id, refund_infos);
-            }
-            // Remove ownership record
-            T::PropertyToken::remove_property_token_ownership(property_details.asset_id, &signer)?;
-            Self::deposit_event(Event::<T>::ExpiredFundsWithdrawn { signer, listing_id });
-            Ok(())
+        /// Returns the account ID for a specific property based on its asset ID.
+        pub fn property_account_id(asset_id: u32) -> AccountIdOf<T> {
+            <T as pallet::Config>::PalletId::get().into_sub_account_truncating(("pr", asset_id))
         }
 
-        #[transactional]
-        pub fn do_withdraw_expired(origin: OriginFor<T>, listing_id: ListingId) -> DispatchResult {
-            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-            let mut property_details =
-                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-            // Ensure the listing has expired.
-            ensure!(
-                property_details.listing_expiry
-                    < <T as pallet::Config>::BlockNumberProvider::current_block_number(),
-                Error::<T>::ListingNotExpired
-            );
-
-            // Ensure that tokens were not fully sold already (if they are, listing is no longer refundable).
-            ensure!(
-                !property_details.listed_token_amount.is_zero(),
-                Error::<T>::PropertyAlreadySold
-            );
-
-            // Retrieve investor's purchase record
-            let token_details =
-                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
-            ensure!(!token_details.token_amount.is_zero(), Error::<T>::NoTokenBought,);
-
-            // Unfreeze investor's funds for this listing (refund for paid assets like USDT/USDC).
-            Self::unfreeze_token(&token_details, &signer)?;
-
-            // Add the withdrawn token amount back to the listing.
-            property_details.listed_token_amount = property_details
-                .listed_token_amount
-                .checked_add(token_details.token_amount)
-                .ok_or(Error::<T>::ArithmeticOverflow)?;
-
-            // Check if all tokens are returned
-            if property_details.listed_token_amount >= property_details.token_amount {
-                // Burn all property tokens since listing is over.
-                T::PropertyToken::burn_property_token(property_details.asset_id)?;
-                // Refund original deposit to the listing creator.
-                let (depositor, deposit_amount) =
-                    ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-                <T as pallet::Config>::NativeCurrency::release(
-                    &HoldReason::ListingDepositReserve.into(),
-                    &depositor,
-                    deposit_amount,
-                    Precision::Exact,
-                )?;
-                // Transfer any remaining native currency from property account back to developer.
-                let property_account = Self::property_account_id(property_details.asset_id);
-                let native_balance =
-                    <T as pallet::Config>::NativeCurrency::balance(&property_account);
-                if !native_balance.is_zero() {
-                    <T as pallet::Config>::NativeCurrency::transfer(
-                        &property_account,
-                        &property_details.real_estate_developer,
-                        native_balance,
-                        Preservation::Expendable,
-                    )?;
-                }
-                OngoingObjectListing::<T>::remove(listing_id);
-            } else {
-                OngoingObjectListing::<T>::insert(listing_id, &property_details);
-            }
-            Self::deposit_event(Event::<T>::ExpiredFundsWithdrawn { signer, listing_id });
-            Ok(())
+        /// Returns the account ID of the treasury pallet.
+        pub fn treasury_account_id() -> AccountIdOf<T> {
+            <T as pallet::Config>::TreasuryId::get().into_account_truncating()
         }
 
-        #[transactional]
-        pub fn do_withdraw_deposit_unsold(
-            origin: OriginFor<T>,
-            listing_id: ListingId,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateDeveloper,
-            )?;
-            let property_details =
-                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-            // Ensure that the caller is the real estate developer.
-            ensure!(property_details.real_estate_developer == signer, Error::<T>::NoPermission);
-            // Ensure the listing has expired.
-            ensure!(
-                property_details.listing_expiry
-                    < <T as pallet::Config>::BlockNumberProvider::current_block_number(),
-                Error::<T>::ListingNotExpired
-            );
-            ensure!(
-                !property_details.listed_token_amount.is_zero(),
-                Error::<T>::PropertyAlreadySold
-            );
-            // Ensure that ALL tokens have been returned to the pool (no partial sales).
-            ensure!(
-                property_details.listed_token_amount >= property_details.token_amount,
-                Error::<T>::TokenNotReturned
-            );
-
-            // Burn property tokens since the entire listing was unsold and is now closed.
-            T::PropertyToken::burn_property_token(property_details.asset_id)?;
-            // Release developer's deposit that was initially locked for the listing.
-            let (depositor, deposit_amount) =
-                ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-            <T as pallet::Config>::NativeCurrency::release(
-                &HoldReason::ListingDepositReserve.into(),
-                &depositor,
-                deposit_amount,
-                Precision::Exact,
-            )?;
-            // If the property account still has native currency, transfer it back to the developer.
-            let property_account = Self::property_account_id(property_details.asset_id);
-            let native_balance = <T as pallet::Config>::NativeCurrency::balance(&property_account);
-            if !native_balance.is_zero() {
-                <T as pallet::Config>::NativeCurrency::transfer(
-                    &property_account,
-                    &property_details.real_estate_developer,
-                    native_balance,
-                    Preservation::Expendable,
-                )?;
-            }
-            OngoingObjectListing::<T>::remove(listing_id);
-            Self::deposit_event(Event::<T>::DeveloperDepositReturned {
-                listing_id,
-                developer: signer,
-                amount: deposit_amount,
-            });
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_withdraw_claiming_expired(
-            origin: OriginFor<T>,
-            listing_id: ListingId,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-            let mut refund_amount =
-                RefundClaimedToken::<T>::get(listing_id).ok_or(Error::<T>::TokenNotRefunded)?;
-            let property_details =
-                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-            let property_account = Self::property_account_id(property_details.asset_id);
-            // Get investor's token balance for this listing.
-            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
-                property_details.asset_id,
-                &signer,
-            );
-            ensure!(!token_amount.is_zero(), Error::<T>::NoTokensOwned);
-            // Update refund tracker.
-            refund_amount = refund_amount
-                .checked_sub(token_amount)
-                .ok_or(Error::<T>::InsufficientRefundableTokens)?;
-            // Refund payments in all accepted assets (USDC, USDT, etc.) including any paid fees.
-            if let Some(investor_funds) = property_details.investor_funds.get(&signer) {
-                for (asset, paid_funds) in investor_funds.paid_funds.iter() {
-                    let paid_fees = investor_funds.paid_fee.get(asset).copied().unwrap_or_default();
-                    let transfer_amount =
-                        paid_funds.checked_add(&paid_fees).ok_or(Error::<T>::ArithmeticOverflow)?;
-                    // Transfer funds back from property account to investor.
-                    Self::transfer_funds(&property_account, &signer, transfer_amount, *asset)?;
-                }
-            }
-            // Transfer property tokens back from investor to property account (burn preparation).
-            <T as pallet::Config>::LocalCurrency::transfer(
-                property_details.asset_id,
-                &signer,
-                &property_account,
-                token_amount.into(),
-                Preservation::Expendable,
-            )?;
-            // If all tokens have been refunded, burn the property token/nft and clean up storage.
-            if refund_amount == 0 {
-                T::PropertyToken::burn_property_token(property_details.asset_id)?;
-                T::PropertyToken::clear_token_owners(property_details.asset_id)?;
-                // Refund the original listing deposit back to the real estate developer.
-                let (depositor, deposit_amount) =
-                    ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
-                <T as pallet::Config>::NativeCurrency::release(
-                    &HoldReason::ListingDepositReserve.into(),
-                    &depositor,
-                    deposit_amount,
-                    Precision::Exact,
-                )?;
-                // If property account still holds native currency, transfer it to the developer.
-                let native_balance =
-                    <T as pallet::Config>::NativeCurrency::balance(&property_account);
-                if !native_balance.is_zero() {
-                    <T as pallet::Config>::NativeCurrency::transfer(
-                        &property_account,
-                        &property_details.real_estate_developer,
-                        native_balance,
-                        Preservation::Expendable,
-                    )?;
-                }
-                OngoingObjectListing::<T>::remove(listing_id);
-                RefundClaimedToken::<T>::remove(listing_id);
-            } else {
-                RefundClaimedToken::<T>::insert(listing_id, refund_amount);
-            }
-            // Remove ownership record
-            T::PropertyToken::remove_property_token_ownership(property_details.asset_id, &signer)?;
-            Self::deposit_event(Event::<T>::RejectedFundsWithdrawn { signer, listing_id });
-            Ok(())
-        }
-
-        #[transactional]
-        pub fn do_withdraw_unclaimed(
-            origin: OriginFor<T>,
-            listing_id: ListingId,
-        ) -> DispatchResult {
-            let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
-                origin,
-                &Role::RealEstateInvestor,
-            )?;
-            // Retrieve investor's purchase record.
-            let token_details: TokenOwnerDetails<T> =
-                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
-            ensure!(!token_details.token_amount.is_zero(), Error::<T>::NoTokenBought);
-            // If property listing still exists, ensure it has been relisted at least once
-            // since this investor's original purchase attempt (otherwise withdrawal is not allowed).
-            if let Some(property_details) = OngoingObjectListing::<T>::get(listing_id) {
-                ensure!(
-                    property_details.relist_count > token_details.relist_count,
-                    Error::<T>::NoPermission
-                );
-            }
-
-            // Unfreeze investor's funds for this listing (refund for paid assets like USDT/USDC).
-            let refunds = Self::unfreeze_token_with_refunds(&token_details, &signer)?;
-
-            Self::deposit_event(Event::<T>::UnclaimedTokenWithdrawn {
-                listing_id,
-                investor: signer,
-                refunds,
-            });
-            Ok(())
+        /// Calculates the next listing ID by incrementing the provided ID.
+        pub fn next_listing_id(listing_id: ListingId) -> Result<ListingId, Error<T>> {
+            listing_id.checked_add(1).ok_or(Error::<T>::ArithmeticOverflow)
         }
 
         /// Executes the deal by distributing tokens to owners and funds to the real estate developer.

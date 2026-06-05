@@ -950,15 +950,12 @@ parameter_types! {
     pub const ClaimWindowTime: BlockNumber = 100;
     pub const MaximumRelistAttempts: u8 = 1;
     pub const MaxOwnershipPercentage: Perbill = Perbill::from_percent(50);
-    pub const MaxCallLen: u32 = 64;
-    pub const MaxDelayedCalls: u32 = 10;
     pub const AcceptedMarketplacePaymentAssets: [u32; 2] = [1, 10];
 }
 
 /// Configure the pallet-marketplace in pallets/marketplace.
 impl pallet_marketplace::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type RuntimeCall = RuntimeCall;
     type WeightInfo = weights::pallet_marketplace::WeightInfo<Runtime>;
     type Balance = Balance;
     type NativeCurrency = Balances;
@@ -993,8 +990,6 @@ impl pallet_marketplace::Config for Runtime {
     type StringLimit = StringLimit;
     type PostcodeLimit = Postcode;
     type MaxOwnershipPercentage = MaxOwnershipPercentage;
-    type MaxCallLen = MaxCallLen;
-    type MaxDelayedCalls = MaxDelayedCalls;
 }
 
 parameter_types! {
