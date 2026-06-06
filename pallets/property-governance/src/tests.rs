@@ -218,19 +218,19 @@ fn propose_works() {
             [31; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([31; 32].into()),
             0,
             30,
@@ -242,12 +242,12 @@ fn propose_works() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
         assert_ok!(
-            Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
+            Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
         );
         assert_ok!(
-            Marketplace::do_claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
+            Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
         );
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
@@ -295,19 +295,19 @@ fn proposal_with_low_amount_works() {
             [31; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([31; 32].into()),
             0,
             30,
@@ -319,12 +319,12 @@ fn proposal_with_low_amount_works() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
         assert_ok!(
-            Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
+            Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
         );
         assert_ok!(
-            Marketplace::do_claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
+            Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
         );
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
@@ -404,19 +404,19 @@ fn propose_fails() {
             [2; 32].into(),
             pallet_xcavate_whitelist::Role::LettingAgent
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([31; 32].into()),
             0,
             30,
@@ -437,12 +437,12 @@ fn propose_fails() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
         assert_ok!(
-            Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
+            Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
         );
         assert_ok!(
-            Marketplace::do_claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
+            Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
         );
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
@@ -510,19 +510,19 @@ fn propose_multiple_auto_execution_fails() {
             [2; 32].into(),
             pallet_xcavate_whitelist::Role::LettingAgent
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([31; 32].into()),
             0,
             30,
@@ -534,12 +534,12 @@ fn propose_multiple_auto_execution_fails() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
         assert_ok!(
-            Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
+            Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
         );
         assert_ok!(
-            Marketplace::do_claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
+            Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
         );
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
@@ -595,19 +595,19 @@ fn challenge_against_letting_agent_works() {
             [31; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([31; 32].into()),
             0,
             30,
@@ -619,9 +619,9 @@ fn challenge_against_letting_agent_works() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
         // Letting agent process
@@ -670,19 +670,19 @@ fn challenge_against_letting_agent_fails() {
             [2; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([31; 32].into()),
             0,
             30,
@@ -694,9 +694,9 @@ fn challenge_against_letting_agent_fails() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
         // Letting agent process
@@ -761,25 +761,25 @@ fn vote_on_proposal_works() {
             [3; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             15,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             15,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([3; 32].into()),
             0,
             40,
@@ -791,9 +791,9 @@ fn vote_on_proposal_works() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 20), ([3; 32].into(), 40)]);
 
         // Letting agent process
@@ -927,19 +927,19 @@ fn proposal_pass() {
             bvec![22, 22],
             false
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([31; 32].into()),
             0,
             30,
@@ -951,9 +951,9 @@ fn proposal_pass() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
         assert_ok!(Regions::register_lawyer(RuntimeOrigin::signed([10; 32].into()), 3,));
         assert_ok!(Regions::register_lawyer(RuntimeOrigin::signed([11; 32].into()), 3,));
         assert_ok!(Marketplace::lawyer_claim_property(
@@ -1071,19 +1071,19 @@ fn proposal_pass_2() {
             [31; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([31; 32].into()),
             0,
             30,
@@ -1095,9 +1095,9 @@ fn proposal_pass_2() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
         // Letting agent process
@@ -1166,19 +1166,19 @@ fn proposal_not_pass() {
             [30; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
@@ -1190,9 +1190,9 @@ fn proposal_not_pass() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 40), ([2; 32].into(), 30)]);
 
         // Letting agent process
@@ -1264,19 +1264,19 @@ fn proposal_not_pass_2() {
             [30; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             45,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             15,
@@ -1288,9 +1288,9 @@ fn proposal_not_pass_2() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 40), ([2; 32].into(), 40)]);
 
         // Letting agent process
@@ -1374,19 +1374,19 @@ fn proposal_not_pass_3() {
             [30; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             45,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             15,
@@ -1398,9 +1398,9 @@ fn proposal_not_pass_3() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 40), ([2; 32].into(), 35)]);
 
         // Letting agent process
@@ -1471,19 +1471,19 @@ fn vote_on_proposal_fails() {
             [2; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([31; 32].into()),
             0,
             30,
@@ -1495,9 +1495,9 @@ fn vote_on_proposal_fails() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
         assert_ok!(XcavateWhitelist::assign_role(
             RuntimeOrigin::signed([20; 32].into()),
@@ -1600,25 +1600,25 @@ fn unfreeze_proposal_token_works() {
             [3; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             15,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             15,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([3; 32].into()),
             0,
             40,
@@ -1630,9 +1630,9 @@ fn unfreeze_proposal_token_works() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 20), ([3; 32].into(), 40)]);
 
         // Letting agent process
@@ -1740,25 +1740,25 @@ fn unfreeze_proposal_token_fails() {
             [3; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             15,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             15,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([3; 32].into()),
             0,
             40,
@@ -1770,9 +1770,9 @@ fn unfreeze_proposal_token_fails() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 20), ([3; 32].into(), 40)]);
 
         // Letting agent process
@@ -1883,25 +1883,25 @@ fn vote_on_challenge_works() {
             [3; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             20,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             10,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([3; 32].into()),
             0,
             40,
@@ -1913,9 +1913,9 @@ fn vote_on_challenge_works() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 20), ([3; 32].into(), 40)]);
 
         // Letting agent process
@@ -2026,19 +2026,19 @@ fn challenge_pass() {
             3,
             bvec![10, 10],
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
@@ -2050,9 +2050,9 @@ fn challenge_pass() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 30), ([2; 32].into(), 40)]);
 
         // Letting agent process
@@ -2371,19 +2371,19 @@ fn challenge_does_not_pass() {
             bvec![22, 22],
             false
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             75,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             100,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             75,
@@ -2395,9 +2395,9 @@ fn challenge_does_not_pass() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 75), ([2; 32].into(), 75)]);
 
         // Letting agent process
@@ -2533,19 +2533,19 @@ fn challenge_pass_only_one_agent() {
             3,
             bvec![9, 10],
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
@@ -2557,9 +2557,9 @@ fn challenge_pass_only_one_agent() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 30), ([2; 32].into(), 40)]);
 
         // Letting agent process
@@ -2697,19 +2697,19 @@ fn challenge_not_pass() {
             [30; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
@@ -2721,9 +2721,9 @@ fn challenge_not_pass() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 40), ([2; 32].into(), 30)]);
 
         // Letting agent process
@@ -2818,19 +2818,19 @@ fn challenge_not_pass2() {
             [1; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             80,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             60,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             60,
@@ -2842,9 +2842,9 @@ fn challenge_not_pass2() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 80), ([2; 32].into(), 60)]);
 
         // Letting agent process
@@ -2915,19 +2915,19 @@ fn vote_on_challenge_fails() {
             [2; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             40,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([30; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([31; 32].into()),
             0,
             30,
@@ -2939,9 +2939,9 @@ fn vote_on_challenge_fails() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
         // Letting agent process
@@ -3023,25 +3023,25 @@ fn unfreeze_challenge_token_works() {
             [3; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             20,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             10,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([3; 32].into()),
             0,
             40,
@@ -3053,9 +3053,9 @@ fn unfreeze_challenge_token_works() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 20), ([3; 32].into(), 40)]);
 
         // Letting agent process
@@ -3141,25 +3141,25 @@ fn unfreeze_challenge_token_fails() {
             [3; 32].into(),
             pallet_xcavate_whitelist::Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             20,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             30,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             10,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([3; 32].into()),
             0,
             40,
@@ -3171,9 +3171,9 @@ fn unfreeze_challenge_token_fails() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 20), ([3; 32].into(), 40)]);
 
         // Letting agent process
@@ -3286,19 +3286,19 @@ fn different_proposals() {
             bvec![22, 22],
             false
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([1; 32].into()),
             0,
             60,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([2; 32].into()),
             0,
             60,
             1984
         ));
-        assert_ok!(Marketplace::do_buy_property_token(
+        assert_ok!(Marketplace::buy_property_token(
             RuntimeOrigin::signed([3; 32].into()),
             0,
             80,
@@ -3310,9 +3310,9 @@ fn different_proposals() {
             pallet_xcavate_whitelist::Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
-        assert_ok!(Marketplace::do_claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([2; 32].into()), 0));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([3; 32].into()), 0));
         lawyer_process(vec![([1; 32].into(), 60), ([2; 32].into(), 60)]);
         assert_ok!(XcavateWhitelist::assign_role(
             RuntimeOrigin::signed([20; 32].into()),
