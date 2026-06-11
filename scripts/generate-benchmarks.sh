@@ -32,7 +32,8 @@ pallets=(
     #delegation
     #did
     #pallet-public_credentials
-    pallet_did_lookup
+    #pallet_did_lookup
+    pallet_faucet
 )
 
 # Generate weights

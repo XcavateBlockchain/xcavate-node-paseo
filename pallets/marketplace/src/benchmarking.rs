@@ -538,7 +538,6 @@ mod benchmarks {
             payment_asset,
         );
 
-
         assert_eq!(
             OngoingObjectListing::<T>::get(listing_id).unwrap().listed_token_amount,
             token_amount - amount - b

@@ -190,7 +190,8 @@ impl<T: Config> Pallet<T> {
         ensure!(!Tags::<T>::contains_prefix(&bucket_id), Error::<T>::DanglingTags);
 
         // find and remove bucket
-        let bucket = Buckets::<T>::take(&namespace_id, &bucket_id).ok_or(Error::<T>::UnknownBucket)?;
+        let bucket =
+            Buckets::<T>::take(&namespace_id, &bucket_id).ok_or(Error::<T>::UnknownBucket)?;
 
         Self::deposit_event(Event::BucketDeleted { namespace_id, bucket_id, bucket });
 
@@ -419,14 +420,14 @@ impl<T: Config> Pallet<T> {
             &namespace_id,
             &bucket_id,
             |bucket| -> Result<BucketDetailsOf<T>, DispatchError> {
-            let Some(bucket) = bucket.as_mut() else {
-                return Err(Error::<T>::UnknownBucket.into());
-            };
+                let Some(bucket) = bucket.as_mut() else {
+                    return Err(Error::<T>::UnknownBucket.into());
+                };
 
-            bucket.lock();
+                bucket.lock();
 
-            Ok(bucket.clone())
-        },
+                Ok(bucket.clone())
+            },
         )?;
 
         Self::deposit_event(Event::PausedBucket { namespace_id, bucket_id, bucket, caller });
@@ -457,14 +458,14 @@ impl<T: Config> Pallet<T> {
             &namespace_id,
             &bucket_id,
             |bucket| -> Result<BucketDetailsOf<T>, DispatchError> {
-            let bucket = bucket.as_mut().ok_or(Error::<T>::UnknownBucket)?;
+                let bucket = bucket.as_mut().ok_or(Error::<T>::UnknownBucket)?;
 
-            ensure!(allow_locked || bucket.is_writable(), Error::<T>::BucketIsLocked);
+                ensure!(allow_locked || bucket.is_writable(), Error::<T>::BucketIsLocked);
 
-            bucket.set_writable(new_encryption_key.clone());
+                bucket.set_writable(new_encryption_key.clone());
 
-            Ok(bucket.clone())
-        },
+                Ok(bucket.clone())
+            },
         )?;
 
         Self::deposit_event(Event::BucketWritableWithKey {
@@ -589,7 +590,11 @@ impl<T: Config> Pallet<T> {
             })?;
         }
 
-        Self::deposit_event(Event::MessageDeleted { bucket_id, message_id, message: message_details });
+        Self::deposit_event(Event::MessageDeleted {
+            bucket_id,
+            message_id,
+            message: message_details,
+        });
 
         Ok(())
     }

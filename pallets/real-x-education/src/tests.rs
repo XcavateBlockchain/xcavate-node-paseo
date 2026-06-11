@@ -107,9 +107,7 @@ fn setup_all_roles() {
 /// Assumes `setup_all_roles()` has already been called.
 /// Returns the asset ID of the created module's fractional token.
 fn setup_and_claim_booking() -> u32 {
-    assert_ok!(RealXEducation::register_module_deliverer(RuntimeOrigin::signed(
-        [4; 32].into()
-    )));
+    assert_ok!(RealXEducation::register_module_deliverer(RuntimeOrigin::signed([4; 32].into())));
     assert_ok!(RealXEducation::create_module(
         RuntimeOrigin::signed([1; 32].into()),
         3,
@@ -117,12 +115,7 @@ fn setup_and_claim_booking() -> u32 {
         bvec![1, 2, 3]
     ));
     let asset_id = ModuleInfo::<Test>::get(0).unwrap().asset_id;
-    assert_ok!(RealXEducation::sponsor_module(
-        RuntimeOrigin::signed([2; 32].into()),
-        0,
-        30,
-        1984
-    ));
+    assert_ok!(RealXEducation::sponsor_module(RuntimeOrigin::signed([2; 32].into()), 0, 30, 1984));
     assert_ok!(RealXEducation::book_module(
         RuntimeOrigin::signed([3; 32].into()),
         0,

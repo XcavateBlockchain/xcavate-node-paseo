@@ -100,6 +100,7 @@ pallet-marketplace = { workspace = true }
 pallet-property-management = { workspace = true }
 pallet-property-governance = { workspace = true }
 pallet-bucket = { workspace = true }
+pallet-faucet = { workspace = true }
 primitives = { path = "../primitives", default-features = false }
 
 # KILT DIDs
@@ -202,6 +203,7 @@ std = [
 	"pallet-property-management/std",
 	"pallet-property-governance/std",
 	"pallet-bucket/std",
+	"pallet-faucet/std",
 	"primitives/std",
 	
 	# KILT
@@ -260,6 +262,7 @@ runtime-benchmarks = [
 	"pallet-property-governance/runtime-benchmarks",
 	"pallet-property-management/runtime-benchmarks",
 	"pallet-bucket/runtime-benchmarks",
+	"pallet-faucet/runtime-benchmarks",
 
 	# KILT
 	"kilt-support/runtime-benchmarks",
@@ -316,6 +319,7 @@ try-runtime = [
 	"pallet-property-governance/try-runtime",
 	"pallet-property-management/try-runtime",
 	"pallet-bucket/try-runtime",
+	"pallet-faucet/try-runtime",
 	"pallet-real-x-education/try-runtime",
 
 	# KILT

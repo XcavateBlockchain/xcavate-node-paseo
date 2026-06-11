@@ -821,10 +821,8 @@ pub mod pallet {
                 <T as pallet::Config>::BlockNumberProvider::current_block_number();
 
             let multiplier = Self::asset_decimal_multiplier(payment_asset)?;
-            let price_per_token = Self::adjust_price_by_multiplier(
-                module_details.total_module_price,
-                multiplier,
-            )?;
+            let price_per_token =
+                Self::adjust_price_by_multiplier(module_details.total_module_price, multiplier)?;
 
             let total_price = price_per_token
                 .checked_mul(&(token_amount as u128).into())
@@ -1115,10 +1113,8 @@ pub mod pallet {
             )?;
 
             let multiplier = Self::asset_decimal_multiplier(payment_asset)?;
-            let total_module_price = Self::adjust_price_by_multiplier(
-                module_details.total_module_price,
-                multiplier,
-            )?;
+            let total_module_price =
+                Self::adjust_price_by_multiplier(module_details.total_module_price, multiplier)?;
 
             // Release the locked funds from the sponsor
             T::ForeignAssetsHolder::release(
@@ -1505,10 +1501,8 @@ pub mod pallet {
             let payment_asset = funded_by_sponsor.payment_asset;
 
             let multiplier = Self::asset_decimal_multiplier(payment_asset)?;
-            let price_per_token = Self::adjust_price_by_multiplier(
-                module_details.total_module_price,
-                multiplier,
-            )?;
+            let price_per_token =
+                Self::adjust_price_by_multiplier(module_details.total_module_price, multiplier)?;
             let total_price = price_per_token
                 .checked_mul(&(amount as u128).into())
                 .ok_or(Error::<T>::MultiplyError)?;

@@ -161,6 +161,7 @@ pallet-property-governance = {  path = "./pallets/property-governance", default-
 pallet-regions = {  path = "./pallets/regions", default-features = false }
 pallet-real-world-asset = {  path = "./pallets/real-world-asset", default-features = false }
 pallet-bucket = { path = "./pallets/pallet-bucket", default-features = false }
+pallet-faucet = { path = "./pallets/faucet", default-features = false }
 
 # KILT DIDs
 kilt-support = { path = "support", default-features = false }

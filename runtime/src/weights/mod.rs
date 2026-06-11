@@ -33,6 +33,7 @@ pub mod pallet_bucket;
 pub mod pallet_collator_selection;
 pub mod pallet_did_lookup;
 pub mod pallet_education_regions;
+pub mod pallet_faucet;
 pub mod pallet_marketplace;
 pub mod pallet_message_queue;
 pub mod pallet_multisig;

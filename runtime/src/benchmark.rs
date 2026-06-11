@@ -26,6 +26,7 @@ frame_benchmarking::define_benchmarks!(
     [pallet_property_management, PropertyManagement]
     [pallet_property_governance, PropertyGovernance]
     [pallet_bucket, Buckets]
+    [pallet_faucet, Faucet]
     // ISMP.
     [ismp_parachain, IsmpParachain]
     [pallet_token_gateway, TokenGateway]

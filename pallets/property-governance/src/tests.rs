@@ -243,12 +243,8 @@ fn propose_works() {
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
         assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
-        assert_ok!(
-            Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
-        );
-        assert_ok!(
-            Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
-        );
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,));
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
         // Letting agent process
@@ -320,12 +316,8 @@ fn proposal_with_low_amount_works() {
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
         assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
-        assert_ok!(
-            Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
-        );
-        assert_ok!(
-            Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
-        );
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,));
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
         // Letting agent process
@@ -438,12 +430,8 @@ fn propose_fails() {
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
         assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
-        assert_ok!(
-            Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
-        );
-        assert_ok!(
-            Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
-        );
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,));
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
         // Letting agent process
@@ -535,12 +523,8 @@ fn propose_multiple_auto_execution_fails() {
         ));
         assert_ok!(Marketplace::create_spv(RuntimeOrigin::signed([5; 32].into()), 0,));
         assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([1; 32].into()), 0,));
-        assert_ok!(
-            Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,)
-        );
-        assert_ok!(
-            Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,)
-        );
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([30; 32].into()), 0,));
+        assert_ok!(Marketplace::claim_property_token(RuntimeOrigin::signed([31; 32].into()), 0,));
         lawyer_process(vec![([1; 32].into(), 40), ([30; 32].into(), 30)]);
 
         // Letting agent process

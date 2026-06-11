@@ -1330,6 +1330,26 @@ impl pallet_bucket::Config for Runtime {
     type MaxPropertyValueLen = MaxPropertyValueLen;
 }
 
+parameter_types! {
+    pub const FaucetDripAssetId: u32 = 10;
+    pub const FaucetDripAmount: Balance = 1_000_000_000_000_000_000_000; // 1000 tGBP (18 decimals)
+    pub const FaucetMinXcavBalance: Balance = XCAV;
+    pub const FaucetCooldownPeriod: BlockNumber = 7 * DAYS;
+}
+
+impl pallet_faucet::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = weights::pallet_faucet::WeightInfo<Runtime>;
+    type Balance = Balance;
+    type NativeCurrency = Balances;
+    type ForeignCurrency = Assets;
+    type DripAssetId = FaucetDripAssetId;
+    type DripAmount = FaucetDripAmount;
+    type MinXcavBalance = FaucetMinXcavBalance;
+    type CooldownPeriod = FaucetCooldownPeriod;
+    type BlockNumberProvider = System;
+}
+
 use crate::{
     assets::AssetDid,
     authorization::{AuthorizationId, PalletAuthorize},
