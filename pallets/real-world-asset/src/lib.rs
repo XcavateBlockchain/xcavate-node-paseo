@@ -27,6 +27,7 @@ mod tests;
 pub mod traits;
 
 use frame_support::pallet_prelude::*;
+use frame_support::transactional;
 
 use frame_support::sp_runtime::traits::{AccountIdConversion, StaticLookup};
 use frame_support::{
@@ -315,6 +316,7 @@ pub mod pallet {
 
         /// Create a new property token by minting an NFT and fractionalizing it into tokens.   
         /// Transfers funding to the property account, mints an NFT, fractionalizes it, and stores details.
+        #[transactional]
         pub(crate) fn do_create_property_token(
             funding_account: &AccountIdOf<T>,
             region: RegionId,
