@@ -53,6 +53,22 @@ pub type LocalAssetIdOf<T> = <<T as Config>::LocalCurrency as fungibles::Inspect
     <T as frame_system::Config>::AccountId,
 >>::AssetId;
 
+pub trait NamespaceManager<AccountId> {
+    fn create_namespace_for_property(
+        manager: &AccountId,
+        real_world_asset_id: u32,
+    ) -> Result<u128, DispatchError>;
+}
+
+impl<AccountId> NamespaceManager<AccountId> for () {
+    fn create_namespace_for_property(
+        _manager: &AccountId,
+        _real_world_asset_id: u32,
+    ) -> Result<u128, DispatchError> {
+        Ok(0)
+    }
+}
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -69,6 +85,8 @@ pub mod pallet {
         pub collection_id: NftCollectionId,
         /// The NFT item ID for the property.
         pub item_id: NftId,
+        /// The namespace ID used for bucket-backed property data.
+        pub namespace_id: u128,
         /// The region ID where the property is located.
         pub region: RegionId,
         /// The location ID within the region.
@@ -182,6 +200,9 @@ pub mod pallet {
         /// The maximum length of data stored in for post codes.
         #[pallet::constant]
         type PostcodeLimit: Get<u32>;
+
+        /// Namespace manager used to create and assign namespaces for property assets.
+        type NamespaceManager: super::NamespaceManager<AccountIdOf<Self>>;
     }
 
     pub type FractionalizedAssetId<T> = <T as Config>::AssetId;
@@ -245,7 +266,7 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// Test
-        PropertyTokenCreated { asset_id: u32 },
+        PropertyTokenCreated { asset_id: u32, namespace_id: u128 },
         /// The property nft got burned.
         PropertyNftBurned {
             collection_id: <T as pallet::Config>::NftCollectionId,
@@ -358,12 +379,16 @@ pub mod pallet {
                 token_amount.into(),
             )?;
 
+            let namespace_id =
+                T::NamespaceManager::create_namespace_for_property(funding_account, asset_number)?;
+
             // Store asset details
             PropertyAssetInfo::<T>::insert(
                 asset_number,
                 PropertyAssetDetails {
                     collection_id: region_info.collection_id,
                     item_id,
+                    namespace_id,
                     region,
                     location,
                     price: property_price,
@@ -380,7 +405,10 @@ pub mod pallet {
 
             NextNftId::<T>::insert(region_info.collection_id, next_item_id);
             NextAssetId::<T>::put(next_asset_number);
-            Self::deposit_event(Event::<T>::PropertyTokenCreated { asset_id: asset_number });
+            Self::deposit_event(Event::<T>::PropertyTokenCreated {
+                asset_id: asset_number,
+                namespace_id,
+            });
             Ok((item_id, asset_number))
         }
 
