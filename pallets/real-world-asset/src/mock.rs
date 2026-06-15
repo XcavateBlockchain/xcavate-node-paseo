@@ -323,6 +323,7 @@ impl crate::Config for Test {
     type StringLimit = ConstU32<50>;
     type RegionProvider = Regions;
     type PostcodeLimit = Postcode;
+    type NamespaceManager = ();
 }
 
 // Build genesis storage according to the mock runtime.

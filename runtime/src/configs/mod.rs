@@ -919,6 +919,42 @@ parameter_types! {
     pub const MaxPropertyTokens: u32 = 250;
 }
 
+pub struct BucketNamespaceManager;
+
+impl pallet_real_world_asset::NamespaceManager<AccountId> for BucketNamespaceManager {
+    fn create_namespace_for_property(
+        manager: &AccountId,
+        real_world_asset_id: u32,
+    ) -> Result<u128, frame_support::pallet_prelude::DispatchError> {
+        let mut properties =
+            frame_support::storage::bounded_btree_map::BoundedBTreeMap::default();
+        properties
+            .try_insert(
+                BoundedVec::truncate_from(b"propertyId".to_vec()),
+                BoundedVec::truncate_from(real_world_asset_id.to_le_bytes().to_vec()),
+            )
+            .map_err(|_| {
+                frame_support::pallet_prelude::DispatchError::Other(
+                    "Namespace metadata properties full",
+                )
+            })?;
+
+        let namespace_id = pallet_bucket::NextNamespaceId::<Runtime>::get();
+        let metadata_input = pallet_bucket::types::NamespaceMetadataInput::<Runtime> {
+            name: BoundedVec::truncate_from(b"Property namespace".to_vec()),
+            schema_uri: None,
+            properties,
+        };
+
+        <pallet_bucket::Pallet<Runtime> as pallet_bucket::traits::Create<Runtime>>::namespace(
+            metadata_input.into(),
+            Some(manager.clone()),
+        )?;
+
+        Ok(namespace_id)
+    }
+}
+
 /// Configure the pallet-property-governance in pallets/property-governance.
 impl pallet_real_world_asset::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
@@ -937,6 +973,7 @@ impl pallet_real_world_asset::Config for Runtime {
     type StringLimit = StringLimit;
     type RegionProvider = Regions;
     type PostcodeLimit = Postcode;
+    type NamespaceManager = BucketNamespaceManager;
 }
 
 parameter_types! {
