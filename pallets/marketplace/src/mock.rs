@@ -370,6 +370,7 @@ impl pallet_real_world_asset::Config for Test {
     type StringLimit = ConstU32<50>;
     type RegionProvider = Regions;
     type PostcodeLimit = Postcode;
+    type NamespaceManager = ();
 }
 
 // Mock IncomeSettlement implementation

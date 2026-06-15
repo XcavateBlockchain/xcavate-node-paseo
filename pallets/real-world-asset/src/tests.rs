@@ -108,6 +108,7 @@ fn create_property_token_works() {
             PropertyAssetDetails {
                 collection_id: 0,
                 item_id: 0,
+                namespace_id: 0,
                 region: 3,
                 location: bvec![10, 10],
                 price: 1_000,
@@ -414,6 +415,7 @@ fn register_spv_works() {
             PropertyAssetDetails {
                 collection_id: 0,
                 item_id: 0,
+                namespace_id: 0,
                 region: 3,
                 location: bvec![10, 10],
                 price: 1_000,
@@ -428,6 +430,7 @@ fn register_spv_works() {
             PropertyAssetDetails {
                 collection_id: 0,
                 item_id: 0,
+                namespace_id: 0,
                 region: 3,
                 location: bvec![10, 10],
                 price: 1_000,
@@ -468,6 +471,7 @@ fn getter_function_works() {
             PropertyAssetDetails {
                 collection_id: 0,
                 item_id: 0,
+                namespace_id: 0,
                 region: 3,
                 location: bvec![10, 10],
                 price: 1_000,
