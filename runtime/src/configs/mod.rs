@@ -686,11 +686,36 @@ impl pallet_assets_freezer::Config<pallet_assets::Instance1> for Runtime {
     type RuntimeEvent = RuntimeEvent;
 }
 
+parameter_types! {
+    pub const WhitelistAirdropNativeAmount: Balance = 10 * XCAV; // 10 XCAV
+    pub const WhitelistAirdropAssetId: u32 = 10; // tGBP
+    pub const WhitelistAirdropAssetAmount: Balance = 10_000_000_000_000_000_000_000; // 10,000 tGBP (18 decimals)
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct WhitelistBenchmarkHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_xcavate_whitelist::BenchmarkHelper<Runtime> for WhitelistBenchmarkHelper {
+    fn setup_airdrop_asset() {
+        use frame_support::traits::fungibles::Create;
+        let admin = AccountId::from([0xffu8; 32]);
+        let _ = <Assets as Create<AccountId>>::create(WhitelistAirdropAssetId::get(), admin, true, 1);
+    }
+}
+
 /// Configure the pallet-xcavate-whitelist in pallets/xcavate-whitelist.
 impl pallet_xcavate_whitelist::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = weights::pallet_xcavate_whitelist::WeightInfo<Runtime>;
     type WhitelistOrigin = EnsureRoot<Self::AccountId>;
+    type Balance = Balance;
+    type NativeCurrency = Balances;
+    type ForeignCurrency = Assets;
+    type AirdropNativeAmount = WhitelistAirdropNativeAmount;
+    type AirdropAssetId = WhitelistAirdropAssetId;
+    type AirdropAssetAmount = WhitelistAirdropAssetAmount;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = WhitelistBenchmarkHelper;
 }
 
 use pallet_xcavate_whitelist::{self as whitelist, RolePermission};
@@ -855,7 +880,7 @@ parameter_types! {
     pub const MaxCleanupPerCallAmount: u32 = 50;
     pub const MinimumImpactScore: Permill = Permill::from_percent(50);
     pub const SuccessfulDeliveriesForStrikeReduction: u32 = 5;
-    pub const AcceptedPaymentAssets: [u32; 4] = [1, 10, 1337, 1984];
+    pub const AcceptedPaymentAssets: [u32; 3] = [10, 1337, 1984];
 }
 
 /// Configure the pallet-real-x-education in pallets/real-x-education.
@@ -987,7 +1012,7 @@ parameter_types! {
     pub const ClaimWindowTime: BlockNumber = 100;
     pub const MaximumRelistAttempts: u8 = 1;
     pub const MaxOwnershipPercentage: Perbill = Perbill::from_percent(50);
-    pub const AcceptedMarketplacePaymentAssets: [u32; 2] = [1, 10];
+    pub const AcceptedMarketplacePaymentAssets: [u32; 2] = [10, 1];
 }
 
 /// Configure the pallet-marketplace in pallets/marketplace.

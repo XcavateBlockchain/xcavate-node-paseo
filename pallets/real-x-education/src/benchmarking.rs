@@ -167,7 +167,7 @@ mod benchmarks {
         let deposit = T::BookingDeposit::get() * 100u32.into();
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&creator, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&sponsor, deposit));
-        assert_ok!(T::ForeignCurrency::mint_into(
+        assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             T::AcceptedAssets::get()[1],
             &sponsor,
             T::ModulePrice::get() * 20u32.into()
@@ -222,7 +222,7 @@ mod benchmarks {
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&creator, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&sponsor, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&school, deposit));
-        assert_ok!(T::ForeignCurrency::mint_into(
+        assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             T::AcceptedAssets::get()[1],
             &sponsor,
             T::ModulePrice::get() * 20u32.into()
@@ -299,7 +299,7 @@ mod benchmarks {
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&sponsor, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&school, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&university_student, deposit));
-        assert_ok!(T::ForeignCurrency::mint_into(
+        assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             T::AcceptedAssets::get()[1],
             &sponsor,
             T::ModulePrice::get() * 20u32.into()
@@ -390,7 +390,7 @@ mod benchmarks {
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&sponsor, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&school, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&university_student, deposit));
-        assert_ok!(T::ForeignCurrency::mint_into(
+        assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             T::AcceptedAssets::get()[1],
             &sponsor,
             T::ModulePrice::get() * 20u32.into()
@@ -512,7 +512,7 @@ mod benchmarks {
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&school, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&university_student, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&high_school_student, deposit));
-        assert_ok!(T::ForeignCurrency::mint_into(
+        assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             T::AcceptedAssets::get()[1],
             &sponsor,
             T::ModulePrice::get() * 20u32.into()
@@ -654,7 +654,7 @@ mod benchmarks {
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&school, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&university_student, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&high_school_student, deposit));
-        assert_ok!(T::ForeignCurrency::mint_into(
+        assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             T::AcceptedAssets::get()[1],
             &sponsor,
             T::ModulePrice::get() * 20u32.into()
@@ -838,7 +838,7 @@ mod benchmarks {
         let deposit = T::BookingDeposit::get() * 100u32.into();
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&creator, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&sponsor, deposit));
-        assert_ok!(T::ForeignCurrency::mint_into(
+        assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             T::AcceptedAssets::get()[1],
             &sponsor,
             T::ModulePrice::get() * 20u32.into()
@@ -914,7 +914,7 @@ mod benchmarks {
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&sponsor, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&school, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&university_student, deposit));
-        assert_ok!(T::ForeignCurrency::mint_into(
+        assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             T::AcceptedAssets::get()[1],
             &sponsor,
             T::ModulePrice::get() * 20u32.into()
@@ -1010,7 +1010,7 @@ mod benchmarks {
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&sponsor, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&school, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&university_student, deposit));
-        assert_ok!(T::ForeignCurrency::mint_into(
+        assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             T::AcceptedAssets::get()[1],
             &sponsor,
             T::ModulePrice::get() * 20u32.into()
@@ -1115,7 +1115,7 @@ mod benchmarks {
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&sponsor, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&school, deposit));
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&university_student, deposit));
-        assert_ok!(T::ForeignCurrency::mint_into(
+        assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             T::AcceptedAssets::get()[1],
             &sponsor,
             T::ModulePrice::get() * 20u32.into()

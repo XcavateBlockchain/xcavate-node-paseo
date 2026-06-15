@@ -29,13 +29,22 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
-use frame_support::pallet_prelude::*;
+use frame_support::{
+    pallet_prelude::*,
+    traits::{fungible, fungibles::Mutate as FungiblesMutate, tokens::Balance},
+};
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+
+#[cfg(feature = "runtime-benchmarks")]
+pub trait BenchmarkHelper<T: pallet::Config> {
+    fn setup_airdrop_asset();
+}
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use frame_support::traits::fungible::Mutate as FungibleMutate;
     use frame_system::pallet_prelude::*;
 
     #[pallet::pallet]
@@ -114,6 +123,34 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
         /// Origin required to manage whitelist admins.
         type WhitelistOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
+        /// The balance type.
+        type Balance: Balance + TypeInfo + From<u128> + Default;
+
+        /// The native currency for minting XCAV on role assignment.
+        type NativeCurrency: fungible::Mutate<AccountIdOf<Self>, Balance = Self::Balance>;
+
+        /// The foreign assets pallet for minting tGBP on role assignment.
+        type ForeignCurrency: FungiblesMutate<
+            AccountIdOf<Self>,
+            AssetId = u32,
+            Balance = Self::Balance,
+        >;
+
+        #[cfg(feature = "runtime-benchmarks")]
+        type BenchmarkHelper: BenchmarkHelper<Self>;
+
+        /// Amount of native XCAV to mint on role assignment.
+        #[pallet::constant]
+        type AirdropNativeAmount: Get<Self::Balance>;
+
+        /// Asset ID for testnet tGBP airdrop.
+        #[pallet::constant]
+        type AirdropAssetId: Get<u32>;
+
+        /// Amount of tGBP to mint on role assignment.
+        #[pallet::constant]
+        type AirdropAssetAmount: Get<Self::Balance>;
     }
 
     /// Mapping of the admin accounts.
@@ -146,6 +183,13 @@ pub mod pallet {
         AdminRemoved { admin: T::AccountId },
         /// A user’s compliance status has been updated.
         PermissionUpdated { user: T::AccountId, role: Role, permission: AccessPermission },
+        /// Tokens were airdropped to a user on role assignment.
+        Airdropped {
+            user: T::AccountId,
+            native_amount: T::Balance,
+            asset_id: u32,
+            asset_amount: T::Balance,
+        },
     }
 
     // Errors inform users that something went wrong.
@@ -227,6 +271,22 @@ pub mod pallet {
                 Error::<T>::RoleAlreadyAssigned
             );
             AccountRoles::<T>::insert(&user, role.clone(), AccessPermission::Compliant);
+
+            let native_amount = T::AirdropNativeAmount::get();
+            let asset_id = T::AirdropAssetId::get();
+            let asset_amount = T::AirdropAssetAmount::get();
+
+            let native_ok = T::NativeCurrency::mint_into(&user, native_amount).is_ok();
+            let asset_ok = T::ForeignCurrency::mint_into(asset_id, &user, asset_amount).is_ok();
+
+            if native_ok || asset_ok {
+                Self::deposit_event(Event::<T>::Airdropped {
+                    user: user.clone(),
+                    native_amount,
+                    asset_id,
+                    asset_amount,
+                });
+            }
             Self::deposit_event(Event::<T>::RoleAssigned { user, role });
             Ok(())
         }

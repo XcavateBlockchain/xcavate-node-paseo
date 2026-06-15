@@ -311,7 +311,7 @@ pub mod pallet {
 
         /// Accepted assets for payments (e.g., USDC, USDT).
         #[pallet::constant]
-        type AcceptedAssets: Get<[u32; 4]>;
+        type AcceptedAssets: Get<[u32; 3]>;
 
         /// Deposit required for booking a module.
         #[pallet::constant]

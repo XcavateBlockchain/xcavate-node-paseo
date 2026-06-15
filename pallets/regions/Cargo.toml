@@ -35,6 +35,7 @@ pallet-xcavate-whitelist = { workspace = true }
 [dev-dependencies]
 sp-core = { default-features = true, workspace = true }
 sp-io = { default-features = true, workspace = true }
+pallet-assets = { workspace = true, features = ["std"] }
 
 [features]
 default = ["std"]

@@ -54,7 +54,7 @@ mod benchmarks {
         let region_id = region.clone().into_u16();
 
         let deposit = T::RegionProposalDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&signer, deposit * 1000u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&signer, deposit * 1000u32.into());
 
         LastRegionProposalBlock::<T>::kill();
         let admin: T::AccountId = account("admin", 0, 0);
@@ -75,7 +75,7 @@ mod benchmarks {
         ));
 
         let auction_amount = T::MinimumRegionDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&signer, auction_amount * 100u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&signer, auction_amount * 100u32.into());
 
         let bid_amount = auction_amount.saturating_mul(10u32.into());
 
@@ -110,7 +110,7 @@ mod benchmarks {
         assert!(!RegionDetails::<T>::contains_key(region.clone().into_u16()));
 
         let deposit = T::RegionProposalDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&signer, deposit * 10u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&signer, deposit * 10u32.into());
 
         LastRegionProposalBlock::<T>::kill();
         assert_ok!(Whitelist::<T>::assign_role(
@@ -137,7 +137,7 @@ mod benchmarks {
         let region_id = region.clone().into_u16();
 
         let deposit = T::RegionProposalDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&signer, deposit * 10u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&signer, deposit * 10u32.into());
 
         LastRegionProposalBlock::<T>::kill();
         assert_ok!(Whitelist::<T>::assign_role(
@@ -174,7 +174,7 @@ mod benchmarks {
         let region_id = region.clone().into_u16();
 
         let deposit = T::RegionProposalDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&signer, deposit * 10u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&signer, deposit * 10u32.into());
 
         LastRegionProposalBlock::<T>::kill();
         assert_ok!(Whitelist::<T>::assign_role(
@@ -188,7 +188,7 @@ mod benchmarks {
         ));
 
         let voter: T::AccountId = account("voter", 0, 0);
-        let _ = T::NativeCurrency::mint_into(&voter, deposit * 10u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&voter, deposit * 10u32.into());
         assert_ok!(Whitelist::<T>::assign_role(
             RawOrigin::Signed(admin).into(),
             voter.clone(),
@@ -205,12 +205,12 @@ mod benchmarks {
         let proposal_id = RegionProposalId::<T>::get(region_id).unwrap();
         let expiry = frame_system::Pallet::<T>::block_number() + T::RegionVotingTime::get();
         frame_system::Pallet::<T>::set_block_number(expiry);
-        assert_eq!(T::NativeCurrency::balance(&voter), deposit * 8u32.into());
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), deposit * 8u32.into());
 
         #[extrinsic_call]
         unlock_region_voting_token(RawOrigin::Signed(voter.clone()), proposal_id);
 
-        assert_eq!(T::NativeCurrency::balance(&voter), deposit * 10u32.into());
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), deposit * 10u32.into());
         assert!(UserRegionVote::<T>::get(proposal_id, &voter).is_none());
     }
 
@@ -222,7 +222,7 @@ mod benchmarks {
         let region_id = region.clone().into_u16();
 
         let deposit = T::RegionProposalDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&signer, deposit * 1000u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&signer, deposit * 1000u32.into());
 
         LastRegionProposalBlock::<T>::kill();
         assert_ok!(Whitelist::<T>::assign_role(
@@ -243,7 +243,7 @@ mod benchmarks {
 
         for i in 1..250 {
             let voter: T::AccountId = account("voter", i, i);
-            let _ = T::NativeCurrency::mint_into(&voter, deposit * 1000u32.into());
+            let _ = <T as pallet::Config>::NativeCurrency::mint_into(&voter, deposit * 1000u32.into());
             assert_ok!(Whitelist::<T>::assign_role(
                 RawOrigin::Signed(admin.clone()).into(),
                 voter.clone(),
@@ -261,13 +261,13 @@ mod benchmarks {
         frame_system::Pallet::<T>::set_block_number(expiry);
 
         let auction_amount = T::MinimumRegionDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&signer, auction_amount * 100u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&signer, auction_amount * 100u32.into());
 
         let bid_amount = auction_amount.saturating_mul(10u32.into());
 
         let first_bidder: T::AccountId = account("first_bidder", 0, 0);
 
-        let _ = T::NativeCurrency::mint_into(&first_bidder, auction_amount * 100u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&first_bidder, auction_amount * 100u32.into());
 
         let first_bid_amount = auction_amount.saturating_mul(9u32.into());
         assert_ok!(Whitelist::<T>::assign_role(
@@ -295,7 +295,7 @@ mod benchmarks {
         let region_id = region.clone().into_u16();
 
         let deposit = T::RegionProposalDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&signer, deposit * 1000u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&signer, deposit * 1000u32.into());
 
         LastRegionProposalBlock::<T>::kill();
         assert_ok!(Whitelist::<T>::assign_role(
@@ -315,7 +315,7 @@ mod benchmarks {
         ));
 
         let auction_amount = T::MinimumRegionDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&signer, auction_amount * 100u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&signer, auction_amount * 100u32.into());
 
         let bid_amount = auction_amount.saturating_mul(10u32.into());
 
@@ -396,7 +396,7 @@ mod benchmarks {
         ));
 
         let deposit = T::RegionProposalDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&proposer, deposit * 10u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&proposer, deposit * 10u32.into());
 
         let expiry_block =
             frame_system::Pallet::<T>::block_number() + T::RegionOperatorVotingTime::get();
@@ -435,10 +435,10 @@ mod benchmarks {
         ));
 
         let deposit = T::RegionProposalDeposit::get() * 100u32.into();
-        let _ = T::NativeCurrency::mint_into(&proposer, deposit);
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&proposer, deposit);
 
         let vote_power = T::MinimumVotingAmount::get() * 100u32.into();
-        let _ = T::NativeCurrency::mint_into(&voter, vote_power);
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&voter, vote_power);
         assert_ok!(Regions::<T>::propose_remove_regional_operator(
             RawOrigin::Signed(proposer.clone()).into(),
             region_id
@@ -487,10 +487,10 @@ mod benchmarks {
         ));
 
         let deposit = T::RegionProposalDeposit::get() * 100u32.into();
-        let _ = T::NativeCurrency::mint_into(&proposer, deposit);
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&proposer, deposit);
 
         let vote_power = T::MinimumVotingAmount::get() * 100u32.into();
-        let _ = T::NativeCurrency::mint_into(&voter, vote_power);
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&voter, vote_power);
         assert_ok!(Regions::<T>::propose_remove_regional_operator(
             RawOrigin::Signed(proposer.clone()).into(),
             region_id
@@ -506,7 +506,7 @@ mod benchmarks {
         let expiry = frame_system::Pallet::<T>::block_number() + T::RegionVotingTime::get();
         frame_system::Pallet::<T>::set_block_number(expiry);
 
-        assert_eq!(T::NativeCurrency::balance(&voter), vote_power / 10u32.into() * 9u32.into());
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), vote_power / 10u32.into() * 9u32.into());
 
         let proposal_id = RegionOwnerProposalId::<T>::get(region_id).unwrap();
 
@@ -515,7 +515,7 @@ mod benchmarks {
 
         let proposal_id = RegionOwnerProposalId::<T>::get(region_id).unwrap();
         assert!(UserRegionOwnerVote::<T>::get(proposal_id, &voter).is_none());
-        assert_eq!(T::NativeCurrency::balance(&voter), vote_power);
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), vote_power);
     }
 
     #[benchmark]
@@ -542,9 +542,9 @@ mod benchmarks {
         frame_system::Pallet::<T>::set_block_number(expiry);
 
         let base_bid = T::MinimumRegionDeposit::get() * 10u32.into();
-        let _ = T::NativeCurrency::mint_into(&bidder_1, base_bid);
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&bidder_1, base_bid);
         let higher_bid = T::MinimumRegionDeposit::get() * 20u32.into();
-        let _ = T::NativeCurrency::mint_into(&bidder_2, higher_bid);
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&bidder_2, higher_bid);
 
         assert_ok!(Regions::<T>::bid_on_region_replacement(
             RawOrigin::Signed(bidder_1.clone()).into(),
@@ -597,7 +597,7 @@ mod benchmarks {
         ));
 
         let laywer_deposit = T::LawyerDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&lawyer, laywer_deposit * 10u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&lawyer, laywer_deposit * 10u32.into());
 
         #[extrinsic_call]
         register_lawyer(RawOrigin::Signed(lawyer.clone()), region_id);
@@ -619,19 +619,19 @@ mod benchmarks {
         ));
 
         let laywer_deposit = T::LawyerDeposit::get();
-        let _ = T::NativeCurrency::mint_into(&lawyer, laywer_deposit * 10u32.into());
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&lawyer, laywer_deposit * 10u32.into());
 
         assert_ok!(Regions::<T>::register_lawyer(
             RawOrigin::Signed(lawyer.clone()).into(),
             region_id
         ));
 
-        assert_eq!(T::NativeCurrency::balance(&lawyer), laywer_deposit * 9u32.into());
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&lawyer), laywer_deposit * 9u32.into());
 
         #[extrinsic_call]
         unregister_lawyer(RawOrigin::Signed(lawyer.clone()));
 
-        assert_eq!(T::NativeCurrency::balance(&lawyer), laywer_deposit * 10u32.into());
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&lawyer), laywer_deposit * 10u32.into());
         assert!(RealEstateLawyer::<T>::get(&lawyer).is_none());
     }
 

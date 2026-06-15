@@ -56,6 +56,8 @@ mod benchmarks {
         let admin: T::AccountId = account("admin", 0, 0);
         let user: T::AccountId = account("user", 0, 0);
 
+        T::BenchmarkHelper::setup_airdrop_asset();
+
         assert_ok!(Whitelist::<T>::add_admin(RawOrigin::Root.into(), admin.clone()));
         #[extrinsic_call]
         assign_role(RawOrigin::Signed(admin.clone()), user.clone(), Role::LettingAgent);
@@ -70,6 +72,8 @@ mod benchmarks {
     fn remove_role() {
         let admin: T::AccountId = account("admin", 0, 0);
         let user: T::AccountId = account("user", 0, 0);
+
+        T::BenchmarkHelper::setup_airdrop_asset();
 
         assert_ok!(Whitelist::<T>::add_admin(RawOrigin::Root.into(), admin.clone()));
         assert_ok!(Whitelist::<T>::assign_role(
@@ -90,6 +94,8 @@ mod benchmarks {
     fn set_permission() {
         let admin: T::AccountId = account("admin", 0, 0);
         let user: T::AccountId = account("user", 0, 0);
+
+        T::BenchmarkHelper::setup_airdrop_asset();
 
         assert_ok!(Whitelist::<T>::add_admin(RawOrigin::Root.into(), admin.clone()));
         assert_ok!(Whitelist::<T>::assign_role(

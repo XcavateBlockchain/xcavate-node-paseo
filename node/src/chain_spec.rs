@@ -238,7 +238,28 @@ fn testnet_genesis(
         "polkadotXcm": {
             "safeXcmVersion": Some(SAFE_XCM_VERSION),
         },
-        "sudo": { "key": Some(root) }
+        "sudo": { "key": Some(root.clone()) },
+        "assets" : {
+            "assets": vec![
+                (10, root.clone(), true, 1),
+                (1337, root.clone(), true, 1),
+                (1984, root.clone(), true, 1),
+            ],
+            "metadata": vec![
+                (10, "tGBP".as_bytes(), "tGBP".as_bytes(), 18),
+                (1337, "USDC".as_bytes(), "USDC".as_bytes(), 6),
+                (1984, "USDT".as_bytes(), "USDT".as_bytes(), 6),
+            ],
+            "accounts": endowed_accounts
+                .iter()
+                .cloned()
+                .flat_map(|x| vec![
+                    (10, x.clone(), 10_000_000_000_000_000_000u64),
+                    (1337, x.clone(), 2_000_000_000_000u64),
+                    (1984, x.clone(), 2_000_000_000_000u64),
+                ])
+                .collect::<Vec<_>>(),
+        }
     })
 }
 
@@ -274,7 +295,28 @@ fn live_genesis(
         "polkadotXcm": {
             "safeXcmVersion": Some(SAFE_XCM_VERSION),
         },
-        "sudo": { "key": Some(root) }
+        "sudo": { "key": Some(root.clone()) },
+        "assets" : {
+            "assets": vec![
+                (10, root.clone(), true, 1),
+                (1337, root.clone(), true, 1),
+                (1984, root.clone(), true, 1),
+            ],
+            "metadata": vec![
+                (10, "tGBP".as_bytes(), "tGBP".as_bytes(), 18),
+                (1337, "USDC".as_bytes(), "USDC".as_bytes(), 6),
+                (1984, "USDT".as_bytes(), "USDT".as_bytes(), 6),
+            ],
+            "accounts": endowed_accounts
+                .iter()
+                .cloned()
+                .flat_map(|x| vec![
+                    (10, x.clone(), 10_000_000_000_000_000_000u64),
+                    (1337, x.clone(), 2_000_000_000_000u64),
+                    (1984, x.clone(), 2_000_000_000_000u64),
+                ])
+                .collect::<Vec<_>>(),
+        },
     })
 }
 

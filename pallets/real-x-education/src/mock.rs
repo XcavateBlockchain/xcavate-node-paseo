@@ -219,10 +219,35 @@ impl pallet_nfts::Config for Test {
     type BlockNumberProvider = System;
 }
 
+parameter_types! {
+    pub const AirdropNativeAmount: Balance = 0;
+    pub const AirdropAssetId: u32 = 10;
+    pub const AirdropAssetAmount: Balance = 0;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct WhitelistBenchmarkHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_xcavate_whitelist::BenchmarkHelper<Test> for WhitelistBenchmarkHelper {
+    fn setup_airdrop_asset() {
+        use frame_support::traits::fungibles::Create;
+        let admin: AccountId = [0; 32].into();
+        let _ = <ForeignAssets as Create<AccountId>>::create(AirdropAssetId::get(), admin, true, 1);
+    }
+}
+
 impl pallet_xcavate_whitelist::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_xcavate_whitelist::weights::SubstrateWeight<Test>;
     type WhitelistOrigin = frame_system::EnsureRoot<Self::AccountId>;
+    type Balance = u128;
+    type NativeCurrency = Balances;
+    type ForeignCurrency = ForeignAssets;
+    type AirdropNativeAmount = AirdropNativeAmount;
+    type AirdropAssetId = AirdropAssetId;
+    type AirdropAssetAmount = AirdropAssetAmount;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = WhitelistBenchmarkHelper;
 }
 
 use pallet_xcavate_whitelist::{self as whitelist, RolePermission};
@@ -303,7 +328,7 @@ parameter_types! {
     pub const RegionalOperatorPercentage: Perbill = Perbill::from_parts(83_000_000);
     pub const ProtocolPercentage: Perbill = Perbill::from_parts(50_000_000);
     pub const DBSPercentage: Perbill = Perbill::from_parts(34_000_000);
-    pub const AcceptedPaymentAssets: [u32; 4] = [1, 10, 1337, 1984];
+    pub const AcceptedPaymentAssets: [u32; 3] = [10, 1337, 1984];
     pub const CancellationWindow: BlockNumber = 100;
     pub const MaximumCancellations: u32 = 3;
     pub const SponsorshipWindow: BlockNumber = 200;
