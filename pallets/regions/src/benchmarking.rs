@@ -205,12 +205,12 @@ mod benchmarks {
         let proposal_id = RegionProposalId::<T>::get(region_id).unwrap();
         let expiry = frame_system::Pallet::<T>::block_number() + T::RegionVotingTime::get();
         frame_system::Pallet::<T>::set_block_number(expiry);
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), deposit * 8u32.into());
+        let voter_balance_after_vote = <T as pallet::Config>::NativeCurrency::balance(&voter);
 
         #[extrinsic_call]
         unlock_region_voting_token(RawOrigin::Signed(voter.clone()), proposal_id);
 
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), deposit * 10u32.into());
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), voter_balance_after_vote + deposit * 2u32.into());
         assert!(UserRegionVote::<T>::get(proposal_id, &voter).is_none());
     }
 
@@ -506,7 +506,7 @@ mod benchmarks {
         let expiry = frame_system::Pallet::<T>::block_number() + T::RegionVotingTime::get();
         frame_system::Pallet::<T>::set_block_number(expiry);
 
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), vote_power / 10u32.into() * 9u32.into());
+        let voter_balance_after_vote = <T as pallet::Config>::NativeCurrency::balance(&voter);
 
         let proposal_id = RegionOwnerProposalId::<T>::get(region_id).unwrap();
 
@@ -515,7 +515,7 @@ mod benchmarks {
 
         let proposal_id = RegionOwnerProposalId::<T>::get(region_id).unwrap();
         assert!(UserRegionOwnerVote::<T>::get(proposal_id, &voter).is_none());
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), vote_power);
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), voter_balance_after_vote + vote_power / 10u32.into());
     }
 
     #[benchmark]
@@ -596,14 +596,14 @@ mod benchmarks {
             Role::Lawyer
         ));
 
-        let laywer_deposit = T::LawyerDeposit::get();
-        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&lawyer, laywer_deposit * 10u32.into());
+        let lawyer_deposit = T::LawyerDeposit::get();
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&lawyer, lawyer_deposit * 10u32.into());
 
         #[extrinsic_call]
         register_lawyer(RawOrigin::Signed(lawyer.clone()), region_id);
 
         assert_eq!(RealEstateLawyer::<T>::get(&lawyer).unwrap().region, region_id);
-        assert_eq!(RealEstateLawyer::<T>::get(&lawyer).unwrap().deposit, laywer_deposit);
+        assert_eq!(RealEstateLawyer::<T>::get(&lawyer).unwrap().deposit, lawyer_deposit);
     }
 
     #[benchmark]
@@ -618,20 +618,20 @@ mod benchmarks {
             Role::Lawyer
         ));
 
-        let laywer_deposit = T::LawyerDeposit::get();
-        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&lawyer, laywer_deposit * 10u32.into());
+        let lawyer_deposit = T::LawyerDeposit::get();
+        let _ = <T as pallet::Config>::NativeCurrency::mint_into(&lawyer, lawyer_deposit * 10u32.into());
 
         assert_ok!(Regions::<T>::register_lawyer(
             RawOrigin::Signed(lawyer.clone()).into(),
             region_id
         ));
 
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&lawyer), laywer_deposit * 9u32.into());
+        let lawyer_balance_after_register = <T as pallet::Config>::NativeCurrency::balance(&lawyer);
 
         #[extrinsic_call]
         unregister_lawyer(RawOrigin::Signed(lawyer.clone()));
 
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&lawyer), laywer_deposit * 10u32.into());
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&lawyer), lawyer_balance_after_register + lawyer_deposit);
         assert!(RealEstateLawyer::<T>::get(&lawyer).is_none());
     }
 

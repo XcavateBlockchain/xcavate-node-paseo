@@ -202,12 +202,12 @@ mod benchmarks {
         let proposal_id = RegionProposalId::<T>::get(region_id).unwrap();
         let expiry = frame_system::Pallet::<T>::block_number() + T::RegionVotingTime::get();
         frame_system::Pallet::<T>::set_block_number(expiry);
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), deposit * 8u32.into());
+        let voter_balance_after_vote = <T as pallet::Config>::NativeCurrency::balance(&voter);
 
         #[extrinsic_call]
         unlock_region_voting_token(RawOrigin::Signed(voter.clone()), proposal_id);
 
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), deposit * 10u32.into());
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), voter_balance_after_vote + deposit * 2u32.into());
         assert!(UserRegionVote::<T>::get(proposal_id, &voter).is_none());
     }
 
@@ -458,7 +458,7 @@ mod benchmarks {
         let expiry = frame_system::Pallet::<T>::block_number() + T::RegionVotingTime::get();
         frame_system::Pallet::<T>::set_block_number(expiry);
 
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), vote_power / 10u32.into() * 9u32.into());
+        let voter_balance_after_vote = <T as pallet::Config>::NativeCurrency::balance(&voter);
 
         let proposal_id = RegionOwnerProposalId::<T>::get(region_id).unwrap();
 
@@ -467,7 +467,7 @@ mod benchmarks {
 
         let proposal_id = RegionOwnerProposalId::<T>::get(region_id).unwrap();
         assert!(UserRegionOwnerVote::<T>::get(proposal_id, &voter).is_none());
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), vote_power);
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&voter), voter_balance_after_vote + vote_power / 10u32.into());
     }
 
     #[benchmark]

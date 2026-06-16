@@ -247,17 +247,6 @@ parameter_types! {
     pub const AirdropAssetAmount: u128 = 0;
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-pub struct WhitelistBenchmarkHelper;
-#[cfg(feature = "runtime-benchmarks")]
-impl pallet_xcavate_whitelist::BenchmarkHelper<Test> for WhitelistBenchmarkHelper {
-    fn setup_airdrop_asset() {
-        use frame_support::traits::fungibles::Create;
-        let admin: AccountId = [0; 32].into();
-        let _ = <ForeignAssets as Create<AccountId>>::create(AirdropAssetId::get(), admin, true, 1);
-    }
-}
-
 impl pallet_xcavate_whitelist::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_xcavate_whitelist::weights::SubstrateWeight<Test>;
@@ -268,8 +257,6 @@ impl pallet_xcavate_whitelist::Config for Test {
     type AirdropNativeAmount = AirdropNativeAmount;
     type AirdropAssetId = AirdropAssetId;
     type AirdropAssetAmount = AirdropAssetAmount;
-    #[cfg(feature = "runtime-benchmarks")]
-    type BenchmarkHelper = WhitelistBenchmarkHelper;
 }
 
 use pallet_xcavate_whitelist::{self as whitelist, RolePermission};

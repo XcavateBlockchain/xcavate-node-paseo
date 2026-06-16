@@ -122,6 +122,14 @@ fn create_a_new_region<T: Config>(
 }
 
 // Helper function to list a property
+fn fund_pallet_account<T: Config>() {
+    let pallet_account = Marketplace::<T>::account_id();
+    let _ = <T as pallet::Config>::NativeCurrency::mint_into(
+        &pallet_account,
+        1_000_000_000_000_000u128.into(),
+    );
+}
+
 fn list_property_helper<T: Config>(
     seller: T::AccountId,
     region_id: u16,
@@ -130,6 +138,7 @@ fn list_property_helper<T: Config>(
     token_price: <T as pallet::Config>::Balance,
     tax_paid_by_developer: bool,
 ) -> u32 {
+    fund_pallet_account::<T>();
     let property_price = token_price.saturating_mul((token_amount as u128).into());
     let deposit_amount = property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
     assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
@@ -160,6 +169,7 @@ fn list_and_sell_property<T: Config>(
     location: LocationId<T>,
     admin: T::AccountId,
 ) -> T::AccountId {
+    fund_pallet_account::<T>();
     let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
     let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
     let property_price = token_price.saturating_mul((token_amount as u128).into());
@@ -238,10 +248,10 @@ fn create_registered_property<T: Config>(
         lawyer_1.clone(),
         Role::Lawyer
     ));
-    let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+    let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
     let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
         &lawyer_1,
-        laywer_deposit * 10u32.into(),
+        lawyer_deposit * 10u32.into(),
     );
     assert_ok!(Whitelist::<T>::assign_role(
         RawOrigin::Signed(admin).into(),
@@ -252,10 +262,10 @@ fn create_registered_property<T: Config>(
         RawOrigin::Signed(lawyer_1.clone()).into(),
         region_id,
     ));
-    let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+    let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
     let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
         &lawyer_2,
-        laywer_deposit * 10u32.into(),
+        lawyer_deposit * 10u32.into(),
     );
     assert_ok!(Regions::<T>::register_lawyer(
         RawOrigin::Signed(lawyer_2.clone()).into(),
@@ -440,6 +450,7 @@ mod benchmarks {
             &signer,
             deposit_amount.saturating_mul(20u32.into())
         ));
+        fund_pallet_account::<T>();
 
         let metadata: BoundedVec<u8, <T as pallet::Config>::StringLimit> =
             BoundedVec::truncate_from(vec![42u8; m as usize]);
@@ -1662,10 +1673,10 @@ mod benchmarks {
             list_and_sell_property::<T>(seller.clone(), region_id, location.clone(), admin.clone());
 
         let lawyer: T::AccountId = account("lawyer", 0, 0);
-        let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+        let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
         let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
             &lawyer,
-            laywer_deposit * 10u32.into(),
+            lawyer_deposit * 10u32.into(),
         );
         assert_ok!(Whitelist::<T>::assign_role(
             RawOrigin::Signed(admin.clone()).into(),
@@ -1696,10 +1707,10 @@ mod benchmarks {
             list_and_sell_property::<T>(seller.clone(), region_id, location.clone(), admin.clone());
 
         let lawyer: T::AccountId = account("lawyer", 0, 0);
-        let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+        let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
         let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
             &lawyer,
-            laywer_deposit * 10u32.into(),
+            lawyer_deposit * 10u32.into(),
         );
         assert_ok!(Whitelist::<T>::assign_role(
             RawOrigin::Signed(admin.clone()).into(),
@@ -1756,10 +1767,10 @@ mod benchmarks {
             list_and_sell_property::<T>(seller.clone(), region_id, location.clone(), admin.clone());
 
         let lawyer: T::AccountId = account("lawyer", 0, 0);
-        let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+        let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
         let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
             &lawyer,
-            laywer_deposit * 10u32.into(),
+            lawyer_deposit * 10u32.into(),
         );
         assert_ok!(Whitelist::<T>::assign_role(
             RawOrigin::Signed(admin.clone()).into(),
@@ -1796,10 +1807,10 @@ mod benchmarks {
             list_and_sell_property::<T>(seller.clone(), region_id, location.clone(), admin.clone());
 
         let lawyer: T::AccountId = account("lawyer", 0, 0);
-        let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+        let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
         let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
             &lawyer,
-            laywer_deposit * 10u32.into(),
+            lawyer_deposit * 10u32.into(),
         );
         assert_ok!(Whitelist::<T>::assign_role(
             RawOrigin::Signed(admin.clone()).into(),
@@ -1854,10 +1865,10 @@ mod benchmarks {
             list_and_sell_property::<T>(seller.clone(), region_id, location.clone(), admin.clone());
 
         let lawyer: T::AccountId = account("lawyer", 0, 0);
-        let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+        let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
         let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
             &lawyer,
-            laywer_deposit * 10u32.into(),
+            lawyer_deposit * 10u32.into(),
         );
         assert_ok!(Whitelist::<T>::assign_role(
             RawOrigin::Signed(admin.clone()).into(),
@@ -1918,10 +1929,10 @@ mod benchmarks {
         let lawyer_1: T::AccountId = account("lawyer1", 0, 0);
         let lawyer_2: T::AccountId = account("lawyer2", 0, 0);
 
-        let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+        let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
         let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
             &lawyer_1,
-            laywer_deposit * 10u32.into(),
+            lawyer_deposit * 10u32.into(),
         );
         assert_ok!(Whitelist::<T>::assign_role(
             RawOrigin::Signed(admin.clone()).into(),
@@ -1932,10 +1943,10 @@ mod benchmarks {
             RawOrigin::Signed(lawyer_1.clone()).into(),
             region_id,
         ));
-        let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+        let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
         let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
             &lawyer_2,
-            laywer_deposit * 10u32.into(),
+            lawyer_deposit * 10u32.into(),
         );
         assert_ok!(Whitelist::<T>::assign_role(
             RawOrigin::Signed(admin.clone()).into(),

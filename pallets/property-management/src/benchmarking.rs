@@ -140,6 +140,11 @@ fn list_and_sell_property<T: Config>(
     region_id: u16,
     admin: T::AccountId,
 ) -> T::AccountId {
+    let pallet_account = Marketplace::<T>::account_id();
+    let _ = <T as pallet_marketplace::Config>::NativeCurrency::mint_into(
+        &pallet_account,
+        1_000_000_000_000_000u128.into(),
+    );
     let token_amount: u32 = <T as pallet_marketplace::Config>::MaxPropertyToken::get();
     let token_price: <T as pallet_marketplace::Config>::Balance = 1_000u32.into();
     let property_price = token_price.saturating_mul((token_amount as u128).into());
@@ -220,10 +225,10 @@ fn create_registered_property<T: Config>(
         lawyer_1.clone(),
         Role::Lawyer
     ));
-    let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+    let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
     let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
         &lawyer_1,
-        laywer_deposit * 10u32.into(),
+        lawyer_deposit * 10u32.into(),
     );
     assert_ok!(Whitelist::<T>::assign_role(
         RawOrigin::Signed(admin).into(),
@@ -234,10 +239,10 @@ fn create_registered_property<T: Config>(
         RawOrigin::Signed(lawyer_1.clone()).into(),
         region_id,
     ));
-    let laywer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
+    let lawyer_deposit = <T as pallet_regions::Config>::LawyerDeposit::get();
     let _ = <T as pallet_regions::Config>::NativeCurrency::mint_into(
         &lawyer_2,
-        laywer_deposit * 10u32.into(),
+        lawyer_deposit * 10u32.into(),
     );
     assert_ok!(Regions::<T>::register_lawyer(
         RawOrigin::Signed(lawyer_2.clone()).into(),
@@ -362,6 +367,7 @@ mod benchmarks {
 
         let deposit = T::LettingAgentDeposit::get().saturating_mul(20u32.into());
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&letting_agent, deposit));
+        let balance_before = <T as pallet::Config>::NativeCurrency::balance(&letting_agent);
 
         #[extrinsic_call]
         add_letting_agent(RawOrigin::Signed(letting_agent.clone()), region_id, location.clone());
@@ -376,7 +382,7 @@ mod benchmarks {
         assert_eq!(letting_info.locations.get(&location).unwrap().assigned_properties, 0);
         assert_eq!(
             <T as pallet::Config>::NativeCurrency::balance(&letting_agent),
-            deposit - T::LettingAgentDeposit::get()
+            balance_before - T::LettingAgentDeposit::get()
         );
     }
 
@@ -394,6 +400,7 @@ mod benchmarks {
 
         let deposit = T::LettingAgentDeposit::get().saturating_mul(20u32.into());
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(&letting_agent, deposit));
+        let balance_before = <T as pallet::Config>::NativeCurrency::balance(&letting_agent);
 
         assert_ok!(PropertyManagement::<T>::add_letting_agent(
             RawOrigin::Signed(letting_agent.clone()).into(),
@@ -402,14 +409,14 @@ mod benchmarks {
         ));
         assert_eq!(
             <T as pallet::Config>::NativeCurrency::balance(&letting_agent),
-            deposit - T::LettingAgentDeposit::get()
+            balance_before - T::LettingAgentDeposit::get()
         );
 
         #[extrinsic_call]
         remove_letting_agent(RawOrigin::Signed(letting_agent.clone()), location.clone());
 
         assert!(LettingInfo::<T>::get(&letting_agent).is_none());
-        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&letting_agent), deposit);
+        assert_eq!(<T as pallet::Config>::NativeCurrency::balance(&letting_agent), balance_before);
     }
 
     #[benchmark]

@@ -19,13 +19,13 @@ pallets=(
     #pallet_vesting
     #pallet_nfts
     #pallet_nft_fractionalization
-    pallet_xcavate_whitelist
-    pallet_education_regions
-    pallet_real_x_education
-    pallet_regions
+    #pallet_xcavate_whitelist
+    #pallet_education_regions
+    #pallet_real_x_education
+    #pallet_regions
     pallet_marketplace
-    pallet_property_management
-    pallet_property_governance
+    #pallet_property_management
+    #pallet_property_governance
     #pallet_bucket
     #attestation
     #ctype

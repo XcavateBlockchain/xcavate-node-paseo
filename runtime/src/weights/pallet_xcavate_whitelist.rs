@@ -39,8 +39,8 @@ impl<T: frame_system::Config> pallet_xcavate_whitelist::WeightInfo for WeightInf
 		// Proof Size summary in bytes:
 		//  Measured:  `80`
 		//  Estimated: `3513`
-		// Minimum execution time: 16_523_000 picoseconds.
-		Weight::from_parts(17_544_000, 0)
+		// Minimum execution time: 9_535_000 picoseconds.
+		Weight::from_parts(9_962_000, 0)
 			.saturating_add(Weight::from_parts(0, 3513))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -51,8 +51,8 @@ impl<T: frame_system::Config> pallet_xcavate_whitelist::WeightInfo for WeightInf
 		// Proof Size summary in bytes:
 		//  Measured:  `154`
 		//  Estimated: `3513`
-		// Minimum execution time: 19_657_000 picoseconds.
-		Weight::from_parts(20_750_000, 0)
+		// Minimum execution time: 11_306_000 picoseconds.
+		Weight::from_parts(11_682_000, 0)
 			.saturating_add(Weight::from_parts(0, 3513))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -71,8 +71,8 @@ impl<T: frame_system::Config> pallet_xcavate_whitelist::WeightInfo for WeightInf
 		// Proof Size summary in bytes:
 		//  Measured:  `940`
 		//  Estimated: `3675`
-		// Minimum execution time: 111_908_000 picoseconds.
-		Weight::from_parts(116_042_000, 0)
+		// Minimum execution time: 63_260_000 picoseconds.
+		Weight::from_parts(65_211_000, 0)
 			.saturating_add(Weight::from_parts(0, 3675))
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(4))
@@ -85,8 +85,8 @@ impl<T: frame_system::Config> pallet_xcavate_whitelist::WeightInfo for WeightInf
 		// Proof Size summary in bytes:
 		//  Measured:  `245`
 		//  Estimated: `3531`
-		// Minimum execution time: 30_147_000 picoseconds.
-		Weight::from_parts(31_590_000, 0)
+		// Minimum execution time: 17_416_000 picoseconds.
+		Weight::from_parts(17_890_000, 0)
 			.saturating_add(Weight::from_parts(0, 3531))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -99,8 +99,8 @@ impl<T: frame_system::Config> pallet_xcavate_whitelist::WeightInfo for WeightInf
 		// Proof Size summary in bytes:
 		//  Measured:  `245`
 		//  Estimated: `3531`
-		// Minimum execution time: 31_059_000 picoseconds.
-		Weight::from_parts(32_329_000, 0)
+		// Minimum execution time: 17_826_000 picoseconds.
+		Weight::from_parts(18_294_000, 0)
 			.saturating_add(Weight::from_parts(0, 3531))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
