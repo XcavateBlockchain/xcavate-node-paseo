@@ -102,14 +102,14 @@ pub fn live_xcavate_config() -> ChainSpec {
 
     // collators1 - ganesh
     let collator_0_account_id: AccountId =
-        AccountId::from_ss58check("5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8").unwrap();
+        AccountId::from_ss58check("5D35UXRqoYT9NrD8yu2bpy1LGi1YTneacmW3qVDLkEVG8rNY").unwrap();
     let collator_0_aura_id: AuraId =
-        AuraId::from_ss58check("5FWUf4AUy1cy1cs3DBMgMwFreG3ZK8d5tvb2SV3gsnvfRqn8").unwrap();
+        AuraId::from_ss58check("5D35UXRqoYT9NrD8yu2bpy1LGi1YTneacmW3qVDLkEVG8rNY").unwrap();
     // collators2 - connor
     let collator_1_account_id: AccountId =
-        AccountId::from_ss58check("5FZ1JXzkPnjxTvbsief2wi2JZJvgBdzjXyi5nCh9g7FPDhvX").unwrap();
+        AccountId::from_ss58check("5GNKZvErffZwhw1qRxjCbaeN7xmxkc64dziffWz5s8HqZnjS").unwrap();
     let collator_1_aura_id: AuraId =
-        AuraId::from_ss58check("5FZ1JXzkPnjxTvbsief2wi2JZJvgBdzjXyi5nCh9g7FPDhvX").unwrap();
+        AuraId::from_ss58check("5GNKZvErffZwhw1qRxjCbaeN7xmxkc64dziffWz5s8HqZnjS").unwrap();
 
     ChainSpec::builder(
         xcavate_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),

@@ -32,3 +32,4 @@ coverage
 # fuzzing output
 **/template-fuzzer/output
 keys.txt
+keys-command-chainspec.txt
