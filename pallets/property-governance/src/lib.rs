@@ -51,7 +51,7 @@ use primitives::MarketplaceFreezeReason;
 
 use pallet_real_world_asset::{
     traits::{
-        PropertyTokenInspect, PropertyTokenManage, PropertyTokenOwnership, PropertyTokenSpvControl,
+        PropertySharesInspect, PropertySharesManage, PropertySharesOwnership, PropertySharesSpvControl,
     },
     PropertyAssetDetails,
 };
@@ -214,22 +214,22 @@ pub mod pallet {
         /// Handler for the unbalanced reduction when slashing a letting agent.
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-        /// Property token management traits.
-        type PropertyToken: PropertyTokenManage<
+        /// Property share management traits.
+        type PropertyShares: PropertySharesManage<
                 AccountIdOf<Self>,
                 <Self as pallet::Config>::Balance,
                 <Self as pallet::Config>::NftId,
                 <Self as pallet::Config>::StringLimit,
                 LocationId<Self>,
-            > + PropertyTokenOwnership<AccountIdOf<Self>>
-            + PropertyTokenSpvControl<
+            > + PropertySharesOwnership<AccountIdOf<Self>>
+            + PropertySharesSpvControl<
                 PropertyAssetInfo = PropertyAssetDetails<
                     <Self as pallet::Config>::NftId,
                     <Self as pallet::Config>::NftCollectionId,
                     <Self as pallet::Config>::Balance,
                     LocationId<Self>,
                 >,
-            > + PropertyTokenInspect<
+            > + PropertySharesInspect<
                 AccountIdOf<Self>,
                 PropertyAssetInfo = PropertyAssetDetails<
                     <Self as pallet::Config>::NftId,
@@ -383,8 +383,8 @@ pub mod pallet {
         ProposalProcessingFailed { asset_id: u32, error: DispatchResult },
         /// Processing of a challenge failed.
         ChallengeProcessingFailed { asset_id: u32, error: DispatchResult },
-        /// A user’s tokens were unfrozen after voting.
-        TokenUnfrozen { proposal_id: ProposalId, asset_id: u32, voter: AccountIdOf<T>, amount: u32 },
+        /// A user’s shares were unfrozen after voting.
+        SharesUnfrozen { proposal_id: ProposalId, asset_id: u32, voter: AccountIdOf<T>, amount: u32 },
     }
 
     #[pallet::error]
@@ -403,13 +403,13 @@ pub mod pallet {
         NoObjectFound,
         /// Arithmetic overflow occurred.
         ArithmeticOverflow,
-        /// Token amount is zero.
-        ZeroTokenAmount,
+        /// Share amount is zero.
+        ZeroShareAmount,
         /// The letting agent has already too many assigned properties.
         TooManyAssignedProperties,
         /// A challenge against a letting agent is already ongoing.
         ChallengeAlreadyOngoing,
-        /// The user has no token amount frozen.
+        /// The user has no share amount frozen.
         NoFrozenAmount,
         /// The voting is still ongoing.
         VotingStillOngoing,
@@ -584,7 +584,7 @@ pub mod pallet {
                 &Role::RealEstateInvestor,
             )?;
             // Ensure the caller is one of the owners of the property
-            let owner_list = <T as pallet::Config>::PropertyToken::get_property_owner(asset_id);
+            let owner_list = <T as pallet::Config>::PropertyShares::get_property_owner(asset_id);
             ensure!(owner_list.contains(&signer), Error::<T>::NoPermission);
             ensure!(
                 pallet_property_management::LettingStorage::<T>::get(asset_id).is_some(),
@@ -643,7 +643,7 @@ pub mod pallet {
         /// Parameters:
         /// - `proposal_id`: The index of the proposal.
         /// - `vote`: Must be either a Yes vote or a No vote.
-        /// - `amount`: The amount of property token that the caller is using for voting.
+        /// - `amount`: The amount of property shares that the caller is using for voting.
         ///
         /// Emits `VotedOnProposal` event when successful.
         #[pallet::call_index(2)]
@@ -661,13 +661,13 @@ pub mod pallet {
             let proposal_id = AssetProposal::<T>::get(asset_id).ok_or(Error::<T>::NotOngoing)?;
             ensure!(Proposals::<T>::get(proposal_id).is_some(), Error::<T>::NotOngoing);
             // Ensure the caller is one of the owners of the property.
-            let owner_list = <T as pallet::Config>::PropertyToken::get_property_owner(asset_id);
+            let owner_list = <T as pallet::Config>::PropertyShares::get_property_owner(asset_id);
             ensure!(owner_list.contains(&signer), Error::<T>::NoPermission);
 
-            // Ensure the vote amount is valid and the voter has enough tokens.
+            // Ensure the vote amount is valid and the voter has enough shares.
             ensure!(amount > 0, Error::<T>::ZeroVoteAmount);
             let voting_power =
-                <T as pallet::Config>::PropertyToken::get_token_balance(asset_id, &signer);
+                <T as pallet::Config>::PropertyShares::get_share_balance(asset_id, &signer);
             ensure!(voting_power >= amount, Error::<T>::NoPermission);
             // Update the voting state for this proposal.
             OngoingProposalVotes::<T>::try_mutate(proposal_id, |maybe_current_vote| {
@@ -691,17 +691,17 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Lets a voter unlock his locked token after voting on a proposal.
+        /// Lets a voter unlock his locked shares after voting on a proposal.
         ///
         /// The origin must be signed and have sufficient funds.
         ///
         /// Parameters:
         /// - `proposal_id`: Id of the proposal.
         ///
-        /// Emits `TokenUnfrozen` event when successful.
+        /// Emits `SharesUnfrozen` event when successful.
         #[pallet::call_index(3)]
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::unfreeze_proposal_token())]
-        pub fn unfreeze_proposal_token(
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::unfreeze_proposal_shares())]
+        pub fn unfreeze_proposal_shares(
             origin: OriginFor<T>,
             proposal_id: ProposalId,
         ) -> DispatchResult {
@@ -712,7 +712,7 @@ pub mod pallet {
             // Ensure the proposal voting has ended.
             ensure!(!Proposals::<T>::contains_key(proposal_id), Error::<T>::VotingStillOngoing);
 
-            // Unfreeze the voter's tokens.
+            // Unfreeze the voter's shares.
             <T as pallet::Config>::AssetsFreezer::decrease_frozen(
                 vote_record.asset_id,
                 &MarketplaceFreezeReason::ProposalVoting,
@@ -722,7 +722,7 @@ pub mod pallet {
 
             UserProposalVote::<T>::remove(proposal_id, &signer);
 
-            Self::deposit_event(Event::TokenUnfrozen {
+            Self::deposit_event(Event::SharesUnfrozen {
                 proposal_id,
                 asset_id: vote_record.asset_id,
                 voter: signer,
@@ -738,7 +738,7 @@ pub mod pallet {
         /// Parameters:
         /// - `asset_id: u32`: The index of the challenge.
         /// - `vote`: Must be either a Yes vote or a No vote.
-        /// - `amount`: The amount of property token that the caller is using for voting.
+        /// - `amount`: The amount of property shares that the caller is using for voting.
         ///
         /// Emits `VotedOnChallenge` event when successful.
         #[pallet::call_index(4)]
@@ -756,13 +756,13 @@ pub mod pallet {
             let proposal_id =
                 AssetLettingChallenge::<T>::get(asset_id).ok_or(Error::<T>::NotOngoing)?;
             ensure!(Challenges::<T>::get(proposal_id).is_some(), Error::<T>::NotOngoing);
-            let owner_list = <T as pallet::Config>::PropertyToken::get_property_owner(asset_id);
+            let owner_list = <T as pallet::Config>::PropertyShares::get_property_owner(asset_id);
             ensure!(owner_list.contains(&signer), Error::<T>::NoPermission);
 
-            // Ensure the vote amount is valid and the voter has enough tokens.
+            // Ensure the vote amount is valid and the voter has enough shares.
             ensure!(amount > 0, Error::<T>::ZeroVoteAmount);
             let voting_power =
-                <T as pallet::Config>::PropertyToken::get_token_balance(asset_id, &signer);
+                <T as pallet::Config>::PropertyShares::get_share_balance(asset_id, &signer);
             ensure!(voting_power >= amount, Error::<T>::NoPermission);
 
             // Update the voting state for this challenge.
@@ -787,17 +787,17 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Lets a voter unlock his locked token after voting on a letting agent challenge.
+        /// Lets a voter unlock his locked shares after voting on a letting agent challenge.
         ///
         /// The origin must be signed and have sufficient funds.
         ///
         /// Parameters:
         /// - `proposal_id`: Id of the letting agent challenge.
         ///
-        /// Emits `TokenUnfrozen` event when successful.
+        /// Emits `SharesUnfrozen` event when successful.
         #[pallet::call_index(5)]
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::unfreeze_challenge_token())]
-        pub fn unfreeze_challenge_token(
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::unfreeze_challenge_shares())]
+        pub fn unfreeze_challenge_shares(
             origin: OriginFor<T>,
             proposal_id: ProposalId,
         ) -> DispatchResult {
@@ -808,7 +808,7 @@ pub mod pallet {
             // Ensure the challenge voting has ended.
             ensure!(!Challenges::<T>::contains_key(proposal_id), Error::<T>::VotingStillOngoing);
 
-            // Unfreeze the voter's tokens.
+            // Unfreeze the voter's shares.
             <T as pallet::Config>::AssetsFreezer::decrease_frozen(
                 vote_record.asset_id,
                 &MarketplaceFreezeReason::ChallengeVoting,
@@ -818,7 +818,7 @@ pub mod pallet {
 
             UserChallengeVote::<T>::remove(proposal_id, &signer);
 
-            Self::deposit_event(Event::TokenUnfrozen {
+            Self::deposit_event(Event::SharesUnfrozen {
                 proposal_id,
                 asset_id: vote_record.asset_id,
                 voter: signer,
@@ -868,12 +868,12 @@ pub mod pallet {
             let proposals = Proposals::<T>::take(proposal_id);
             if let Some(proposal) = proposals {
                 if let Some(voting_result) = voting_results {
-                    // Retrieve property details and validate token supply.
+                    // Retrieve property details and validate share supply.
                     let asset_details =
-                        <T as pallet::Config>::PropertyToken::get_property_asset_info(asset_id);
+                        <T as pallet::Config>::PropertyShares::get_property_asset_info(asset_id);
                     if let Some(asset_details) = asset_details {
-                        let total_supply = asset_details.token_amount;
-                        ensure!(total_supply > 0, Error::<T>::ZeroTokenAmount);
+                        let total_supply = asset_details.share_amount;
+                        ensure!(total_supply > 0, Error::<T>::ZeroShareAmount);
 
                         let total_votes = voting_result
                             .yes_voting_power
@@ -935,10 +935,10 @@ pub mod pallet {
             let voting_result =
                 OngoingChallengeVotes::<T>::take(proposal_id).ok_or(Error::<T>::NotOngoing)?;
             let asset_details =
-                <T as pallet::Config>::PropertyToken::get_property_asset_info(asset_id)
+                <T as pallet::Config>::PropertyShares::get_property_asset_info(asset_id)
                     .ok_or(Error::<T>::AssetNotFound)?;
-            let total_supply = asset_details.token_amount;
-            ensure!(total_supply > 0, Error::<T>::ZeroTokenAmount);
+            let total_supply = asset_details.share_amount;
+            ensure!(total_supply > 0, Error::<T>::ZeroShareAmount);
 
             // Calculate total votes and check quorum.
             let total_votes = voting_result
@@ -1026,7 +1026,7 @@ pub mod pallet {
         ) -> DispatchResult {
             // If the user already voted before, undo their previous vote.
             if let Some(previous_vote) = maybe_vote_record.take() {
-                // Unfreeze the previously frozen tokens.
+                // Unfreeze the previously frozen shares.
                 <T as pallet::Config>::AssetsFreezer::decrease_frozen(
                     asset_id,
                     freeze_reason,
@@ -1051,7 +1051,7 @@ pub mod pallet {
                 }
             }
 
-            // Freeze the new voting tokens for this vote.
+            // Freeze the new voting shares for this vote.
             <T as pallet::Config>::AssetsFreezer::increase_frozen(
                 asset_id,
                 freeze_reason,

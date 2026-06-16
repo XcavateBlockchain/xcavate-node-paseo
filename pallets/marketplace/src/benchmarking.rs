@@ -134,12 +134,12 @@ fn list_property_helper<T: Config>(
     seller: T::AccountId,
     region_id: u16,
     location: LocationId<T>,
-    token_amount: u32,
-    token_price: <T as pallet::Config>::Balance,
+    share_amount: u32,
+    share_price: <T as pallet::Config>::Balance,
     tax_paid_by_developer: bool,
 ) -> u32 {
     fund_pallet_account::<T>();
-    let property_price = token_price.saturating_mul((token_amount as u128).into());
+    let property_price = share_price.saturating_mul((share_amount as u128).into());
     let deposit_amount = property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
     assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
         &seller,
@@ -153,8 +153,8 @@ fn list_property_helper<T: Config>(
         RawOrigin::Signed(seller).into(),
         region_id,
         location,
-        token_price,
-        token_amount,
+        share_price,
+        share_amount,
         metadata,
         tax_paid_by_developer,
     ));
@@ -170,9 +170,9 @@ fn list_and_sell_property<T: Config>(
     admin: T::AccountId,
 ) -> T::AccountId {
     fund_pallet_account::<T>();
-    let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-    let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
-    let property_price = token_price.saturating_mul((token_amount as u128).into());
+    let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+    let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
+    let property_price = share_price.saturating_mul((share_amount as u128).into());
     let deposit_amount = property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
     assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
         &seller,
@@ -187,8 +187,8 @@ fn list_and_sell_property<T: Config>(
         RawOrigin::Signed(seller).into(),
         region_id,
         location,
-        token_price,
-        token_amount,
+        share_price,
+        share_amount,
         metadata,
         tax_paid_by_developer,
     ));
@@ -210,9 +210,9 @@ fn list_and_sell_property<T: Config>(
         buyer.clone(),
         Role::RealEstateInvestor
     ));
-    add_buyers_to_listing::<T>(token_amount - 1, payment_asset, property_price, admin.clone());
+    add_buyers_to_listing::<T>(share_amount - 1, payment_asset, property_price, admin.clone());
 
-    assert_ok!(Marketplace::<T>::buy_property_token(
+    assert_ok!(Marketplace::<T>::buy_property_shares(
         RawOrigin::Signed(buyer.clone()).into(),
         listing_id,
         1,
@@ -225,11 +225,11 @@ fn list_and_sell_property<T: Config>(
         Role::SpvConfirmation
     ));
     assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-    assert_ok!(Marketplace::<T>::claim_property_token(
+    assert_ok!(Marketplace::<T>::claim_property_shares(
         RawOrigin::Signed(buyer.clone()).into(),
         listing_id,
     ));
-    claim_buyers_property_token::<T>(token_amount - 1, listing_id);
+    claim_buyers_property_shares::<T>(share_amount - 1, listing_id);
     buyer
 }
 
@@ -239,7 +239,7 @@ fn create_registered_property<T: Config>(
     location: LocationId<T>,
     admin: T::AccountId,
 ) -> T::AccountId {
-    let token_owner =
+    let share_owner =
         list_and_sell_property::<T>(seller.clone(), region_id, location, admin.clone());
     let lawyer_1: T::AccountId = account("lawyer1", 0, 0);
     let lawyer_2: T::AccountId = account("lawyer2", 0, 0);
@@ -288,7 +288,7 @@ fn create_registered_property<T: Config>(
         crate::LegalProperty::SpvSide,
         400_u32.into()
     ));
-    for i in 1..=<T as pallet::Config>::MaxPropertyToken::get() - 1 {
+    for i in 1..=<T as pallet::Config>::MaxPropertyShares::get() - 1 {
         let buyer: T::AccountId = account("buyer", i, i);
         assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
             RawOrigin::Signed(buyer).into(),
@@ -300,7 +300,7 @@ fn create_registered_property<T: Config>(
     let expiry = frame_system::Pallet::<T>::block_number() + T::LawyerVotingTime::get();
     frame_system::Pallet::<T>::set_block_number(expiry);
     assert_ok!(Marketplace::<T>::finalize_spv_lawyer(
-        RawOrigin::Signed(token_owner.clone()).into(),
+        RawOrigin::Signed(share_owner.clone()).into(),
         0,
     ));
 
@@ -314,7 +314,7 @@ fn create_registered_property<T: Config>(
         0,
         true
     ));
-    token_owner
+    share_owner
 }
 
 fn add_buyers_to_listing<T: Config>(
@@ -342,7 +342,7 @@ fn add_buyers_to_listing<T: Config>(
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer).into(),
             0,
             1,
@@ -351,10 +351,10 @@ fn add_buyers_to_listing<T: Config>(
     }
 }
 
-fn claim_buyers_property_token<T: Config>(buyers: u32, listing_id: ListingId) {
+fn claim_buyers_property_shares<T: Config>(buyers: u32, listing_id: ListingId) {
     for i in 1..=buyers {
         let buyer: T::AccountId = account("buyer", i, i);
-        assert_ok!(Marketplace::<T>::claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_shares(
             RawOrigin::Signed(buyer).into(),
             listing_id
         ));
@@ -418,12 +418,12 @@ fn setup_spv_and_lawyers<T: Config>(
     ));
 
     for helper_buyer in buyers {
-        let token_amount = T::PropertyToken::get_token_balance(0, &helper_buyer);
+        let share_amount = T::PropertyShares::get_share_balance(0, &helper_buyer);
         assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
             RawOrigin::Signed(helper_buyer).into(),
             listing_id,
             types::Vote::Yes,
-            token_amount
+            share_amount
         ));
     }
 
@@ -441,9 +441,9 @@ mod benchmarks {
     fn list_property(m: Linear<0, { <T as pallet::Config>::StringLimit::get() }>) {
         let (signer, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(signer.clone(), admin);
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
@@ -462,32 +462,32 @@ mod benchmarks {
             RawOrigin::Signed(signer.clone()),
             region_id,
             location,
-            token_price,
-            token_amount,
+            share_price,
+            share_amount,
             metadata,
             tax_paid_by_developer,
         );
 
         let listing_id = 0;
         let listing = OngoingObjectListing::<T>::get(listing_id).unwrap();
-        assert_eq!(listing.listed_token_amount, token_amount);
+        assert_eq!(listing.listed_share_amount, share_amount);
         assert_eq!(ListingDeposits::<T>::get(listing_id).unwrap().0, signer);
-        assert_eq!(listing.token_price, token_price);
+        assert_eq!(listing.share_price, share_price);
         assert_eq!(listing.tax_paid_by_developer, tax_paid_by_developer);
     }
 
     #[benchmark]
-    fn buy_property_token_single_token(
-        a: Linear<1, { <T as pallet::Config>::MaxPropertyToken::get().saturating_sub(1) }>,
-        b: Linear<0, { <T as pallet::Config>::MaxPropertyToken::get().saturating_sub(2) }>,
+    fn buy_property_shares_single_share(
+        a: Linear<1, { <T as pallet::Config>::MaxPropertyShares::get().saturating_sub(1) }>,
+        b: Linear<0, { <T as pallet::Config>::MaxPropertyShares::get().saturating_sub(2) }>,
     ) {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id =
-            list_property_helper::<T>(seller, region_id, location, token_amount, token_price, true);
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+            list_property_helper::<T>(seller, region_id, location, share_amount, share_price, true);
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
         let payment_asset = T::AcceptedAssets::get()[0];
@@ -508,9 +508,9 @@ mod benchmarks {
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        let amount: u32 = a.min(token_amount - b - 1);
+        let amount: u32 = a.min(share_amount - b - 1);
 
-        let buyer_amount = if amount >= token_amount * 50 / 100 {
+        let buyer_amount = if amount >= share_amount * 50 / 100 {
             let base = amount / 3;
             let remainder = amount % 3;
             for i in 1..=2 {
@@ -529,7 +529,7 @@ mod benchmarks {
                     buyer_helper.clone(),
                     Role::RealEstateInvestor
                 ));
-                assert_ok!(Marketplace::<T>::buy_property_token(
+                assert_ok!(Marketplace::<T>::buy_property_shares(
                     RawOrigin::Signed(buyer_helper.clone()).into(),
                     listing_id,
                     base,
@@ -542,7 +542,7 @@ mod benchmarks {
         };
 
         #[extrinsic_call]
-        buy_property_token(
+        buy_property_shares(
             RawOrigin::Signed(buyer.clone()),
             listing_id,
             buyer_amount,
@@ -550,33 +550,33 @@ mod benchmarks {
         );
 
         assert_eq!(
-            OngoingObjectListing::<T>::get(listing_id).unwrap().listed_token_amount,
-            token_amount - amount - b
+            OngoingObjectListing::<T>::get(listing_id).unwrap().listed_share_amount,
+            share_amount - amount - b
         );
-        let token_owner = TokenOwner::<T>::get(&buyer, listing_id).unwrap();
-        assert_eq!(token_owner.token_amount, buyer_amount);
+        let share_owner = ShareOwner::<T>::get(&buyer, listing_id).unwrap();
+        assert_eq!(share_owner.share_amount, buyer_amount);
         assert!(PropertyLawyer::<T>::get(listing_id).is_none());
     }
 
     #[benchmark]
-    fn buy_property_token_all_token(
-        b: Linear<1, { <T as pallet::Config>::MaxPropertyToken::get() }>,
+    fn buy_property_shares_all_shares(
+        b: Linear<1, { <T as pallet::Config>::MaxPropertyShares::get() }>,
         n: Linear<1, { <T as pallet::Config>::AcceptedAssets::get().len() as u32 }>,
     ) {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id =
-            list_property_helper::<T>(seller, region_id, location, token_amount, token_price, true);
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+            list_property_helper::<T>(seller, region_id, location, share_amount, share_price, true);
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
         let payment_asset = T::AcceptedAssets::get()[0];
         add_buyers_to_listing::<T>(b - 1, payment_asset, property_price, admin.clone());
 
         let buyer: T::AccountId = account("buyer_final", 0, 0);
-        let amount: u32 = token_amount - (b - 1);
+        let amount: u32 = share_amount - (b - 1);
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
             &buyer,
             deposit_amount.saturating_mul(20u32.into())
@@ -591,7 +591,7 @@ mod benchmarks {
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        let buyer_amount = if amount >= token_amount * 50 / 100 {
+        let buyer_amount = if amount >= share_amount * 50 / 100 {
             let base = amount / 3;
             let remainder = amount % 3;
             for i in 1..=2 {
@@ -610,7 +610,7 @@ mod benchmarks {
                     buyer_helper.clone(),
                     Role::RealEstateInvestor
                 ));
-                assert_ok!(Marketplace::<T>::buy_property_token(
+                assert_ok!(Marketplace::<T>::buy_property_shares(
                     RawOrigin::Signed(buyer_helper.clone()).into(),
                     listing_id,
                     base,
@@ -623,30 +623,29 @@ mod benchmarks {
         };
 
         #[extrinsic_call]
-        buy_property_token(
+        buy_property_shares(
             RawOrigin::Signed(buyer.clone()),
             listing_id,
             buyer_amount,
             payment_asset,
         );
 
-        assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_token_amount, 0);
-        //assert!(TokenBuyer::<T>::get(listing_id).contains(&buyer));
-        let token_owner = TokenOwner::<T>::get(&buyer, listing_id).unwrap();
-        assert_eq!(token_owner.token_amount, buyer_amount);
-        assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_token_amount, 0);
+        assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_share_amount, 0);
+        let share_owner = ShareOwner::<T>::get(&buyer, listing_id).unwrap();
+        assert_eq!(share_owner.share_amount, buyer_amount);
+        assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_share_amount, 0);
     }
 
     #[benchmark]
-    fn claim_property_token() {
+    fn claim_property_shares() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
 
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id =
-            list_property_helper::<T>(seller, region_id, location, token_amount, token_price, true);
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+            list_property_helper::<T>(seller, region_id, location, share_amount, share_price, true);
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
         let payment_asset = T::AcceptedAssets::get()[0];
@@ -665,9 +664,9 @@ mod benchmarks {
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        add_buyers_to_listing::<T>(token_amount - 1, payment_asset, property_price, admin.clone());
+        add_buyers_to_listing::<T>(share_amount - 1, payment_asset, property_price, admin.clone());
 
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             1,
@@ -680,12 +679,12 @@ mod benchmarks {
             Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-        claim_buyers_property_token::<T>(token_amount - 1, listing_id);
+        claim_buyers_property_shares::<T>(share_amount - 1, listing_id);
 
         #[extrinsic_call]
-        claim_property_token(RawOrigin::Signed(buyer.clone()), listing_id);
+        claim_property_shares(RawOrigin::Signed(buyer.clone()), listing_id);
 
-        assert!(TokenOwner::<T>::get(&buyer, listing_id).is_none());
+        assert!(ShareOwner::<T>::get(&buyer, listing_id).is_none());
         assert_eq!(
             OngoingObjectListing::<T>::get(listing_id)
                 .unwrap()
@@ -695,7 +694,7 @@ mod benchmarks {
                 .unwrap()
                 .paid_funds
                 .get(&payment_asset),
-            Some(token_price).as_ref()
+            Some(share_price).as_ref()
         );
     }
 
@@ -704,11 +703,11 @@ mod benchmarks {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
 
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id =
-            list_property_helper::<T>(seller, region_id, location, token_amount, token_price, true);
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+            list_property_helper::<T>(seller, region_id, location, share_amount, share_price, true);
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
         let payment_asset = T::AcceptedAssets::get()[0];
@@ -727,9 +726,9 @@ mod benchmarks {
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        add_buyers_to_listing::<T>(token_amount - 1, payment_asset, property_price, admin.clone());
+        add_buyers_to_listing::<T>(share_amount - 1, payment_asset, property_price, admin.clone());
 
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             1,
@@ -742,7 +741,7 @@ mod benchmarks {
             Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-        claim_buyers_property_token::<T>(token_amount - 1, listing_id);
+        claim_buyers_property_shares::<T>(share_amount - 1, listing_id);
 
         let expiry =
             frame_system::Pallet::<T>::block_number() + T::ClaimWindow::get() + 1u32.into();
@@ -755,7 +754,7 @@ mod benchmarks {
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             1,
@@ -769,7 +768,7 @@ mod benchmarks {
         finalize_claim_window(RawOrigin::Signed(buyer.clone()), listing_id);
 
         assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().claim_expiry, None);
-        assert_eq!(RefundClaimedToken::<T>::get(listing_id), Some(token_amount - 1));
+        assert_eq!(RefundClaimedShare::<T>::get(listing_id), Some(share_amount - 1));
     }
 
     #[benchmark]
@@ -777,11 +776,11 @@ mod benchmarks {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
 
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id =
-            list_property_helper::<T>(seller, region_id, location, token_amount, token_price, true);
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+            list_property_helper::<T>(seller, region_id, location, share_amount, share_price, true);
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
         let payment_asset = T::AcceptedAssets::get()[0];
@@ -800,9 +799,9 @@ mod benchmarks {
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        add_buyers_to_listing::<T>(token_amount - 1, payment_asset, property_price, admin.clone());
+        add_buyers_to_listing::<T>(share_amount - 1, payment_asset, property_price, admin.clone());
 
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             1,
@@ -819,14 +818,14 @@ mod benchmarks {
         #[extrinsic_call]
         create_spv(RawOrigin::Signed(spv_admin.clone()), listing_id);
 
-        assert!(T::PropertyToken::get_property_asset_info(0).unwrap().spv_created);
+        assert!(T::PropertyShares::get_property_asset_info(0).unwrap().spv_created);
     }
 
     #[benchmark]
-    fn relist_token() {
+    fn relist_shares() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_owner =
+        let share_owner =
             create_registered_property::<T>(seller.clone(), region_id, location, admin);
 
         let asset_id = 0;
@@ -834,28 +833,28 @@ mod benchmarks {
         let price = 5_000u32.into();
 
         #[extrinsic_call]
-        relist_token(RawOrigin::Signed(token_owner.clone()), asset_id, price, amount);
+        relist_shares(RawOrigin::Signed(share_owner.clone()), asset_id, price, amount);
 
-        let listing = TokenListings::<T>::get(1).unwrap();
-        assert_eq!(listing.seller, token_owner);
-        assert_eq!(listing.token_price, price);
+        let listing = ShareListings::<T>::get(1).unwrap();
+        assert_eq!(listing.seller, share_owner);
+        assert_eq!(listing.share_price, price);
         assert_eq!(listing.amount, amount);
         assert_eq!(NextListingId::<T>::get(), 2);
     }
 
     #[benchmark]
-    fn buy_relisted_token() {
+    fn buy_relisted_shares() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_owner =
+        let share_owner =
             create_registered_property::<T>(seller.clone(), region_id, location, admin.clone());
 
         let asset_id = 0;
         let amount = 1;
         let price = 5_000u32.into();
 
-        assert_ok!(Marketplace::<T>::relist_token(
-            RawOrigin::Signed(token_owner.clone()).into(),
+        assert_ok!(Marketplace::<T>::relist_shares(
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id,
             price,
             amount
@@ -880,28 +879,28 @@ mod benchmarks {
         ));
 
         #[extrinsic_call]
-        buy_relisted_token(RawOrigin::Signed(relist_buyer.clone()), 1, amount, payment_asset);
+        buy_relisted_shares(RawOrigin::Signed(relist_buyer.clone()), 1, amount, payment_asset);
 
-        assert!(!TokenListings::<T>::contains_key(1));
-        assert!(T::PropertyToken::get_property_owner(asset_id).contains(&relist_buyer));
-        assert!(!T::PropertyToken::get_property_owner(asset_id).contains(&token_owner));
-        assert_eq!(T::PropertyToken::get_token_balance(asset_id, &relist_buyer), amount);
-        assert_eq!(T::PropertyToken::get_token_balance(asset_id, &token_owner), 0);
+        assert!(!ShareListings::<T>::contains_key(1));
+        assert!(T::PropertyShares::get_property_owner(asset_id).contains(&relist_buyer));
+        assert!(!T::PropertyShares::get_property_owner(asset_id).contains(&share_owner));
+        assert_eq!(T::PropertyShares::get_share_balance(asset_id, &relist_buyer), amount);
+        assert_eq!(T::PropertyShares::get_share_balance(asset_id, &share_owner), 0);
     }
 
     #[benchmark]
     fn cancel_property_purchase() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id =
-            list_property_helper::<T>(seller, region_id, location, token_amount, token_price, true);
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+            list_property_helper::<T>(seller, region_id, location, share_amount, share_price, true);
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
         let payment_asset = T::AcceptedAssets::get()[0];
-        add_buyers_to_listing::<T>(token_amount - 2, payment_asset, property_price, admin.clone());
+        add_buyers_to_listing::<T>(share_amount - 2, payment_asset, property_price, admin.clone());
 
         let buyer: T::AccountId = account("buyer_final", 0, 0);
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
@@ -920,36 +919,34 @@ mod benchmarks {
         ));
         let amount = 1;
 
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             amount,
             payment_asset,
         ));
 
-        assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_token_amount, 1);
-        //assert!(TokenBuyer::<T>::get(listing_id).contains(&buyer));
+        assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_share_amount, 1);
 
         #[extrinsic_call]
         cancel_property_purchase(RawOrigin::Signed(buyer.clone()), 0);
 
-        assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_token_amount, 2);
-        //assert!(!TokenBuyer::<T>::get(listing_id).contains(&buyer));
+        assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().listed_share_amount, 2);
     }
 
     #[benchmark]
     fn make_offer() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_owner =
+        let share_owner =
             create_registered_property::<T>(seller.clone(), region_id, location, admin.clone());
 
         let asset_id = 0;
         let amount = 1;
         let price = 5_000u32.into();
 
-        assert_ok!(Marketplace::<T>::relist_token(
-            RawOrigin::Signed(token_owner.clone()).into(),
+        assert_ok!(Marketplace::<T>::relist_shares(
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id,
             price,
             amount
@@ -978,22 +975,22 @@ mod benchmarks {
         #[extrinsic_call]
         make_offer(RawOrigin::Signed(offerer.clone()), 1, offer_price, amount, payment_asset);
 
-        assert_eq!(OngoingOffers::<T>::get(1, offerer).unwrap().token_price, offer_price);
+        assert_eq!(OngoingOffers::<T>::get(1, offerer).unwrap().share_price, offer_price);
     }
 
     #[benchmark]
     fn handle_offer() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_owner =
+        let share_owner =
             create_registered_property::<T>(seller.clone(), region_id, location, admin.clone());
 
         let asset_id = 0;
         let amount = 1;
         let price = 5_000u32.into();
 
-        assert_ok!(Marketplace::<T>::relist_token(
-            RawOrigin::Signed(token_owner.clone()).into(),
+        assert_ok!(Marketplace::<T>::relist_shares(
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id,
             price,
             amount
@@ -1028,7 +1025,7 @@ mod benchmarks {
         ));
 
         #[extrinsic_call]
-        handle_offer(RawOrigin::Signed(token_owner), 1, offerer.clone(), Offer::Accept, 0);
+        handle_offer(RawOrigin::Signed(share_owner), 1, offerer.clone(), Offer::Accept, 0);
 
         assert_eq!(OngoingOffers::<T>::get(1, offerer).is_none(), true);
     }
@@ -1037,15 +1034,15 @@ mod benchmarks {
     fn cancel_offer() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_owner =
+        let share_owner =
             create_registered_property::<T>(seller.clone(), region_id, location, admin.clone());
 
         let asset_id = 0;
         let amount = 1;
         let price = 5_000u32.into();
 
-        assert_ok!(Marketplace::<T>::relist_token(
-            RawOrigin::Signed(token_owner.clone()).into(),
+        assert_ok!(Marketplace::<T>::relist_shares(
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id,
             price,
             amount
@@ -1083,24 +1080,24 @@ mod benchmarks {
         cancel_offer(RawOrigin::Signed(offerer.clone()), 1);
 
         assert_eq!(OngoingOffers::<T>::get(1, offerer).is_none(), true);
-        assert!(TokenListings::<T>::contains_key(1));
+        assert!(ShareListings::<T>::contains_key(1));
     }
 
     #[benchmark]
     fn withdraw_rejected() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id = list_property_helper::<T>(
             seller.clone(),
             region_id,
             location,
-            token_amount,
-            token_price,
+            share_amount,
+            share_price,
             true,
         );
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
 
@@ -1120,8 +1117,8 @@ mod benchmarks {
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        let base = token_amount / 3;
-        let remainder = token_amount % 3;
+        let base = share_amount / 3;
+        let remainder = share_amount % 3;
         for i in 1..=2 {
             let buyer_helper: T::AccountId = account("buyer_helper", i, i);
             assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
@@ -1138,7 +1135,7 @@ mod benchmarks {
                 buyer_helper.clone(),
                 Role::RealEstateInvestor
             ));
-            assert_ok!(Marketplace::<T>::buy_property_token(
+            assert_ok!(Marketplace::<T>::buy_property_shares(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
                 base,
@@ -1146,7 +1143,7 @@ mod benchmarks {
             ));
         }
         let buyer_amount = base + remainder;
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             buyer_amount,
@@ -1159,15 +1156,15 @@ mod benchmarks {
             Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-        assert_ok!(Marketplace::<T>::claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_shares(
             RawOrigin::Signed(account("buyer_helper", 1, 1)).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_shares(
             RawOrigin::Signed(account("buyer_helper", 2, 2)).into(),
             listing_id,
         ));
@@ -1181,11 +1178,11 @@ mod benchmarks {
             vec![account("buyer_helper", 1, 1), account("buyer_helper", 2, 2)],
         );
 
-        assert_ok!(Marketplace::<T>::unfreeze_spv_lawyer_token(
+        assert_ok!(Marketplace::<T>::unfreeze_spv_lawyer_shares(
             RawOrigin::Signed(account("buyer_helper", 1, 1)).into(),
             0,
         ));
-        assert_ok!(Marketplace::<T>::unfreeze_spv_lawyer_token(
+        assert_ok!(Marketplace::<T>::unfreeze_spv_lawyer_shares(
             RawOrigin::Signed(account("buyer_helper", 2, 2)).into(),
             0,
         ));
@@ -1209,13 +1206,13 @@ mod benchmarks {
             listing_id,
         ));
 
-        assert!(RefundToken::<T>::get(listing_id).is_some());
+        assert!(RefundShare::<T>::get(listing_id).is_some());
 
         #[extrinsic_call]
         withdraw_rejected(RawOrigin::Signed(buyer.clone()), listing_id);
 
-        //assert_eq!(TokenOwner::<T>::get(&buyer, listing_id).token_amount, 0);
-        assert!(RefundToken::<T>::get(listing_id).is_none());
+        //assert_eq!(ShareOwner::<T>::get(&buyer, listing_id).share_amount, 0);
+        assert!(RefundShare::<T>::get(listing_id).is_none());
         assert!(ListingDeposits::<T>::get(listing_id).is_none());
     }
 
@@ -1223,17 +1220,17 @@ mod benchmarks {
     fn withdraw_legal_process_expired() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id = list_property_helper::<T>(
             seller.clone(),
             region_id,
             location,
-            token_amount,
-            token_price,
+            share_amount,
+            share_price,
             true,
         );
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
         let payment_asset = T::AcceptedAssets::get()[0];
@@ -1252,8 +1249,8 @@ mod benchmarks {
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        let base = token_amount / 3;
-        let remainder = token_amount % 3;
+        let base = share_amount / 3;
+        let remainder = share_amount % 3;
         for i in 1..=2 {
             let buyer_helper: T::AccountId = account("buyer_helper", i, i);
             assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
@@ -1270,7 +1267,7 @@ mod benchmarks {
                 buyer_helper.clone(),
                 Role::RealEstateInvestor
             ));
-            assert_ok!(Marketplace::<T>::buy_property_token(
+            assert_ok!(Marketplace::<T>::buy_property_shares(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
                 base,
@@ -1278,7 +1275,7 @@ mod benchmarks {
             ));
         }
         let buyer_amount = base + remainder;
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             buyer_amount,
@@ -1291,15 +1288,15 @@ mod benchmarks {
             Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-        assert_ok!(Marketplace::<T>::claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_shares(
             RawOrigin::Signed(account("buyer_helper", 1, 1)).into(),
             listing_id,
         ));
-        assert_ok!(Marketplace::<T>::claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_shares(
             RawOrigin::Signed(account("buyer_helper", 2, 2)).into(),
             listing_id,
         ));
@@ -1313,11 +1310,11 @@ mod benchmarks {
             vec![account("buyer_helper", 1, 1), account("buyer_helper", 2, 2)],
         );
 
-        assert_ok!(Marketplace::<T>::unfreeze_spv_lawyer_token(
+        assert_ok!(Marketplace::<T>::unfreeze_spv_lawyer_shares(
             RawOrigin::Signed(account("buyer_helper", 1, 1)).into(),
             0,
         ));
-        assert_ok!(Marketplace::<T>::unfreeze_spv_lawyer_token(
+        assert_ok!(Marketplace::<T>::unfreeze_spv_lawyer_shares(
             RawOrigin::Signed(account("buyer_helper", 2, 2)).into(),
             0,
         ));
@@ -1348,11 +1345,11 @@ mod benchmarks {
     fn withdraw_expired() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id =
-            list_property_helper::<T>(seller, region_id, location, token_amount, token_price, true);
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+            list_property_helper::<T>(seller, region_id, location, share_amount, share_price, true);
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
 
@@ -1373,7 +1370,7 @@ mod benchmarks {
             Role::RealEstateInvestor
         ));
 
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             10,
@@ -1387,7 +1384,7 @@ mod benchmarks {
         #[extrinsic_call]
         withdraw_expired(RawOrigin::Signed(buyer.clone()), listing_id);
 
-        //assert_eq!(TokenOwner::<T>::get(&buyer, listing_id).token_amount, 0);
+        //assert_eq!(ShareOwner::<T>::get(&buyer, listing_id).share_amount, 0);
         assert!(OngoingObjectListing::<T>::get(listing_id).is_none());
         assert!(ListingDeposits::<T>::get(listing_id).is_none());
     }
@@ -1396,14 +1393,14 @@ mod benchmarks {
     fn withdraw_deposit_unsold() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id = list_property_helper::<T>(
             seller.clone(),
             region_id,
             location,
-            token_amount,
-            token_price,
+            share_amount,
+            share_price,
             true,
         );
 
@@ -1417,7 +1414,6 @@ mod benchmarks {
         assert!(OngoingObjectListing::<T>::get(listing_id).is_none());
         assert!(ListingDeposits::<T>::get(listing_id).is_none());
         assert!(OngoingObjectListing::<T>::get(listing_id).is_none());
-        //assert_eq!(TokenBuyer::<T>::get(listing_id).len(), 0);
     }
 
     #[benchmark]
@@ -1425,11 +1421,11 @@ mod benchmarks {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
 
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id =
-            list_property_helper::<T>(seller, region_id, location, token_amount, token_price, true);
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+            list_property_helper::<T>(seller, region_id, location, share_amount, share_price, true);
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
         let payment_asset = T::AcceptedAssets::get()[0];
@@ -1448,8 +1444,8 @@ mod benchmarks {
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        let base = token_amount / 3;
-        let remainder = token_amount % 3;
+        let base = share_amount / 3;
+        let remainder = share_amount % 3;
         for i in 1..=2 {
             let buyer_helper: T::AccountId = account("buyer_helper", i, i);
             assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
@@ -1466,7 +1462,7 @@ mod benchmarks {
                 buyer_helper.clone(),
                 Role::RealEstateInvestor
             ));
-            assert_ok!(Marketplace::<T>::buy_property_token(
+            assert_ok!(Marketplace::<T>::buy_property_shares(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
                 base,
@@ -1474,7 +1470,7 @@ mod benchmarks {
             ));
         }
         let buyer_amount = base + remainder;
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             buyer_amount,
@@ -1489,7 +1485,7 @@ mod benchmarks {
         ));
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
 
-        assert_ok!(Marketplace::<T>::claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
         ));
@@ -1509,7 +1505,7 @@ mod benchmarks {
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
             ));
-            assert_ok!(Marketplace::<T>::buy_property_token(
+            assert_ok!(Marketplace::<T>::buy_property_shares(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
                 base,
@@ -1530,7 +1526,7 @@ mod benchmarks {
         withdraw_claiming_expired(RawOrigin::Signed(buyer.clone()), listing_id);
 
         assert!(OngoingObjectListing::<T>::get(listing_id).is_none());
-        assert!(T::PropertyToken::get_property_asset_info(0).is_none());
+        assert!(T::PropertyShares::get_property_asset_info(0).is_none());
     }
 
     #[benchmark]
@@ -1538,11 +1534,11 @@ mod benchmarks {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
 
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id =
-            list_property_helper::<T>(seller, region_id, location, token_amount, token_price, true);
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+            list_property_helper::<T>(seller, region_id, location, share_amount, share_price, true);
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
         let payment_asset = T::AcceptedAssets::get()[0];
@@ -1561,8 +1557,8 @@ mod benchmarks {
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        let base = token_amount / 3;
-        let remainder = token_amount % 3;
+        let base = share_amount / 3;
+        let remainder = share_amount % 3;
         for i in 1..=2 {
             let buyer_helper: T::AccountId = account("buyer_helper", i, i);
             assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
@@ -1579,7 +1575,7 @@ mod benchmarks {
                 buyer_helper.clone(),
                 Role::RealEstateInvestor
             ));
-            assert_ok!(Marketplace::<T>::buy_property_token(
+            assert_ok!(Marketplace::<T>::buy_property_shares(
                 RawOrigin::Signed(buyer_helper.clone()).into(),
                 listing_id,
                 base,
@@ -1587,7 +1583,7 @@ mod benchmarks {
             ));
         }
         let buyer_amount = base + remainder;
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer.clone()).into(),
             listing_id,
             buyer_amount,
@@ -1614,21 +1610,21 @@ mod benchmarks {
         #[extrinsic_call]
         withdraw_unclaimed(RawOrigin::Signed(buyer.clone()), listing_id);
 
-        assert!(TokenOwner::<T>::get(&buyer, listing_id).is_none());
+        assert!(ShareOwner::<T>::get(&buyer, listing_id).is_none());
     }
 
     #[benchmark]
     fn upgrade_object() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id = list_property_helper::<T>(
             seller.clone(),
             region_id,
             location,
-            token_amount,
-            token_price,
+            share_amount,
+            share_price,
             true,
         );
 
@@ -1637,32 +1633,32 @@ mod benchmarks {
         #[extrinsic_call]
         upgrade_object(RawOrigin::Signed(seller.clone()), listing_id, new_price);
 
-        assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().token_price, new_price);
+        assert_eq!(OngoingObjectListing::<T>::get(listing_id).unwrap().share_price, new_price);
     }
 
     #[benchmark]
-    fn delist_token() {
+    fn delist_shares() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_owner =
+        let share_owner =
             create_registered_property::<T>(seller.clone(), region_id, location, admin);
 
         let asset_id = 0;
         let amount = 1;
         let price = 5_000u32.into();
 
-        assert_ok!(Marketplace::<T>::relist_token(
-            RawOrigin::Signed(token_owner.clone()).into(),
+        assert_ok!(Marketplace::<T>::relist_shares(
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id,
             price,
             amount
         ));
 
         #[extrinsic_call]
-        delist_token(RawOrigin::Signed(token_owner.clone()), 1);
+        delist_shares(RawOrigin::Signed(share_owner.clone()), 1);
 
-        assert!(!TokenListings::<T>::contains_key(1));
-        assert!(T::PropertyToken::get_property_owner(asset_id).contains(&token_owner));
+        assert!(!ShareListings::<T>::contains_key(1));
+        assert!(T::PropertyShares::get_property_owner(asset_id).contains(&share_owner));
     }
 
     #[benchmark]
@@ -1703,7 +1699,7 @@ mod benchmarks {
     fn vote_on_spv_lawyer() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_holder =
+        let share_holder =
             list_and_sell_property::<T>(seller.clone(), region_id, location.clone(), admin.clone());
 
         let lawyer: T::AccountId = account("lawyer", 0, 0);
@@ -1729,7 +1725,7 @@ mod benchmarks {
             400_u32.into(),
         ));
 
-        for i in 1..<T as pallet::Config>::MaxPropertyToken::get() {
+        for i in 1..<T as pallet::Config>::MaxPropertyShares::get() {
             let buyer: T::AccountId = account("buyer", i, i);
             assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
                 RawOrigin::Signed(buyer.clone()).into(),
@@ -1741,22 +1737,22 @@ mod benchmarks {
         }
 
         assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
-            RawOrigin::Signed(token_holder.clone()).into(),
+            RawOrigin::Signed(share_holder.clone()).into(),
             0,
             crate::Vote::No,
             1
         ));
-        assert_eq!(UserLawyerVote::<T>::get(0, &token_holder).unwrap().vote, crate::Vote::No);
+        assert_eq!(UserLawyerVote::<T>::get(0, &share_holder).unwrap().vote, crate::Vote::No);
 
         #[extrinsic_call]
-        vote_on_spv_lawyer(RawOrigin::Signed(token_holder.clone()), 0, types::Vote::Yes, 1);
+        vote_on_spv_lawyer(RawOrigin::Signed(share_holder.clone()), 0, types::Vote::Yes, 1);
 
         assert_eq!(SpvLawyerProposal::<T>::get(0).unwrap().lawyer, lawyer);
         assert_eq!(
             OngoingLawyerVoting::<T>::get(0).unwrap().yes_voting_power,
-            <T as pallet::Config>::MaxPropertyToken::get()
+            <T as pallet::Config>::MaxPropertyShares::get()
         );
-        assert_eq!(UserLawyerVote::<T>::get(0, token_holder).unwrap().vote, crate::Vote::Yes);
+        assert_eq!(UserLawyerVote::<T>::get(0, share_holder).unwrap().vote, crate::Vote::Yes);
     }
 
     #[benchmark]
@@ -1803,7 +1799,7 @@ mod benchmarks {
     fn finalize_spv_lawyer() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_holder =
+        let share_holder =
             list_and_sell_property::<T>(seller.clone(), region_id, location.clone(), admin.clone());
 
         let lawyer: T::AccountId = account("lawyer", 0, 0);
@@ -1830,12 +1826,12 @@ mod benchmarks {
         ));
 
         assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
-            RawOrigin::Signed(token_holder.clone()).into(),
+            RawOrigin::Signed(share_holder.clone()).into(),
             0,
             types::Vote::Yes,
             1
         ));
-        for i in 1..<T as pallet::Config>::MaxPropertyToken::get() {
+        for i in 1..<T as pallet::Config>::MaxPropertyShares::get() {
             let buyer: T::AccountId = account("buyer", i, i);
             assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
                 RawOrigin::Signed(buyer.clone()).into(),
@@ -1849,19 +1845,19 @@ mod benchmarks {
         frame_system::Pallet::<T>::set_block_number(expiry);
 
         #[extrinsic_call]
-        finalize_spv_lawyer(RawOrigin::Signed(token_holder.clone()), 0);
+        finalize_spv_lawyer(RawOrigin::Signed(share_holder.clone()), 0);
 
         assert!(SpvLawyerProposal::<T>::get(0).is_none());
         assert!(OngoingLawyerVoting::<T>::get(0).is_none());
         assert_eq!(PropertyLawyer::<T>::get(0).unwrap().spv_lawyer, Some(lawyer.clone()));
-        assert!(UserLawyerVote::<T>::get(0, &token_holder).is_some());
+        assert!(UserLawyerVote::<T>::get(0, &share_holder).is_some());
     }
 
     #[benchmark]
-    fn unfreeze_spv_lawyer_token() {
+    fn unfreeze_spv_lawyer_shares() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_holder =
+        let share_holder =
             list_and_sell_property::<T>(seller.clone(), region_id, location.clone(), admin.clone());
 
         let lawyer: T::AccountId = account("lawyer", 0, 0);
@@ -1888,12 +1884,12 @@ mod benchmarks {
         ));
 
         assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
-            RawOrigin::Signed(token_holder.clone()).into(),
+            RawOrigin::Signed(share_holder.clone()).into(),
             0,
             types::Vote::Yes,
             1
         ));
-        for i in 1..<T as pallet::Config>::MaxPropertyToken::get() {
+        for i in 1..<T as pallet::Config>::MaxPropertyShares::get() {
             let buyer: T::AccountId = account("buyer", i, i);
             assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
                 RawOrigin::Signed(buyer.clone()).into(),
@@ -1907,23 +1903,23 @@ mod benchmarks {
         frame_system::Pallet::<T>::set_block_number(expiry);
 
         assert_ok!(Marketplace::<T>::finalize_spv_lawyer(
-            RawOrigin::Signed(token_holder.clone()).into(),
+            RawOrigin::Signed(share_holder.clone()).into(),
             0,
         ));
 
-        assert!(UserLawyerVote::<T>::get(0, &token_holder).is_some());
+        assert!(UserLawyerVote::<T>::get(0, &share_holder).is_some());
 
         #[extrinsic_call]
-        unfreeze_spv_lawyer_token(RawOrigin::Signed(token_holder.clone()), 0);
+        unfreeze_spv_lawyer_shares(RawOrigin::Signed(share_holder.clone()), 0);
 
-        assert!(UserLawyerVote::<T>::get(0, &token_holder).is_none());
+        assert!(UserLawyerVote::<T>::get(0, &share_holder).is_none());
     }
 
     #[benchmark]
     fn remove_lawyer_claim() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_holder =
+        let share_holder =
             list_and_sell_property::<T>(seller.clone(), region_id, location.clone(), admin.clone());
 
         let lawyer_1: T::AccountId = account("lawyer1", 0, 0);
@@ -1975,12 +1971,12 @@ mod benchmarks {
             400_u32.into()
         ));
         assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
-            RawOrigin::Signed(token_holder.clone()).into(),
+            RawOrigin::Signed(share_holder.clone()).into(),
             0,
             types::Vote::Yes,
             1
         ));
-        for i in 1..<T as pallet::Config>::MaxPropertyToken::get() {
+        for i in 1..<T as pallet::Config>::MaxPropertyShares::get() {
             let buyer: T::AccountId = account("buyer", i, i);
             assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
                 RawOrigin::Signed(buyer.clone()).into(),
@@ -1993,7 +1989,7 @@ mod benchmarks {
         let expiry = frame_system::Pallet::<T>::block_number() + T::LawyerVotingTime::get();
         frame_system::Pallet::<T>::set_block_number(expiry);
         assert_ok!(Marketplace::<T>::finalize_spv_lawyer(
-            RawOrigin::Signed(token_holder).into(),
+            RawOrigin::Signed(share_holder).into(),
             0,
         ));
 
@@ -2004,44 +2000,44 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn lawyer_confirm_documents(a: Linear<1, { <T as pallet::Config>::MaxPropertyToken::get() }>) {
+    fn lawyer_confirm_documents(a: Linear<1, { <T as pallet::Config>::MaxPropertyShares::get() }>) {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_amount: u32 = <T as pallet::Config>::MaxPropertyToken::get();
-        let token_price: <T as pallet::Config>::Balance = 1_000u32.into();
+        let share_amount: u32 = <T as pallet::Config>::MaxPropertyShares::get();
+        let share_price: <T as pallet::Config>::Balance = 1_000u32.into();
         let listing_id = list_property_helper::<T>(
             seller.clone(),
             region_id,
             location,
-            token_amount,
-            token_price,
+            share_amount,
+            share_price,
             true,
         );
-        let property_price = token_price.saturating_mul((token_amount as u128).into());
+        let property_price = share_price.saturating_mul((share_amount as u128).into());
         let deposit_amount =
             property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
 
         let payment_asset = T::AcceptedAssets::get()[0];
-        let token_holder: T::AccountId = account("buyer", 0, 0);
+        let share_holder: T::AccountId = account("buyer", 0, 0);
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
-            &token_holder,
+            &share_holder,
             deposit_amount.saturating_mul(20u32.into())
         ));
         assert_ok!(<T as pallet::Config>::ForeignCurrency::mint_into(
             payment_asset,
-            &token_holder,
+            &share_holder,
             property_price.saturating_mul(100u32.into())
         ));
         assert_ok!(Whitelist::<T>::assign_role(
             RawOrigin::Signed(admin.clone()).into(),
-            token_holder.clone(),
+            share_holder.clone(),
             Role::RealEstateInvestor
         ));
         add_buyers_to_listing::<T>(a - 1, payment_asset, property_price, admin.clone());
 
-        let buyer_amount = if token_amount - a + 1 >= token_amount * 50 / 100 {
-            let base = (token_amount - a + 1) / 3;
-            let remainder = (token_amount - a + 1) % 3;
+        let buyer_amount = if share_amount - a + 1 >= share_amount * 50 / 100 {
+            let base = (share_amount - a + 1) / 3;
+            let remainder = (share_amount - a + 1) % 3;
             for i in 1..=2 {
                 let buyer_helper: T::AccountId = account("buyer_helper", i, i);
                 assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
@@ -2058,7 +2054,7 @@ mod benchmarks {
                     buyer_helper.clone(),
                     Role::RealEstateInvestor
                 ));
-                assert_ok!(Marketplace::<T>::buy_property_token(
+                assert_ok!(Marketplace::<T>::buy_property_shares(
                     RawOrigin::Signed(buyer_helper.clone()).into(),
                     listing_id,
                     base,
@@ -2067,10 +2063,10 @@ mod benchmarks {
             }
             base + remainder
         } else {
-            token_amount - a + 1
+            share_amount - a + 1
         };
-        assert_ok!(Marketplace::<T>::buy_property_token(
-            RawOrigin::Signed(token_holder.clone()).into(),
+        assert_ok!(Marketplace::<T>::buy_property_shares(
+            RawOrigin::Signed(share_holder.clone()).into(),
             listing_id,
             buyer_amount,
             payment_asset,
@@ -2082,37 +2078,37 @@ mod benchmarks {
             Role::SpvConfirmation
         ));
         assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-        assert_ok!(Marketplace::<T>::claim_property_token(
-            RawOrigin::Signed(token_holder.clone()).into(),
+        assert_ok!(Marketplace::<T>::claim_property_shares(
+            RawOrigin::Signed(share_holder.clone()).into(),
             listing_id,
         ));
-        claim_buyers_property_token::<T>(a - 1, listing_id);
-        if token_amount - a + 1 >= token_amount * 50 / 100 {
+        claim_buyers_property_shares::<T>(a - 1, listing_id);
+        if share_amount - a + 1 >= share_amount * 50 / 100 {
             for i in 1..=2 {
                 let buyer_helper: T::AccountId = account("buyer_helper", i, i);
-                assert_ok!(Marketplace::<T>::claim_property_token(
+                assert_ok!(Marketplace::<T>::claim_property_shares(
                     RawOrigin::Signed(buyer_helper.clone()).into(),
                     listing_id,
                 ));
             }
         }
 
-        let mut token_holders: Vec<T::AccountId> = vec![token_holder.clone()];
+        let mut share_holders: Vec<T::AccountId> = vec![share_holder.clone()];
         for i in 1..a - 1 {
             let buyer: T::AccountId = account("buyer", i, i);
-            token_holders.push(buyer);
+            share_holders.push(buyer);
         }
-        if token_amount - a + 1 >= token_amount * 50 / 100 {
+        if share_amount - a + 1 >= share_amount * 50 / 100 {
             let buyer_helper: T::AccountId = account("buyer_helper", 1, 1);
-            token_holders.push(buyer_helper);
+            share_holders.push(buyer_helper);
         }
         let (lawyer_1, lawyer_2) = setup_spv_and_lawyers::<T>(
             seller,
             admin.clone(),
             listing_id,
             region_id,
-            token_holder.clone(),
-            token_holders,
+            share_holder.clone(),
+            share_holders,
         );
 
         assert_ok!(Marketplace::<T>::lawyer_confirm_documents(
@@ -2129,10 +2125,10 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn send_property_token() {
+    fn send_property_shares() {
         let (seller, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let (region_id, location) = create_a_new_region::<T>(seller.clone(), admin.clone());
-        let token_owner =
+        let share_owner =
             create_registered_property::<T>(seller.clone(), region_id, location, admin.clone());
 
         let new_owner: T::AccountId = account("new_owner", 0, 0);
@@ -2149,20 +2145,20 @@ mod benchmarks {
         ));
 
         let asset_id = 0;
-        let token_amount = 1;
+        let share_amount = 1;
 
         #[extrinsic_call]
-        send_property_token(
-            RawOrigin::Signed(token_owner.clone()),
+        send_property_shares(
+            RawOrigin::Signed(share_owner.clone()),
             asset_id,
             new_owner.clone(),
-            token_amount,
+            share_amount,
         );
 
-        assert_eq!(T::PropertyToken::get_token_balance(asset_id, &seller), 0);
-        assert_eq!(T::PropertyToken::get_token_balance(asset_id, &new_owner.clone()), token_amount);
-        assert!(T::PropertyToken::get_property_owner(asset_id).contains(&new_owner));
-        assert!(!T::PropertyToken::get_property_owner(asset_id).contains(&seller));
+        assert_eq!(T::PropertyShares::get_share_balance(asset_id, &seller), 0);
+        assert_eq!(T::PropertyShares::get_share_balance(asset_id, &new_owner.clone()), share_amount);
+        assert!(T::PropertyShares::get_property_owner(asset_id).contains(&new_owner));
+        assert!(!T::PropertyShares::get_property_owner(asset_id).contains(&seller));
     }
 
     impl_benchmark_test_suite!(Marketplace, crate::mock::new_test_ext(), crate::mock::Test);

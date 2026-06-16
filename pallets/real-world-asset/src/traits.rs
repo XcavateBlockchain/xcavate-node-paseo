@@ -18,49 +18,49 @@ use frame_support::pallet_prelude::*;
 
 use super::*;
 
-pub trait PropertyTokenManage<AccountId, Balance, NftId, StringLimit, LocationId> {
-    // Create a new property token by minting an NFT and fractionalizing it into tokens.
-    fn create_property_token(
+pub trait PropertySharesManage<AccountId, Balance, NftId, StringLimit, LocationId> {
+    // Create new property shares by minting an NFT and fractionalizing it into shares.
+    fn create_property_shares(
         funding_account: &AccountId,
         region: RegionId,
         location: LocationId,
-        token_amount: u32,
+        share_amount: u32,
         property_price: Balance,
         data: BoundedVec<u8, StringLimit>,
     ) -> Result<(NftId, u32), DispatchError>;
 
     // Burns a property’s NFT and removes its details.
-    fn burn_property_token(asset_id: u32) -> DispatchResult;
+    fn burn_property_shares(asset_id: u32) -> DispatchResult;
 }
 
-pub trait PropertyTokenOwnership<AccountId> {
-    // Transfer property tokens from one account to another.
-    fn transfer_property_token(
+pub trait PropertySharesOwnership<AccountId> {
+    // Transfer property shares from one account to another.
+    fn transfer_property_shares(
         asset_id: u32,
         sender: &AccountId,
         funds_source: &AccountId,
         receiver: &AccountId,
-        token_amount: u32,
+        share_amount: u32,
     ) -> DispatchResult;
 
-    // Distributes property tokens to an investor from the property account.
-    fn distribute_property_token_to_owner(
+    // Distributes property shares to an investor from the property account.
+    fn distribute_property_shares_to_owner(
         asset_id: u32,
         investor: &AccountId,
-        token_amount: u32,
+        share_amount: u32,
     ) -> DispatchResult;
 
-    // Removes and returns the token balance of an owner for a property.
-    fn take_property_token(asset_id: u32, owner: &AccountId) -> u32;
+    // Removes and returns the share balance of an owner for a property.
+    fn take_property_shares(asset_id: u32, owner: &AccountId) -> u32;
 
-    // Removes an account’s token ownership for a property.
-    fn remove_property_token_ownership(asset_id: u32, account: &AccountId) -> DispatchResult;
+    // Removes an account’s share ownership for a property.
+    fn remove_property_share_ownership(asset_id: u32, account: &AccountId) -> DispatchResult;
 
-    // Clears all token owners for a property.
-    fn clear_token_owners(asset_id: u32) -> DispatchResult;
+    // Clears all share owners for a property.
+    fn clear_share_owners(asset_id: u32) -> DispatchResult;
 }
 
-pub trait PropertyTokenSpvControl {
+pub trait PropertySharesSpvControl {
     type PropertyAssetInfo;
 
     // Registers a Special Purpose Vehicle (SPV) for a property.
@@ -85,22 +85,22 @@ pub trait PropertyTokenSpvControl {
     fn ensure_property_finalized(asset_id: u32) -> DispatchResult;
 }
 
-pub trait PropertyTokenInspect<AccountId> {
+pub trait PropertySharesInspect<AccountId> {
     type PropertyAssetInfo;
-    type MaxPropertyToken;
+    type MaxPropertyShares;
 
     // Retrieves property asset details.
     fn get_property_asset_info(asset_id: u32) -> Option<Self::PropertyAssetInfo>;
 
-    // Retrieves the list of token owners for a property.
-    fn get_property_owner(asset_id: u32) -> BoundedBTreeSet<AccountId, Self::MaxPropertyToken>;
+    // Retrieves the list of share owners for a property.
+    fn get_property_owner(asset_id: u32) -> BoundedBTreeSet<AccountId, Self::MaxPropertyShares>;
 
-    // Retrieves the token balance of an account for a property.
-    fn get_token_balance(asset_id: u32, owner: &AccountId) -> u32;
+    // Retrieves the share balance of an account for a property.
+    fn get_share_balance(asset_id: u32, owner: &AccountId) -> u32;
 }
 
 impl<T: Config>
-    PropertyTokenManage<
+    PropertySharesManage<
         AccountIdOf<T>,
         <T as pallet::Config>::Balance,
         <T as pallet::Config>::NftId,
@@ -108,62 +108,62 @@ impl<T: Config>
         LocationId<T>,
     > for Pallet<T>
 {
-    fn create_property_token(
+    fn create_property_shares(
         funding_account: &AccountIdOf<T>,
         region: RegionId,
         location: LocationId<T>,
-        token_amount: u32,
+        share_amount: u32,
         property_price: <T as pallet::Config>::Balance,
         data: BoundedVec<u8, <T as pallet::Config>::StringLimit>,
     ) -> Result<(<T as pallet::Config>::NftId, u32), DispatchError> {
-        Self::do_create_property_token(
+        Self::do_create_property_shares(
             funding_account,
             region,
             location,
-            token_amount,
+            share_amount,
             property_price,
             data,
         )
     }
 
-    fn burn_property_token(asset_id: u32) -> DispatchResult {
-        Self::do_burn_property_token(asset_id)
+    fn burn_property_shares(asset_id: u32) -> DispatchResult {
+        Self::do_burn_property_shares(asset_id)
     }
 }
 
-impl<T: Config> PropertyTokenOwnership<AccountIdOf<T>> for Pallet<T> {
-    fn transfer_property_token(
+impl<T: Config> PropertySharesOwnership<AccountIdOf<T>> for Pallet<T> {
+    fn transfer_property_shares(
         asset_id: u32,
         sender: &AccountIdOf<T>,
         funds_source: &AccountIdOf<T>,
         receiver: &AccountIdOf<T>,
-        token_amount: u32,
+        share_amount: u32,
     ) -> DispatchResult {
-        Self::do_transfer_property_token(asset_id, sender, funds_source, receiver, token_amount)
+        Self::do_transfer_property_shares(asset_id, sender, funds_source, receiver, share_amount)
     }
 
-    fn distribute_property_token_to_owner(
+    fn distribute_property_shares_to_owner(
         asset_id: u32,
         investor: &AccountIdOf<T>,
-        token_amount: u32,
+        share_amount: u32,
     ) -> DispatchResult {
-        Self::do_distribute_property_token_to_owner(asset_id, investor, token_amount)
+        Self::do_distribute_property_shares_to_owner(asset_id, investor, share_amount)
     }
 
-    fn take_property_token(asset_id: u32, owner: &AccountIdOf<T>) -> u32 {
-        Self::do_take_property_token(asset_id, owner)
+    fn take_property_shares(asset_id: u32, owner: &AccountIdOf<T>) -> u32 {
+        Self::do_take_property_shares(asset_id, owner)
     }
 
-    fn remove_property_token_ownership(asset_id: u32, account: &AccountIdOf<T>) -> DispatchResult {
-        Self::do_remove_property_token_ownership(asset_id, account)
+    fn remove_property_share_ownership(asset_id: u32, account: &AccountIdOf<T>) -> DispatchResult {
+        Self::do_remove_property_share_ownership(asset_id, account)
     }
 
-    fn clear_token_owners(asset_id: u32) -> DispatchResult {
-        Self::do_clear_token_owners(asset_id)
+    fn clear_share_owners(asset_id: u32) -> DispatchResult {
+        Self::do_clear_share_owners(asset_id)
     }
 }
 
-impl<T: Config> PropertyTokenSpvControl for Pallet<T> {
+impl<T: Config> PropertySharesSpvControl for Pallet<T> {
     type PropertyAssetInfo = PropertyAssetDetailsOf<T>;
 
     fn register_spv(asset_id: u32) -> DispatchResult {
@@ -195,9 +195,9 @@ impl<T: Config> PropertyTokenSpvControl for Pallet<T> {
     }
 }
 
-impl<T: Config> PropertyTokenInspect<AccountIdOf<T>> for Pallet<T> {
+impl<T: Config> PropertySharesInspect<AccountIdOf<T>> for Pallet<T> {
     type PropertyAssetInfo = PropertyAssetDetailsOf<T>;
-    type MaxPropertyToken = T::MaxPropertyToken;
+    type MaxPropertyShares = T::MaxPropertyShares;
 
     fn get_property_asset_info(asset_id: u32) -> Option<Self::PropertyAssetInfo> {
         Self::do_get_property_asset_info(asset_id)
@@ -205,11 +205,11 @@ impl<T: Config> PropertyTokenInspect<AccountIdOf<T>> for Pallet<T> {
 
     fn get_property_owner(
         asset_id: u32,
-    ) -> BoundedBTreeSet<AccountIdOf<T>, Self::MaxPropertyToken> {
+    ) -> BoundedBTreeSet<AccountIdOf<T>, Self::MaxPropertyShares> {
         Self::get_property_owner(asset_id)
     }
 
-    fn get_token_balance(asset_id: u32, owner: &AccountIdOf<T>) -> u32 {
-        Self::get_token_balance(asset_id, owner)
+    fn get_share_balance(asset_id: u32, owner: &AccountIdOf<T>) -> u32 {
+        Self::get_share_balance(asset_id, owner)
     }
 }

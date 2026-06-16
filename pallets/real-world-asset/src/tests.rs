@@ -17,9 +17,9 @@
 use crate::{mock::*, Error};
 use crate::{
     traits::{
-        PropertyTokenInspect, PropertyTokenManage, PropertyTokenOwnership, PropertyTokenSpvControl,
+        PropertySharesInspect, PropertySharesManage, PropertySharesOwnership, PropertySharesSpvControl,
     },
-    PropertyAssetDetails, PropertyAssetInfo, PropertyOwner, PropertyOwnerToken,
+    PropertyAssetDetails, PropertyAssetInfo, PropertyOwner, PropertyOwnerShares,
 };
 use frame_support::{
     assert_noop, assert_ok,
@@ -86,14 +86,14 @@ fn new_region_helper() {
     ));
 }
 
-// create_property_token tests
+// create_property_shares tests
 
 #[test]
-fn create_property_token_works() {
+fn create_property_shares_works() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -112,7 +112,7 @@ fn create_property_token_works() {
                 region: 3,
                 location: bvec![10, 10],
                 price: 1_000,
-                token_amount: 10,
+                share_amount: 10,
                 spv_created: false,
                 finalized: false,
             }
@@ -120,14 +120,14 @@ fn create_property_token_works() {
     })
 }
 
-// burn_property_token tests
+// burn_property_shares tests
 
 #[test]
-fn burn_property_token_works() {
+fn burn_property_shares_works() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -136,7 +136,7 @@ fn burn_property_token_works() {
             bvec![22, 22]
         ));
         assert_eq!(LocalAssets::balance(0, &RealWorldAsset::property_account_id(0)), 10);
-        assert_ok!(RealWorldAsset::burn_property_token(0));
+        assert_ok!(RealWorldAsset::burn_property_shares(0));
         assert_eq!(LocalAssets::balance(0, &RealWorldAsset::property_account_id(0)), 0);
         assert_eq!(Nfts::owner(0, 0).is_none(), true);
         assert_eq!(PropertyAssetInfo::<Test>::get(0).is_none(), true);
@@ -144,15 +144,15 @@ fn burn_property_token_works() {
 }
 
 #[test]
-fn burn_property_token_fails() {
+fn burn_property_shares_fails() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
         assert_noop!(
-            RealWorldAsset::burn_property_token(0),
+            RealWorldAsset::burn_property_shares(0),
             Error::<Test>::PropertyAssetNotRegistered
         );
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -160,20 +160,20 @@ fn burn_property_token_fails() {
             1_000,
             bvec![22, 22]
         ));
-        assert_ok!(RealWorldAsset::do_distribute_property_token_to_owner(0, &[1; 32].into(), 10));
+        assert_ok!(RealWorldAsset::do_distribute_property_shares_to_owner(0, &[1; 32].into(), 10));
         assert_eq!(LocalAssets::balance(0, &[1; 32].into()), 10);
-        assert_noop!(RealWorldAsset::burn_property_token(0), TokenError::FundsUnavailable);
+        assert_noop!(RealWorldAsset::burn_property_shares(0), TokenError::FundsUnavailable);
     })
 }
 
-// distribute_property_token_to_owner tests
+// distribute_property_shares_to_owner tests
 
 #[test]
-fn distribute_property_token_to_owner_works() {
+fn distribute_property_shares_to_owner_works() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -181,29 +181,29 @@ fn distribute_property_token_to_owner_works() {
             1_000,
             bvec![22, 22]
         ));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[1; 32].into(), 4));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[2; 32].into(), 6));
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[1; 32].into(), 4));
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[2; 32].into(), 6));
         assert_eq!(LocalAssets::balance(0, &RealWorldAsset::property_account_id(0)), 0);
         assert_eq!(LocalAssets::balance(0, &[1; 32].into()), 4);
         assert_eq!(LocalAssets::balance(0, &[2; 32].into()), 6);
         assert_eq!(
             PropertyOwner::<Test>::get(0),
-            BoundedBTreeSet::<_, MaxPropertyTokens>::try_from(
+            BoundedBTreeSet::<_, MaxPropertyShares>::try_from(
                 [[1; 32].into(), [2; 32].into()].into_iter().collect::<BTreeSet<_>>()
             )
             .unwrap()
         );
-        assert_eq!(PropertyOwnerToken::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 4);
-        assert_eq!(PropertyOwnerToken::<Test>::get::<u32, AccountId>(0, [2; 32].into()), 6);
+        assert_eq!(PropertyOwnerShares::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 4);
+        assert_eq!(PropertyOwnerShares::<Test>::get::<u32, AccountId>(0, [2; 32].into()), 6);
     })
 }
 
 #[test]
-fn distribute_property_token_to_owner_fails() {
+fn distribute_property_shares_to_owner_fails() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -213,21 +213,21 @@ fn distribute_property_token_to_owner_fails() {
         ));
         assert_eq!(LocalAssets::balance(0, &RealWorldAsset::property_account_id(0)), 10);
         assert_noop!(
-            RealWorldAsset::distribute_property_token_to_owner(0, &[1; 32].into(), 11),
+            RealWorldAsset::distribute_property_shares_to_owner(0, &[1; 32].into(), 11),
             ArithmeticError::Underflow
         );
         assert_eq!(LocalAssets::balance(0, &RealWorldAsset::property_account_id(0)), 10);
     })
 }
 
-// transfer_property_token tests
+// transfer_property_shares tests
 
 #[test]
-fn transfer_property_token_works() {
+fn transfer_property_shares_works() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -235,9 +235,9 @@ fn transfer_property_token_works() {
             1_000,
             bvec![22, 22]
         ));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[1; 32].into(), 4));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[2; 32].into(), 6));
-        assert_ok!(RealWorldAsset::transfer_property_token(
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[1; 32].into(), 4));
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[2; 32].into(), 6));
+        assert_ok!(RealWorldAsset::transfer_property_shares(
             0,
             &[2; 32].into(),
             &[2; 32].into(),
@@ -246,7 +246,7 @@ fn transfer_property_token_works() {
         ));
         assert_eq!(LocalAssets::balance(0, &[2; 32].into()), 3);
         assert_eq!(LocalAssets::balance(0, &[3; 32].into()), 3);
-        assert_ok!(RealWorldAsset::transfer_property_token(
+        assert_ok!(RealWorldAsset::transfer_property_shares(
             0,
             &[2; 32].into(),
             &[2; 32].into(),
@@ -255,14 +255,14 @@ fn transfer_property_token_works() {
         ));
         assert_eq!(
             PropertyOwner::<Test>::get(0),
-            BoundedBTreeSet::<_, MaxPropertyTokens>::try_from(
+            BoundedBTreeSet::<_, MaxPropertyShares>::try_from(
                 [[1; 32].into(), [3; 32].into()].into_iter().collect::<BTreeSet<_>>()
             )
             .unwrap()
         );
         assert_eq!(LocalAssets::balance(0, &[2; 32].into()), 0);
         assert_eq!(LocalAssets::balance(0, &[3; 32].into()), 6);
-        assert_ok!(RealWorldAsset::transfer_property_token(
+        assert_ok!(RealWorldAsset::transfer_property_shares(
             0,
             &[1; 32].into(),
             &[3; 32].into(),
@@ -272,18 +272,18 @@ fn transfer_property_token_works() {
         assert_eq!(LocalAssets::balance(0, &[0; 32].into()), 3);
         assert_eq!(LocalAssets::balance(0, &[1; 32].into()), 4);
         assert_eq!(LocalAssets::balance(0, &[3; 32].into()), 3);
-        assert_eq!(PropertyOwnerToken::<Test>::get::<u32, AccountId>(0, [0; 32].into()), 3);
-        assert_eq!(PropertyOwnerToken::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 1);
-        assert_eq!(PropertyOwnerToken::<Test>::get::<u32, AccountId>(0, [3; 32].into()), 6);
+        assert_eq!(PropertyOwnerShares::<Test>::get::<u32, AccountId>(0, [0; 32].into()), 3);
+        assert_eq!(PropertyOwnerShares::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 1);
+        assert_eq!(PropertyOwnerShares::<Test>::get::<u32, AccountId>(0, [3; 32].into()), 6);
     })
 }
 
 #[test]
-fn transfer_property_token_fails() {
+fn transfer_property_shares_fails() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -291,41 +291,41 @@ fn transfer_property_token_fails() {
             1_000,
             bvec![22, 22]
         ));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[1; 32].into(), 4));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[2; 32].into(), 6));
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[1; 32].into(), 4));
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[2; 32].into(), 6));
         assert_noop!(
-            RealWorldAsset::transfer_property_token(
+            RealWorldAsset::transfer_property_shares(
                 0,
                 &[2; 32].into(),
                 &[2; 32].into(),
                 &[3; 32].into(),
                 7
             ),
-            Error::<Test>::NotEnoughToken
+            Error::<Test>::NotEnoughShares
         );
         assert_noop!(
-            RealWorldAsset::transfer_property_token(
+            RealWorldAsset::transfer_property_shares(
                 0,
                 &[1; 32].into(),
                 &[2; 32].into(),
                 &[3; 32].into(),
                 6
             ),
-            Error::<Test>::NotEnoughToken
+            Error::<Test>::NotEnoughShares
         );
         assert_eq!(LocalAssets::balance(0, &[1; 32].into()), 4);
         assert_eq!(LocalAssets::balance(0, &[2; 32].into()), 6);
     })
 }
 
-// take_property_token tests
+// take_property_shares tests
 
 #[test]
-fn take_property_token_works() {
+fn take_property_shares_works() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -333,19 +333,19 @@ fn take_property_token_works() {
             1_000,
             bvec![22, 22]
         ));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[1; 32].into(), 4));
-        assert_eq!(PropertyOwnerToken::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 4);
-        assert_eq!(RealWorldAsset::take_property_token(0, &[1; 32].into()), 4);
-        assert_eq!(PropertyOwnerToken::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 0);
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[1; 32].into(), 4));
+        assert_eq!(PropertyOwnerShares::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 4);
+        assert_eq!(RealWorldAsset::take_property_shares(0, &[1; 32].into()), 4);
+        assert_eq!(PropertyOwnerShares::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 0);
     })
 }
 
 #[test]
-fn remove_token_ownership_works() {
+fn remove_share_ownership_works() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -353,21 +353,21 @@ fn remove_token_ownership_works() {
             1_000,
             bvec![22, 22]
         ));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[1; 32].into(), 4));
-        assert_eq!(PropertyOwnerToken::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 4);
-        assert_eq!(RealWorldAsset::take_property_token(0, &[1; 32].into()), 4);
-        assert_eq!(PropertyOwnerToken::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 0);
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[1; 32].into(), 4));
+        assert_eq!(PropertyOwnerShares::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 4);
+        assert_eq!(RealWorldAsset::take_property_shares(0, &[1; 32].into()), 4);
+        assert_eq!(PropertyOwnerShares::<Test>::get::<u32, AccountId>(0, [1; 32].into()), 0);
     })
 }
 
-// clear_token_owners tests
+// clear_share_owners tests
 
 #[test]
-fn clear_token_owners_works() {
+fn clear_share_owners_works() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -375,19 +375,19 @@ fn clear_token_owners_works() {
             1_000,
             bvec![22, 22]
         ));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[1; 32].into(), 4));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[2; 32].into(), 6));
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[1; 32].into(), 4));
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[2; 32].into(), 6));
         assert_eq!(
             PropertyOwner::<Test>::get(0),
-            BoundedBTreeSet::<_, MaxPropertyTokens>::try_from(
+            BoundedBTreeSet::<_, MaxPropertyShares>::try_from(
                 [[1; 32].into(), [2; 32].into()].into_iter().collect::<BTreeSet<_>>()
             )
             .unwrap()
         );
-        assert_ok!(RealWorldAsset::clear_token_owners(0));
+        assert_ok!(RealWorldAsset::clear_share_owners(0));
         assert_eq!(
             PropertyOwner::<Test>::get(0),
-            BoundedBTreeSet::<_, MaxPropertyTokens>::try_from(
+            BoundedBTreeSet::<_, MaxPropertyShares>::try_from(
                 [].into_iter().collect::<BTreeSet<_>>()
             )
             .unwrap()
@@ -402,7 +402,7 @@ fn register_spv_works() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -419,7 +419,7 @@ fn register_spv_works() {
                 region: 3,
                 location: bvec![10, 10],
                 price: 1_000,
-                token_amount: 10,
+                share_amount: 10,
                 spv_created: false,
                 finalized: false,
             }
@@ -434,7 +434,7 @@ fn register_spv_works() {
                 region: 3,
                 location: bvec![10, 10],
                 price: 1_000,
-                token_amount: 10,
+                share_amount: 10,
                 spv_created: true,
                 finalized: false,
             }
@@ -456,7 +456,7 @@ fn getter_function_works() {
     new_test_ext().execute_with(|| {
         assert_ok!(XcavateWhitelist::add_admin(RuntimeOrigin::root(), [20; 32].into(),));
         new_region_helper();
-        assert_ok!(RealWorldAsset::create_property_token(
+        assert_ok!(RealWorldAsset::create_property_shares(
             &[0; 32].into(),
             3,
             bvec![10, 10],
@@ -464,8 +464,8 @@ fn getter_function_works() {
             1_000,
             bvec![22, 22]
         ));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[1; 32].into(), 4));
-        assert_ok!(RealWorldAsset::distribute_property_token_to_owner(0, &[2; 32].into(), 6));
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[1; 32].into(), 4));
+        assert_ok!(RealWorldAsset::distribute_property_shares_to_owner(0, &[2; 32].into(), 6));
         assert_eq!(
             RealWorldAsset::get_property_asset_info(0).unwrap(),
             PropertyAssetDetails {
@@ -475,27 +475,27 @@ fn getter_function_works() {
                 region: 3,
                 location: bvec![10, 10],
                 price: 1_000,
-                token_amount: 10,
+                share_amount: 10,
                 spv_created: false,
                 finalized: false,
             }
         );
         assert_eq!(
             PropertyOwner::<Test>::get(0),
-            BoundedBTreeSet::<_, MaxPropertyTokens>::try_from(
+            BoundedBTreeSet::<_, MaxPropertyShares>::try_from(
                 [[1; 32].into(), [2; 32].into()].into_iter().collect::<BTreeSet<_>>()
             )
             .unwrap()
         );
-        assert_eq!(RealWorldAsset::take_property_token(0, &[1; 32].into()), 4);
+        assert_eq!(RealWorldAsset::take_property_shares(0, &[1; 32].into()), 4);
         assert_eq!(RealWorldAsset::get_property_asset_info(1).is_none(), true);
         assert_eq!(
             PropertyOwner::<Test>::get(1),
-            BoundedBTreeSet::<_, MaxPropertyTokens>::try_from(
+            BoundedBTreeSet::<_, MaxPropertyShares>::try_from(
                 [].into_iter().collect::<BTreeSet<_>>()
             )
             .unwrap()
         );
-        assert_eq!(RealWorldAsset::take_property_token(1, &[3; 32].into()), 0);
+        assert_eq!(RealWorldAsset::take_property_shares(1, &[3; 32].into()), 0);
     })
 }

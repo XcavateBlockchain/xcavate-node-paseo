@@ -50,7 +50,7 @@ use frame_support::sp_runtime::{
 use parity_scale_codec::Codec;
 
 use pallet_real_world_asset::{
-    traits::{PropertyTokenInspect, PropertyTokenSpvControl},
+    traits::{PropertySharesInspect, PropertySharesSpvControl},
     PropertyAssetDetails,
 };
 
@@ -248,15 +248,15 @@ pub mod pallet {
         #[pallet::constant]
         type AcceptedAssets: Get<[u32; 2]>;
 
-        /// Property token management traits.
-        type PropertyToken: PropertyTokenSpvControl<
+        /// Property share management traits.
+        type PropertyShares: PropertySharesSpvControl<
                 PropertyAssetInfo = PropertyAssetDetails<
                     <Self as pallet::Config>::NftId,
                     <Self as pallet::Config>::NftCollectionId,
                     <Self as pallet::Config>::Balance,
                     LocationId<Self>,
                 >,
-            > + PropertyTokenInspect<
+            > + PropertySharesInspect<
                 AccountIdOf<Self>,
                 PropertyAssetInfo = PropertyAssetDetails<
                     <Self as pallet::Config>::NftId,
@@ -407,8 +407,8 @@ pub mod pallet {
         },
         /// A letting agent proposal was rejected.
         LettingAgentRejected { asset_id: u32, letting_agent: T::AccountId },
-        /// A user’s frozen tokens were released after voting.
-        TokenUnfrozen { proposal_id: ProposalId, asset_id: u32, voter: AccountIdOf<T>, amount: u32 },
+        /// A user’s frozen shares were released after voting.
+        SharesUnfrozen { proposal_id: ProposalId, asset_id: u32, voter: AccountIdOf<T>, amount: u32 },
         /// A letting agent initiated resignation from a property.
         LettingAgentResignationInitiated {
             asset_id: u32,
@@ -471,14 +471,14 @@ pub mod pallet {
         LettingAgentNotActiveInLocation,
         /// Letting agent still has active properties in location.
         LettingAgentActive,
-        /// The user has no token amount frozen.
+        /// The user has no share amount frozen.
         NoFrozenAmount,
         /// The voting amount must be greater than zero.
         ZeroVoteAmount,
         /// The distribution amount cannot be zero.
         ZeroDistributionAmount,
-        /// The total token supply for the property cannot be zero.
-        ZeroTokenSupply,
+        /// The total share supply for the property cannot be zero.
+        ZeroShareSupply,
         /// A resignation notice is already active for the property.
         ResignationAlreadyInitiated,
         /// Too many resignation notices for the block.
@@ -665,7 +665,7 @@ pub mod pallet {
                 Error::<T>::LettingAgentProposalOngoing
             );
 
-            let property_info = T::PropertyToken::get_property_asset_info(asset_id)
+            let property_info = T::PropertyShares::get_property_asset_info(asset_id)
                 .ok_or(Error::<T>::NoObjectFound)?;
             // Ensure the letting agent is registered and has access to the property's location.
             let letting_info = LettingInfo::<T>::get(&signer).ok_or(Error::<T>::AgentNotFound)?;
@@ -673,7 +673,7 @@ pub mod pallet {
                 letting_info.locations.contains_key(&property_info.location),
                 Error::<T>::NoPermission
             );
-            T::PropertyToken::ensure_property_finalized(asset_id)?;
+            T::PropertyShares::ensure_property_finalized(asset_id)?;
 
             // Generate a new proposal ID and set expiry.
             let proposal_id = ProposalCounter::<T>::get();
@@ -715,7 +715,7 @@ pub mod pallet {
         /// Parameters:
         /// - `asset_id`: The asset id of the property.
         /// - `vote`: Must be either a Yes vote or a No vote.
-        /// - `amount`: The amount of property token that the investor is using for voting.
+        /// - `amount`: The amount of property shares that the investor is using for voting.
         ///
         /// Emits `VotedOnLettingAgent` event when successful.
         #[pallet::call_index(3)]
@@ -740,9 +740,9 @@ pub mod pallet {
                 Error::<T>::VotingExpired
             );
 
-            // Ensure the vote amount is valid and the voter has enough tokens.
+            // Ensure the vote amount is valid and the voter has enough shares.
             ensure!(amount > 0, Error::<T>::ZeroVoteAmount);
-            let voting_power = T::PropertyToken::get_token_balance(asset_id, &signer);
+            let voting_power = T::PropertyShares::get_share_balance(asset_id, &signer);
             ensure!(voting_power >= amount, Error::<T>::NoPermission);
 
             // Update the voting state for this proposal.
@@ -750,7 +750,7 @@ pub mod pallet {
                 let current_vote =
                     maybe_current_vote.as_mut().ok_or(Error::<T>::NoLettingAgentProposed)?;
                 UserLettingAgentVote::<T>::try_mutate(proposal_id, &signer, |maybe_vote_record| {
-                    // If the user had a previous vote, unfreeze those tokens and adjust their previous vote.
+                    // If the user had a previous vote, unfreeze those shares and adjust their previous vote.
                     if let Some(previous_vote) = maybe_vote_record.take() {
                         T::AssetsFreezer::decrease_frozen(
                             asset_id,
@@ -847,13 +847,13 @@ pub mod pallet {
 
             // Fetch property details to calculate total supply and quorum.
             let asset_details =
-                <T as pallet::Config>::PropertyToken::get_property_asset_info(asset_id)
+                <T as pallet::Config>::PropertyShares::get_property_asset_info(asset_id)
                     .ok_or(Error::<T>::NoObjectFound)?;
             let total_votes = voting_result
                 .yes_voting_power
                 .saturating_add(voting_result.no_voting_power)
                 .saturating_add(voting_result.abstain_voting_power);
-            let total_supply = asset_details.token_amount;
+            let total_supply = asset_details.share_amount;
 
             ensure!(total_supply > Zero::zero(), Error::<T>::NoObjectFound);
 
@@ -905,17 +905,17 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Lets a voter unlock his locked token after voting on a letting agent.
+        /// Lets a voter unlock his locked shares after voting on a letting agent.
         ///
         /// The origin must be signed and have sufficient funds.
         ///
         /// Parameters:
         /// - `proposal_id`: Id of the letting agent proposal.
         ///
-        /// Emits `TokenUnfrozen` event when successful.
+        /// Emits `SharesUnfrozen` event when successful.
         #[pallet::call_index(5)]
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::unfreeze_letting_voting_token())]
-        pub fn unfreeze_letting_voting_token(
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::unfreeze_letting_voting_shares())]
+        pub fn unfreeze_letting_voting_shares(
             origin: OriginFor<T>,
             proposal_id: ProposalId,
         ) -> DispatchResult {
@@ -932,7 +932,7 @@ pub mod pallet {
                 );
             }
 
-            // Unfreeze the voter's tokens.
+            // Unfreeze the voter's shares.
             T::AssetsFreezer::decrease_frozen(
                 vote_record.asset_id,
                 &MarketplaceFreezeReason::LettingAgentVoting,
@@ -942,7 +942,7 @@ pub mod pallet {
 
             UserLettingAgentVote::<T>::remove(proposal_id, &signer);
 
-            Self::deposit_event(Event::TokenUnfrozen {
+            Self::deposit_event(Event::SharesUnfrozen {
                 proposal_id,
                 asset_id: vote_record.asset_id,
                 voter: signer,
@@ -984,11 +984,11 @@ pub mod pallet {
                 Error::<T>::PaymentAssetNotSupported
             );
 
-            // Fetch property info (including token supply).
-            let property_info = T::PropertyToken::get_property_asset_info(asset_id)
+            // Fetch property info (including share supply).
+            let property_info = T::PropertyShares::get_property_asset_info(asset_id)
                 .ok_or(Error::<T>::NoObjectFound)?;
-            let total_supply = property_info.token_amount;
-            ensure!(total_supply > 0, Error::<T>::ZeroTokenSupply);
+            let total_supply = property_info.share_amount;
+            ensure!(total_supply > 0, Error::<T>::ZeroShareSupply);
 
             // Transfer the funds from the letting agent to the property's account.
             <T as pallet::Config>::ForeignCurrency::transfer(
@@ -1000,7 +1000,7 @@ pub mod pallet {
             )
             .map_err(|_| Error::<T>::NotEnoughFunds)?;
 
-            // Calculate the income per share (distribution per token).
+            // Calculate the income per share (distribution per share).
             let income_per_share =
                 amount.checked_div(&total_supply.into()).ok_or(Error::<T>::DivisionError)?;
 
@@ -1031,14 +1031,14 @@ pub mod pallet {
                 origin,
                 &Role::RealEstateInvestor,
             )?;
-            // Get the number of property tokens the investor currently owns.
-            let token_amount = T::PropertyToken::get_token_balance(asset_id, &signer);
+            // Get the number of property shares the investor currently owns.
+            let share_amount = T::PropertyShares::get_share_balance(asset_id, &signer);
             // Calculate the income delta since the last checkpoint.
             let (delta, checkpoint) = Self::get_delta(&signer, asset_id)?;
             // Ensure there is income to claim.
             ensure!(!delta.is_zero(), Error::<T>::UserHasNoFundsStored);
             // Settle the income by transferring funds and updating the checkpoint.
-            Self::do_settle_income(signer, asset_id, token_amount, delta, checkpoint)?;
+            Self::do_settle_income(signer, asset_id, share_amount, delta, checkpoint)?;
             Ok(())
         }
 
@@ -1101,7 +1101,7 @@ pub mod pallet {
             // Remove letting agent from storage.
             let letting_agent =
                 LettingStorage::<T>::take(asset_id).ok_or(Error::<T>::NoLettingAgentFound)?;
-            let property_info = T::PropertyToken::get_property_asset_info(asset_id)
+            let property_info = T::PropertyShares::get_property_asset_info(asset_id)
                 .ok_or(Error::<T>::NoObjectFound)?;
             // Update letting agent info to reflect the property removal.
             LettingInfo::<T>::try_mutate(&letting_agent, |maybe_info| {
@@ -1124,7 +1124,7 @@ pub mod pallet {
         pub fn finalize_resignation(asset_id: u32) -> DispatchResult {
             let notice =
                 ResignationNotices::<T>::get(asset_id).ok_or(Error::<T>::NoResignationNotice)?;
-            let property_info = T::PropertyToken::get_property_asset_info(asset_id)
+            let property_info = T::PropertyShares::get_property_asset_info(asset_id)
                 .ok_or(Error::<T>::NoObjectFound)?;
             // Update letting agent info to reflect the property removal.
             LettingInfo::<T>::try_mutate(&notice.letting_agent, |maybe_info| {
@@ -1169,14 +1169,14 @@ pub mod pallet {
         pub fn do_settle_income(
             account: AccountIdOf<T>,
             asset_id: u32,
-            token_amount: u32,
+            share_amount: u32,
             delta: <T as pallet::Config>::Balance,
             checkpoint: <T as pallet::Config>::Balance,
         ) -> DispatchResult {
-            ensure!(!token_amount.is_zero(), Error::<T>::UserHasNoFundsStored);
-            // Calculate total owed = delta per token * number of tokens owned.
+            ensure!(!share_amount.is_zero(), Error::<T>::UserHasNoFundsStored);
+            // Calculate total owed = delta per share * number of shares owned.
             let amount =
-                delta.checked_mul(&token_amount.into()).ok_or(Error::<T>::MultiplyError)?;
+                delta.checked_mul(&share_amount.into()).ok_or(Error::<T>::MultiplyError)?;
 
             // Track total transferred amount
             let mut total_transferred: <T as pallet::Config>::Balance = Zero::zero();
@@ -1217,11 +1217,11 @@ pub mod pallet {
             }
             // If anything was transferred, update checkpoint & emit event.
             if !total_transferred.is_zero() {
-                let transferred_per_token = total_transferred
-                    .checked_div(&token_amount.into())
+                let transferred_per_share = total_transferred
+                    .checked_div(&share_amount.into())
                     .ok_or(Error::<T>::DivisionError)?;
                 let new_checkpoint = checkpoint
-                    .checked_add(&transferred_per_token)
+                    .checked_add(&transferred_per_share)
                     .ok_or(Error::<T>::ArithmeticOverflow)?;
                 OwnerCheckpoints::<T>::insert(&account, asset_id, new_checkpoint);
                 Self::deposit_event(Event::<T>::WithdrawFunds {
@@ -1258,15 +1258,15 @@ impl<T: Config> IncomeSettlement for Pallet<T> {
 
     /// Settles income for a given account and property.
     fn settle_income(account: Self::AccountId, asset_id: u32) -> DispatchResult {
-        let token_amount = T::PropertyToken::get_token_balance(asset_id, &account);
-        if token_amount.is_zero() {
-            // If the user has no tokens, just update the checkpoint.
+        let share_amount = T::PropertyShares::get_share_balance(asset_id, &account);
+        if share_amount.is_zero() {
+            // If the user has no shares, just update the checkpoint.
             Self::do_set_checkpoint(account, asset_id)?;
         } else {
             // Calculate the income delta and settle if there's any owed amount.
             let (delta, checkpoint) = Self::get_delta(&account, asset_id)?;
             if !delta.is_zero() {
-                Self::do_settle_income(account, asset_id, token_amount, delta, checkpoint)?;
+                Self::do_settle_income(account, asset_id, share_amount, delta, checkpoint)?;
             } else {
                 Self::do_set_checkpoint(account, asset_id)?;
             }

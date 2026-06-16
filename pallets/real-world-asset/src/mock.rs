@@ -345,7 +345,7 @@ impl pallet_regions::Config for Test {
 }
 
 parameter_types! {
-    pub const MaxPropertyTokens: u32 = 1000;
+    pub const MaxPropertyShares: u32 = 1000;
 }
 
 impl crate::Config for Test {
@@ -361,7 +361,7 @@ impl crate::Config for Test {
     type FractionalizeItemId = <Self as pallet_nfts::Config>::ItemId;
     type AssetId = <Self as pallet_assets::Config<Instance1>>::AssetId;
     type PropertyAccountFundingAmount = ConstU128<100>;
-    type MaxPropertyToken = MaxPropertyTokens;
+    type MaxPropertyShares = MaxPropertyShares;
     type StringLimit = ConstU32<50>;
     type RegionProvider = Regions;
     type PostcodeLimit = Postcode;

@@ -141,9 +141,9 @@ fn list_and_sell_property<T: Config>(
         &pallet_account,
         1_000_000_000_000_000u128.into(),
     );
-    let token_amount: u32 = <T as pallet_marketplace::Config>::MaxPropertyToken::get();
-    let token_price: <T as pallet_marketplace::Config>::Balance = 1_000u32.into();
-    let property_price = token_price.saturating_mul((token_amount as u128).into());
+    let share_amount: u32 = <T as pallet_marketplace::Config>::MaxPropertyShares::get();
+    let share_price: <T as pallet_marketplace::Config>::Balance = 1_000u32.into();
+    let property_price = share_price.saturating_mul((share_amount as u128).into());
     let deposit_amount = property_price.saturating_mul(T::ListingDeposit::get()) / 100u128.into();
     assert_ok!(<T as pallet_marketplace::Config>::NativeCurrency::mint_into(
         &seller,
@@ -163,8 +163,8 @@ fn list_and_sell_property<T: Config>(
         RawOrigin::Signed(seller).into(),
         region_id,
         location,
-        token_price,
-        token_amount,
+        share_price,
+        share_amount,
         metadata,
         tax_paid_by_developer,
     ));
@@ -185,9 +185,9 @@ fn list_and_sell_property<T: Config>(
         buyer.clone(),
         Role::RealEstateInvestor
     ));
-    add_buyers_to_listing::<T>(token_amount - 1, payment_asset, property_price, admin.clone());
+    add_buyers_to_listing::<T>(share_amount - 1, payment_asset, property_price, admin.clone());
 
-    assert_ok!(Marketplace::<T>::buy_property_token(
+    assert_ok!(Marketplace::<T>::buy_property_shares(
         RawOrigin::Signed(buyer.clone()).into(),
         listing_id,
         1,
@@ -200,8 +200,8 @@ fn list_and_sell_property<T: Config>(
         Role::SpvConfirmation
     ));
     assert_ok!(Marketplace::<T>::create_spv(RawOrigin::Signed(spv_admin).into(), listing_id,));
-    claim_buyers_property_token::<T>(token_amount - 1, listing_id);
-    assert_ok!(Marketplace::<T>::claim_property_token(
+    claim_buyers_property_shares::<T>(share_amount - 1, listing_id);
+    assert_ok!(Marketplace::<T>::claim_property_shares(
         RawOrigin::Signed(buyer.clone()).into(),
         listing_id,
     ));
@@ -213,7 +213,7 @@ fn create_registered_property<T: Config>(
     region_id: u16,
     admin: T::AccountId,
 ) -> (T::AccountId, u32) {
-    let token_owner = list_and_sell_property::<T>(seller.clone(), region_id, admin.clone());
+    let share_owner = list_and_sell_property::<T>(seller.clone(), region_id, admin.clone());
     let lawyer_1: T::AccountId = account("lawyer1", 0, 0);
     let lawyer_2: T::AccountId = account("lawyer2", 0, 0);
 
@@ -262,14 +262,14 @@ fn create_registered_property<T: Config>(
         LegalProperty::SpvSide,
         400_u32.into()
     ));
-    let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(0, &token_owner);
+    let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(0, &share_owner);
     assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
-        RawOrigin::Signed(token_owner.clone()).into(),
+        RawOrigin::Signed(share_owner.clone()).into(),
         0,
         pallet_marketplace::types::Vote::Yes,
-        token_amount
+        share_amount
     ));
-    for i in 1..=<T as pallet_marketplace::Config>::MaxPropertyToken::get() - 1 {
+    for i in 1..=<T as pallet_marketplace::Config>::MaxPropertyShares::get() - 1 {
         let buyer: T::AccountId = account("buyer", i, i);
         assert_ok!(Marketplace::<T>::vote_on_spv_lawyer(
             RawOrigin::Signed(buyer).into(),
@@ -281,7 +281,7 @@ fn create_registered_property<T: Config>(
     let expiry = frame_system::Pallet::<T>::block_number() + T::LawyerVotingTime::get();
     frame_system::Pallet::<T>::set_block_number(expiry);
     assert_ok!(Marketplace::<T>::finalize_spv_lawyer(
-        RawOrigin::Signed(token_owner.clone()).into(),
+        RawOrigin::Signed(share_owner.clone()).into(),
         0,
     ));
 
@@ -296,7 +296,7 @@ fn create_registered_property<T: Config>(
         true
     ));
     let asset_id = 0u32;
-    (token_owner, asset_id)
+    (share_owner, asset_id)
 }
 
 fn add_buyers_to_listing<T: Config + pallet_marketplace::Config>(
@@ -326,7 +326,7 @@ fn add_buyers_to_listing<T: Config + pallet_marketplace::Config>(
             buyer.clone(),
             Role::RealEstateInvestor
         ));
-        assert_ok!(Marketplace::<T>::buy_property_token(
+        assert_ok!(Marketplace::<T>::buy_property_shares(
             RawOrigin::Signed(buyer).into(),
             0,
             1,
@@ -338,7 +338,7 @@ fn add_buyers_to_listing<T: Config + pallet_marketplace::Config>(
 fn set_letting_agent<T: Config>(
     region_id: u16,
     asset_id: u32,
-    token_owner: T::AccountId,
+    share_owner: T::AccountId,
     admin: T::AccountId,
 ) -> T::AccountId {
     let letting_agent: T::AccountId = account("letting_agent", 0, 0);
@@ -363,14 +363,14 @@ fn set_letting_agent<T: Config>(
         RawOrigin::Signed(letting_agent.clone()).into(),
         asset_id
     ));
-    let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(0, &token_owner);
+    let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(0, &share_owner);
     assert_ok!(PropertyManagement::<T>::vote_on_letting_agent(
-        RawOrigin::Signed(token_owner.clone()).into(),
+        RawOrigin::Signed(share_owner.clone()).into(),
         asset_id,
         pallet_property_management::Vote::Yes,
-        token_amount
+        share_amount
     ));
-    for i in 1..=<T as pallet_marketplace::Config>::MaxPropertyToken::get() - 1 {
+    for i in 1..=<T as pallet_marketplace::Config>::MaxPropertyShares::get() - 1 {
         let buyer: T::AccountId = account("buyer", i, i);
         assert_ok!(PropertyManagement::<T>::vote_on_letting_agent(
             RawOrigin::Signed(buyer).into(),
@@ -382,16 +382,16 @@ fn set_letting_agent<T: Config>(
     let expiry = frame_system::Pallet::<T>::block_number() + T::LettingAgentVotingTime::get();
     frame_system::Pallet::<T>::set_block_number(expiry);
     assert_ok!(PropertyManagement::<T>::finalize_letting_agent(
-        RawOrigin::Signed(token_owner).into(),
+        RawOrigin::Signed(share_owner).into(),
         asset_id
     ));
     letting_agent
 }
 
-fn claim_buyers_property_token<T: Config>(buyers: u32, listing_id: pallet_marketplace::ListingId) {
+fn claim_buyers_property_shares<T: Config>(buyers: u32, listing_id: pallet_marketplace::ListingId) {
     for i in 1..=buyers {
         let buyer: T::AccountId = account("buyer", i, i);
-        assert_ok!(Marketplace::<T>::claim_property_token(
+        assert_ok!(Marketplace::<T>::claim_property_shares(
             RawOrigin::Signed(buyer).into(),
             listing_id
         ));
@@ -419,9 +419,9 @@ mod benchmarks {
     fn propose() {
         let (region_owner, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let region_id = create_a_new_region::<T>(region_owner.clone(), admin.clone());
-        let (token_owner, asset_id) =
+        let (share_owner, asset_id) =
             create_registered_property::<T>(region_owner.clone(), region_id, admin.clone());
-        let letting_agent = set_letting_agent::<T>(region_id, 0, token_owner, admin);
+        let letting_agent = set_letting_agent::<T>(region_id, 0, share_owner, admin);
 
         let expiry_block = <System<T>>::block_number().saturating_add(T::VotingTime::get());
         let mut proposals = BoundedVec::default();
@@ -447,9 +447,9 @@ mod benchmarks {
     fn challenge_against_letting_agent() {
         let (region_owner, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let region_id = create_a_new_region::<T>(region_owner.clone(), admin.clone());
-        let (token_owner, asset_id) =
+        let (share_owner, asset_id) =
             create_registered_property::<T>(region_owner.clone(), region_id, admin.clone());
-        let _ = set_letting_agent::<T>(region_id, 0, token_owner.clone(), admin);
+        let _ = set_letting_agent::<T>(region_id, 0, share_owner.clone(), admin);
 
         let expiry_block = <System<T>>::block_number().saturating_add(T::VotingTime::get());
         let mut challenges = BoundedVec::default();
@@ -458,12 +458,12 @@ mod benchmarks {
         }
         ChallengeRoundsExpiring::<T>::insert(expiry_block, challenges);
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
-            &token_owner,
+            &share_owner,
             T::ChallengeDeposit::get()
         ));
 
         #[extrinsic_call]
-        challenge_against_letting_agent(RawOrigin::Signed(token_owner.clone()), asset_id);
+        challenge_against_letting_agent(RawOrigin::Signed(share_owner.clone()), asset_id);
 
         let proposal_id = 0;
         assert!(Challenges::<T>::contains_key(proposal_id));
@@ -476,9 +476,9 @@ mod benchmarks {
     fn vote_on_proposal() {
         let (region_owner, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let region_id = create_a_new_region::<T>(region_owner.clone(), admin.clone());
-        let (token_owner, asset_id) =
+        let (share_owner, asset_id) =
             create_registered_property::<T>(region_owner.clone(), region_id, admin.clone());
-        let letting_agent = set_letting_agent::<T>(region_id, 0, token_owner.clone(), admin);
+        let letting_agent = set_letting_agent::<T>(region_id, 0, share_owner.clone(), admin);
 
         let data = BoundedVec::try_from("Proposal".as_bytes().to_vec()).unwrap();
         let proposal_amount = T::LowProposal::get().saturating_mul(2_u32.into());
@@ -489,40 +489,40 @@ mod benchmarks {
             proposal_amount,
             data.clone(),
         ));
-        let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(0, &token_owner);
+        let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(0, &share_owner);
         assert_ok!(PropertyGovernance::<T>::vote_on_proposal(
-            RawOrigin::Signed(token_owner.clone()).into(),
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id,
             crate::Vote::No,
-            token_amount,
+            share_amount,
         ));
 
         #[extrinsic_call]
         vote_on_proposal(
-            RawOrigin::Signed(token_owner.clone()),
+            RawOrigin::Signed(share_owner.clone()),
             asset_id,
             crate::Vote::Yes,
-            token_amount,
+            share_amount,
         );
 
         let proposal_id = 0;
         assert_eq!(
             OngoingProposalVotes::<T>::get(proposal_id).unwrap().yes_voting_power,
-            token_amount
+            share_amount
         );
-        let vote_record = UserProposalVote::<T>::get(proposal_id, &token_owner).unwrap();
+        let vote_record = UserProposalVote::<T>::get(proposal_id, &share_owner).unwrap();
         assert_eq!(vote_record.vote, crate::Vote::Yes);
         assert_eq!(vote_record.asset_id, asset_id);
-        assert_eq!(vote_record.power, token_amount);
+        assert_eq!(vote_record.power, share_amount);
     }
 
     #[benchmark]
-    fn unfreeze_proposal_token() {
+    fn unfreeze_proposal_shares() {
         let (region_owner, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let region_id = create_a_new_region::<T>(region_owner.clone(), admin.clone());
-        let (token_owner, asset_id) =
+        let (share_owner, asset_id) =
             create_registered_property::<T>(region_owner.clone(), region_id, admin.clone());
-        let letting_agent = set_letting_agent::<T>(region_id, 0, token_owner.clone(), admin);
+        let letting_agent = set_letting_agent::<T>(region_id, 0, share_owner.clone(), admin);
 
         let data = BoundedVec::try_from("Proposal".as_bytes().to_vec()).unwrap();
         let proposal_amount = T::LowProposal::get().saturating_mul(2_u32.into());
@@ -533,22 +533,22 @@ mod benchmarks {
             proposal_amount,
             data.clone(),
         ));
-        let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(0, &token_owner);
+        let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(0, &share_owner);
         assert_ok!(PropertyGovernance::<T>::vote_on_proposal(
-            RawOrigin::Signed(token_owner.clone()).into(),
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id,
             crate::Vote::No,
-            token_amount,
+            share_amount,
         ));
 
-        for i in 1..=<T as pallet_marketplace::Config>::MaxPropertyToken::get() - 1 {
+        for i in 1..=<T as pallet_marketplace::Config>::MaxPropertyShares::get() - 1 {
             let buyer: T::AccountId = account("buyer", i, i);
-            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(0, &buyer);
+            let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(0, &buyer);
             assert_ok!(PropertyGovernance::<T>::vote_on_proposal(
                 RawOrigin::Signed(buyer).into(),
                 asset_id,
                 crate::Vote::Yes,
-                token_amount
+                share_amount
             ));
         }
 
@@ -556,25 +556,25 @@ mod benchmarks {
             <T as pallet::Config>::AssetsFreezer::balance_frozen(
                 asset_id,
                 &MarketplaceFreezeReason::ProposalVoting,
-                &token_owner
+                &share_owner
             ),
-            token_amount.into()
+            share_amount.into()
         );
 
         let expiry = System::<T>::block_number() + T::VotingTime::get();
         run_to_block::<T>(expiry);
 
         #[extrinsic_call]
-        unfreeze_proposal_token(RawOrigin::Signed(token_owner.clone()), 0);
+        unfreeze_proposal_shares(RawOrigin::Signed(share_owner.clone()), 0);
 
         let proposal_id = 0;
 
-        assert!(UserProposalVote::<T>::get(proposal_id, &token_owner).is_none());
+        assert!(UserProposalVote::<T>::get(proposal_id, &share_owner).is_none());
         assert_eq!(
             <T as pallet::Config>::AssetsFreezer::balance_frozen(
                 asset_id,
                 &MarketplaceFreezeReason::ProposalVoting,
-                &token_owner
+                &share_owner
             ),
             0u32.into()
         );
@@ -584,73 +584,73 @@ mod benchmarks {
     fn vote_on_letting_agent_challenge() {
         let (region_owner, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let region_id = create_a_new_region::<T>(region_owner.clone(), admin.clone());
-        let (token_owner, asset_id) =
+        let (share_owner, asset_id) =
             create_registered_property::<T>(region_owner.clone(), region_id, admin.clone());
-        let _ = set_letting_agent::<T>(region_id, 0, token_owner.clone(), admin);
+        let _ = set_letting_agent::<T>(region_id, 0, share_owner.clone(), admin);
 
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
-            &token_owner,
+            &share_owner,
             T::ChallengeDeposit::get()
         ));
         assert_ok!(PropertyGovernance::<T>::challenge_against_letting_agent(
-            RawOrigin::Signed(token_owner.clone()).into(),
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id
         ));
-        let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(0, &token_owner);
+        let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(0, &share_owner);
         assert_ok!(PropertyGovernance::<T>::vote_on_letting_agent_challenge(
-            RawOrigin::Signed(token_owner.clone()).into(),
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id,
             crate::Vote::No,
-            token_amount
+            share_amount
         ));
 
         #[extrinsic_call]
         vote_on_letting_agent_challenge(
-            RawOrigin::Signed(token_owner.clone()),
+            RawOrigin::Signed(share_owner.clone()),
             asset_id,
             crate::Vote::Yes,
-            token_amount,
+            share_amount,
         );
 
-        assert_eq!(OngoingChallengeVotes::<T>::get(0).unwrap().yes_voting_power, token_amount);
-        let vote_record = UserChallengeVote::<T>::get(0, &token_owner).unwrap();
+        assert_eq!(OngoingChallengeVotes::<T>::get(0).unwrap().yes_voting_power, share_amount);
+        let vote_record = UserChallengeVote::<T>::get(0, &share_owner).unwrap();
         assert_eq!(vote_record.vote, crate::Vote::Yes);
         assert_eq!(vote_record.asset_id, asset_id);
-        assert_eq!(vote_record.power, token_amount);
+        assert_eq!(vote_record.power, share_amount);
     }
 
     #[benchmark]
-    fn unfreeze_challenge_token() {
+    fn unfreeze_challenge_shares() {
         let (region_owner, admin): (T::AccountId, T::AccountId) = create_whitelisted_user::<T>();
         let region_id = create_a_new_region::<T>(region_owner.clone(), admin.clone());
-        let (token_owner, asset_id) =
+        let (share_owner, asset_id) =
             create_registered_property::<T>(region_owner.clone(), region_id, admin.clone());
-        let _ = set_letting_agent::<T>(region_id, 0, token_owner.clone(), admin);
+        let _ = set_letting_agent::<T>(region_id, 0, share_owner.clone(), admin);
 
         assert_ok!(<T as pallet::Config>::NativeCurrency::mint_into(
-            &token_owner,
+            &share_owner,
             T::ChallengeDeposit::get()
         ));
         assert_ok!(PropertyGovernance::<T>::challenge_against_letting_agent(
-            RawOrigin::Signed(token_owner.clone()).into(),
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id
         ));
-        let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(0, &token_owner);
+        let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(0, &share_owner);
         assert_ok!(PropertyGovernance::<T>::vote_on_letting_agent_challenge(
-            RawOrigin::Signed(token_owner.clone()).into(),
+            RawOrigin::Signed(share_owner.clone()).into(),
             asset_id,
             crate::Vote::No,
-            token_amount
+            share_amount
         ));
 
-        for i in 1..=<T as pallet_marketplace::Config>::MaxPropertyToken::get() - 1 {
+        for i in 1..=<T as pallet_marketplace::Config>::MaxPropertyShares::get() - 1 {
             let buyer: T::AccountId = account("buyer", i, i);
-            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(0, &buyer);
+            let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(0, &buyer);
             assert_ok!(PropertyGovernance::<T>::vote_on_letting_agent_challenge(
                 RawOrigin::Signed(buyer).into(),
                 asset_id,
                 crate::Vote::Yes,
-                token_amount
+                share_amount
             ));
         }
 
@@ -658,23 +658,23 @@ mod benchmarks {
             <T as pallet::Config>::AssetsFreezer::balance_frozen(
                 asset_id,
                 &MarketplaceFreezeReason::ChallengeVoting,
-                &token_owner
+                &share_owner
             ),
-            token_amount.into()
+            share_amount.into()
         );
 
         let expiry = System::<T>::block_number() + T::VotingTime::get();
         run_to_block::<T>(expiry);
 
         #[extrinsic_call]
-        unfreeze_challenge_token(RawOrigin::Signed(token_owner.clone()), 0);
+        unfreeze_challenge_shares(RawOrigin::Signed(share_owner.clone()), 0);
 
-        assert!(UserChallengeVote::<T>::get(0, &token_owner).is_none());
+        assert!(UserChallengeVote::<T>::get(0, &share_owner).is_none());
         assert_eq!(
             <T as pallet::Config>::AssetsFreezer::balance_frozen(
                 asset_id,
                 &MarketplaceFreezeReason::ChallengeVoting,
-                &token_owner
+                &share_owner
             ),
             0u32.into()
         );

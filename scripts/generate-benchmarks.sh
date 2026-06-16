@@ -24,8 +24,8 @@ pallets=(
     #pallet_real_x_education
     #pallet_regions
     pallet_marketplace
-    #pallet_property_management
-    #pallet_property_governance
+    pallet_property_management
+    pallet_property_governance
     #pallet_bucket
     #attestation
     #ctype

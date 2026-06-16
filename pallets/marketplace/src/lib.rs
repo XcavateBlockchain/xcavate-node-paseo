@@ -62,7 +62,7 @@ use types::*;
 
 use pallet_real_world_asset::{
     traits::{
-        PropertyTokenInspect, PropertyTokenManage, PropertyTokenOwnership, PropertyTokenSpvControl,
+        PropertySharesInspect, PropertySharesManage, PropertySharesOwnership, PropertySharesSpvControl,
     },
     PropertyAssetDetails,
 };
@@ -126,7 +126,7 @@ pub mod pallet {
         /// The overarching hold reason.
         type RuntimeHoldReason: From<HoldReason>;
 
-        /// The currency for property tokens.
+        /// The currency for property shares.
         type LocalCurrency: fungibles::InspectEnumerable<
                 AccountIdOf<Self>,
                 Balance = <Self as pallet::Config>::Balance,
@@ -172,13 +172,13 @@ pub mod pallet {
         #[pallet::constant]
         type PalletId: Get<PalletId>;
 
-        /// The minimum amount of token of a property.
+        /// The minimum amount of shares of a property.
         #[pallet::constant]
-        type MinPropertyToken: Get<u32>;
+        type MinPropertyShares: Get<u32>;
 
-        /// The maximum amount of token of a property.
+        /// The maximum amount of shares of a property.
         #[pallet::constant]
-        type MaxPropertyToken: Get<u32>;
+        type MaxPropertyShares: Get<u32>;
 
         /// Asset id type from pallet NFT fractionalization.
         type AssetId: IsType<<Self as pallet_nft_fractionalization::Config>::AssetId>
@@ -207,22 +207,22 @@ pub mod pallet {
         #[pallet::constant]
         type MaxAcceptedAssets: Get<u32>;
 
-        /// Property token management traits.
-        type PropertyToken: PropertyTokenManage<
+        /// Property share management traits.
+        type PropertyShares: PropertySharesManage<
                 AccountIdOf<Self>,
                 <Self as pallet::Config>::Balance,
                 <Self as pallet::Config>::NftId,
                 <Self as pallet::Config>::StringLimit,
                 LocationId<Self>,
-            > + PropertyTokenOwnership<AccountIdOf<Self>>
-            + PropertyTokenSpvControl<
+            > + PropertySharesOwnership<AccountIdOf<Self>>
+            + PropertySharesSpvControl<
                 PropertyAssetInfo = PropertyAssetDetails<
                     <Self as pallet::Config>::NftId,
                     <Self as pallet::Config>::NftCollectionId,
                     <Self as pallet::Config>::Balance,
                     LocationId<Self>,
                 >,
-            > + PropertyTokenInspect<
+            > + PropertySharesInspect<
                 AccountIdOf<Self>,
                 PropertyAssetInfo = PropertyAssetDetails<
                     <Self as pallet::Config>::NftId,
@@ -261,11 +261,11 @@ pub mod pallet {
         #[pallet::constant]
         type MinVotingQuorum: Get<Percent>;
 
-        /// Time window for claiming property tokens.
+        /// Time window for claiming property shares.
         #[pallet::constant]
         type ClaimWindow: Get<BlockNumberFor<Self>>;
 
-        /// Maximum attempts to relist unclaimed tokens.
+        /// Maximum attempts to relist unclaimed shares.
         #[pallet::constant]
         type MaxRelistAttempts: Get<u8>;
 
@@ -313,7 +313,7 @@ pub mod pallet {
         T,
     >;
 
-    pub(super) type ListingDetailsType<T> = TokenListingDetails<
+    pub(super) type ListingDetailsType<T> = ShareListingDetails<
         <T as pallet::Config>::NftId,
         <T as pallet::Config>::NftCollectionId,
         T,
@@ -332,21 +332,21 @@ pub mod pallet {
     pub(super) type OngoingObjectListing<T: Config> =
         StorageMap<_, Blake2_128Concat, ListingId, PropertyListingDetailsType<T>, OptionQuery>;
 
-    /// Storage for token ownership, mapping account ID and listing ID to token amounts.
+    /// Storage for share ownership, mapping account ID and listing ID to share amounts.
     #[pallet::storage]
-    pub(super) type TokenOwner<T: Config> = StorageDoubleMap<
+    pub(super) type ShareOwner<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
         AccountIdOf<T>,
         Blake2_128Concat,
         ListingId,
-        TokenOwnerDetails<T>,
+        ShareOwnerDetails<T>,
         OptionQuery,
     >;
 
-    /// Storage for token listings, mapping listing ID to listing details.
+    /// Storage for share listings, mapping listing ID to listing details.
     #[pallet::storage]
-    pub(super) type TokenListings<T: Config> =
+    pub(super) type ShareListings<T: Config> =
         StorageMap<_, Blake2_128Concat, ListingId, ListingDetailsType<T>, OptionQuery>;
 
     /// Storage for ongoing offers, mapping listing ID and offeror to offer details.
@@ -368,12 +368,12 @@ pub mod pallet {
 
     /// Storage for refund information.
     #[pallet::storage]
-    pub type RefundToken<T: Config> =
+    pub type RefundShare<T: Config> =
         StorageMap<_, Blake2_128Concat, ListingId, RefundInfos<T>, OptionQuery>;
 
     /// Stores required infos in case of a refund.
     #[pallet::storage]
-    pub type RefundClaimedToken<T: Config> =
+    pub type RefundClaimedShare<T: Config> =
         StorageMap<_, Blake2_128Concat, ListingId, u32, OptionQuery>;
 
     /// Stores required infos in case of a refund is a legal process expired.
@@ -435,16 +435,16 @@ pub mod pallet {
             collection_index: <T as pallet::Config>::NftCollectionId,
             item_index: <T as pallet::Config>::NftId,
             asset_id: u32,
-            token_price: <T as pallet::Config>::Balance,
-            token_amount: u32,
+            share_price: <T as pallet::Config>::Balance,
+            share_amount: u32,
             total_valuation: <T as pallet::Config>::Balance,
             seller: AccountIdOf<T>,
             tax_paid_by_developer: bool,
             listing_expiry: BlockNumberFor<T>,
             metadata_blob: BoundedVec<u8, <T as pallet::Config>::StringLimit>,
         },
-        /// A relisted token has been bought.
-        RelistedTokenBought {
+        /// Relisted shares have been bought.
+        RelistedSharesBought {
             listing_index: ListingId,
             asset_id: u32,
             buyer: AccountIdOf<T>,
@@ -454,8 +454,8 @@ pub mod pallet {
             payment_asset: u32,
             new_amount_remaining: u32,
         },
-        /// Property tokens have been purchased.
-        PropertyTokenBought {
+        /// Property shares have been purchased.
+        PropertySharesBought {
             listing_index: ListingId,
             asset_id: u32,
             buyer: AccountIdOf<T>,
@@ -463,14 +463,14 @@ pub mod pallet {
             price_paid: <T as pallet::Config>::Balance,
             tax_paid: <T as pallet::Config>::Balance,
             payment_asset: u32,
-            new_tokens_remaining: u32,
+            new_shares_remaining: u32,
         },
-        /// Token have been relisted.
-        TokenRelisted {
+        /// Shares have been relisted.
+        SharesRelisted {
             listing_index: ListingId,
             asset_id: u32,
             price: <T as pallet::Config>::Balance,
-            token_amount: u32,
+            share_amount: u32,
             seller: AccountIdOf<T>,
         },
         /// The property has been delisted.
@@ -538,15 +538,15 @@ pub mod pallet {
             listing_id: ListingId,
             investor: AccountIdOf<T>,
             amount_returned: u32,
-            new_tokens_remaining: u32,
+            new_shares_remaining: u32,
             refunds: BoundedBTreeMap<
                 u32,
                 (<T as pallet::Config>::Balance, <T as pallet::Config>::Balance), // (principal, tax)
                 <T as pallet::Config>::MaxAcceptedAssets,
             >,
         },
-        /// Property tokens have been transferred.
-        PropertyTokenSend {
+        /// Property shares have been transferred.
+        PropertySharesSent {
             asset_id: u32,
             sender: AccountIdOf<T>,
             receiver: AccountIdOf<T>,
@@ -584,8 +584,8 @@ pub mod pallet {
             final_no_power: u32,
             final_abstain_power: u32,
         },
-        /// Property tokens have been claimed.
-        PropertyTokenClaimed {
+        /// Property shares have been claimed.
+        PropertySharesClaimed {
             listing_id: ListingId,
             asset_id: u32,
             owner: AccountIdOf<T>,
@@ -593,16 +593,16 @@ pub mod pallet {
         },
         /// An SPV has been created for a property.
         SpvCreated { listing_id: ListingId, asset_id: u32 },
-        /// All token of a property have been sold.
+        /// All shares of a property have been sold.
         PrimarySaleSoldOut { listing_id: ListingId, asset_id: u32 },
-        /// All property tokens have been claimed.
-        AllPropertyTokenClaimed {
+        /// All property shares have been claimed.
+        AllPropertySharesClaimed {
             listing_id: ListingId,
             asset_id: u32,
             legal_process_expiry_block: BlockNumberFor<T>,
         },
-        /// A user has unfrozen his token.
-        TokenUnfrozen { proposal_id: ProposalId, asset_id: u32, voter: AccountIdOf<T>, amount: u32 },
+        /// A user has unfrozen his shares.
+        SharesUnfrozen { proposal_id: ProposalId, asset_id: u32, voter: AccountIdOf<T>, amount: u32 },
         /// Lawyer costs have been allocated.
         LawyerCostsAllocated {
             listing_id: ListingId,
@@ -614,10 +614,10 @@ pub mod pallet {
                 <T as pallet::Config>::MaxAcceptedAssets,
             >,
         },
-        /// Unclaimed token have been relisted.
+        /// Unclaimed shares have been relisted.
         UnclaimedRelisted { listing_id: ListingId, amount: u32, relist_count: u8 },
-        /// Unclaimed token have been withdrawn.
-        UnclaimedTokenWithdrawn {
+        /// Unclaimed shares have been withdrawn.
+        UnclaimedSharesWithdrawn {
             listing_id: ListingId,
             investor: AccountIdOf<T>,
             refunds: BoundedBTreeMap<
@@ -626,7 +626,7 @@ pub mod pallet {
                 <T as pallet::Config>::MaxAcceptedAssets,
             >,
         },
-        /// A sale has been cancelled due to unclaimed tokens.
+        /// A sale has been cancelled due to unclaimed shares.
         SaleCancelledUnclaimed { listing_id: ListingId, unclaimed_amount: u32 },
     }
 
@@ -637,8 +637,8 @@ pub mod pallet {
         InvalidIndex,
         /// The buyer doesn't have enough funds.
         NotEnoughFunds,
-        /// Not enough token available to buy.
-        NotEnoughTokenAvailable,
+        /// Not enough shares available to buy.
+        NotEnoughSharesAvailable,
         /// Error by dividing a number.
         DivisionError,
         /// Error by multiplying a number.
@@ -651,16 +651,16 @@ pub mod pallet {
         ArithmeticUnderflow,
         /// Overflow in arithmetic operations.
         ArithmeticOverflow,
-        /// The token is not for sale.
-        TokenNotForSale,
+        /// The share is not for sale.
+        ShareNotForSale,
         /// This Region is not known.
         RegionUnknown,
         /// The location is not registered.
         LocationUnknown,
-        /// The object can not be divided in so many token.
-        TooManyToken,
-        /// The object needs more token.
-        TokenAmountTooLow,
+        /// The object can not be divided in so many shares.
+        TooManyShares,
+        /// The object needs more shares.
+        ShareAmountTooLow,
         /// A user can only make one offer per listing.
         OnlyOneOfferPerUser,
         /// The lawyer job has already been taken.
@@ -678,31 +678,31 @@ pub mod pallet {
         /// Exceeds maximum allowed entries.
         ExceedsMaxEntries,
         /// The property is not refunded.
-        TokenNotRefunded,
+        SharesNotRefunded,
         /// The property is already sold.
         PropertyAlreadySold,
         /// Listing has already expired.
         ListingExpired,
-        /// Signer has not bought any token.
-        NoTokenBought,
+        /// Signer has not bought any shares.
+        NoSharesBought,
         /// The listing has not expired.
         ListingNotExpired,
-        /// Price of a token can not be zero.
-        InvalidTokenPrice,
-        /// Token amount can not be zero.
+        /// Price of a share can not be zero.
+        InvalidSharePrice,
+        /// Share amount can not be zero.
         AmountCannotBeZero,
         /// Marketplace fee needs to be below 100 %.
         InvalidFeePercentage,
-        /// The sender has not enough token.
-        NotEnoughToken,
-        /// Token have not been returned yet.
-        TokenNotReturned,
+        /// The sender has not enough shares.
+        NotEnoughShares,
+        /// Shares have not been returned yet.
+        SharesNotReturned,
         /// The real estate object could not be found.
         NoObjectFound,
         /// The lawyer has no permission for this region.
         WrongRegion,
-        /// TokenOwnerHasNotBeenFound.
-        TokenOwnerNotFound,
+        /// Share owner has not been found.
+        ShareOwnerNotFound,
         /// No lawyer has been proposed to vote on.
         NoLawyerProposed,
         /// There is already a lawyer proposal ongoing.
@@ -717,30 +717,30 @@ pub mod pallet {
         LegalProcessFailed,
         /// The legal process is currently ongoing.
         LegalProcessOngoing,
-        /// The user has no token amount frozen.
+        /// The user has no share amount frozen.
         NoFrozenAmount,
-        /// The user has no token amount frozen.
+        /// The user has no share amount frozen.
         NoClaimWindow,
         /// The claim window already expired.
         ClaimWindowExpired,
         /// The claim period is still ongoing.
         ClaimWindowNotExpired,
-        /// The user still has unclaimed token.
-        StillHasUnclaimedToken,
-        /// The user does not have any valid token to claim.
-        NoValidTokenToClaim,
-        /// The user is not allowed to own too many token of a certain property.
+        /// The user still has unclaimed shares.
+        StillHasUnclaimedShares,
+        /// The user does not have any valid shares to claim.
+        NoValidSharesToClaim,
+        /// The user is not allowed to own too many shares of a certain property.
         ExceedsMaxOwnership,
         /// The listing does not exist.
         ListingNotFound,
-        /// All property token have already been claimed.
-        AllTokensClaimed,
+        /// All property shares have already been claimed.
+        AllSharesClaimed,
         /// The offer does not exist.
         OfferNotFound,
-        /// The user does not own any token of the property.
-        NoTokensOwned,
-        /// There are not enough token available to refund.
-        InsufficientRefundableTokens,
+        /// The user does not own any shares of the property.
+        NoSharesOwned,
+        /// There are not enough shares available to refund.
+        InsufficientRefundableShares,
         /// The amount for voting has to be higher than 0.
         ZeroVoteAmount,
         /// The nonce does not match the nonce for this offer.
@@ -757,8 +757,8 @@ pub mod pallet {
         /// Parameters:
         /// - `region`: The region where the object is located.
         /// - `location`: The location where the object is located.
-        /// - `token_price`: The price of a single token.
-        /// - `token_amount`: The amount of tokens for a object.
+        /// - `share_price`: The price of a single share.
+        /// - `share_amount`: The amount of shares for a object.
         /// - `data`: The Metadata of the nft.
         /// - `tax_paid_by_developer`: Bool if the tax is paid by the real estate developer or not.
         ///
@@ -771,8 +771,8 @@ pub mod pallet {
             origin: OriginFor<T>,
             region: RegionId,
             location: LocationId<T>,
-            token_price: <T as pallet::Config>::Balance,
-            token_amount: u32,
+            share_price: <T as pallet::Config>::Balance,
+            share_amount: u32,
             data: BoundedVec<u8, <T as pallet::Config>::StringLimit>,
             tax_paid_by_developer: bool,
         ) -> DispatchResult {
@@ -780,14 +780,14 @@ pub mod pallet {
                 origin,
                 &Role::RealEstateDeveloper,
             )?;
-            // Validate token bounds
-            ensure!(token_amount > 0, Error::<T>::AmountCannotBeZero);
+            // Validate share bounds
+            ensure!(share_amount > 0, Error::<T>::AmountCannotBeZero);
             ensure!(
-                token_amount <= <T as pallet::Config>::MaxPropertyToken::get(),
-                Error::<T>::TooManyToken
+                share_amount <= <T as pallet::Config>::MaxPropertyShares::get(),
+                Error::<T>::TooManyShares
             );
-            ensure!(token_amount >= T::MinPropertyToken::get(), Error::<T>::TokenAmountTooLow);
-            ensure!(!token_price.is_zero(), Error::<T>::InvalidTokenPrice);
+            ensure!(share_amount >= T::MinPropertyShares::get(), Error::<T>::ShareAmountTooLow);
+            ensure!(!share_price.is_zero(), Error::<T>::InvalidSharePrice);
 
             let region_info = <T as pallet::Config>::RegionProvider::get_region_details(region)
                 .ok_or(Error::<T>::RegionUnknown)?;
@@ -814,8 +814,8 @@ pub mod pallet {
             }
 
             // Calculate total property price
-            let property_price = token_price
-                .checked_mul(&((token_amount as u128).into()))
+            let property_price = share_price
+                .checked_mul(&((share_amount as u128).into()))
                 .ok_or(Error::<T>::MultiplyError)?;
             let deposit_amount = T::ListingDeposit::get();
 
@@ -825,12 +825,12 @@ pub mod pallet {
                 _ => return Err(Error::<T>::NotEnoughFunds.into()),
             }
 
-            // Create property token and store details
-            let (item_id, asset_number) = T::PropertyToken::create_property_token(
+            // Create property shares and store details
+            let (item_id, asset_number) = T::PropertyShares::create_property_shares(
                 &signer,
                 region,
                 location,
-                token_amount,
+                share_amount,
                 property_price,
                 data.clone(),
             )?;
@@ -838,22 +838,22 @@ pub mod pallet {
             // Build and store listing details
             let property_details = PropertyListingDetails {
                 real_estate_developer: signer.clone(),
-                token_price,
+                share_price,
                 collected_funds: collected_funds.clone(),
                 collected_tax: collected_funds.clone(),
                 collected_fees: collected_funds,
                 asset_id: asset_number,
                 item_id,
                 collection_id: region_info.collection_id,
-                token_amount,
-                listed_token_amount: token_amount,
+                share_amount,
+                listed_share_amount: share_amount,
                 tax_paid_by_developer,
                 tax: region_info.tax,
                 listing_expiry,
                 investor_funds: Default::default(),
                 claim_expiry: None,
                 relist_count: Zero::zero(),
-                unclaimed_token_amount: Zero::zero(),
+                unclaimed_share_amount: Zero::zero(),
             };
             OngoingObjectListing::<T>::insert(listing_id, property_details);
 
@@ -874,8 +874,8 @@ pub mod pallet {
                 collection_index: region_info.collection_id,
                 item_index: item_id,
                 asset_id: asset_number,
-                token_price,
-                token_amount,
+                share_price,
+                share_amount,
                 total_valuation: property_price,
                 seller: signer,
                 tax_paid_by_developer,
@@ -885,22 +885,22 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Buy listed token from the marketplace.
+        /// Buy listed shares from the marketplace.
         ///
         /// The origin must be Signed by a compliant RealEstateInvestor and have sufficient funds.
         ///
         /// Parameters:
-        /// - `listing_id`: The listing that the investor wants to buy token from.
-        /// - `amount`: The amount of token that the investor wants to buy.
+        /// - `listing_id`: The listing that the investor wants to buy shares from.
+        /// - `amount`: The amount of shares that the investor wants to buy.
         /// - `payment_asset`: Asset in which the investor wants to pay.
         ///
-        /// Emits `PropertyTokenBought` event when successful.
+        /// Emits `PropertySharesBought` event when successful.
         #[pallet::call_index(1)]
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::buy_property_token_all_token(
-            <T as pallet::Config>::MaxPropertyToken::get(),
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::buy_property_shares_all_shares(
+            <T as pallet::Config>::MaxPropertyShares::get(),
             <T as pallet::Config>::AcceptedAssets::get().len() as u32,
         ))]
-        pub fn buy_property_token(
+        pub fn buy_property_shares(
             origin: OriginFor<T>,
             listing_id: ListingId,
             amount: u32,
@@ -921,10 +921,10 @@ pub mod pallet {
 
             // Retrieve and validate listing details
             let mut property_details =
-                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
+                OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ShareNotForSale)?;
             ensure!(
-                property_details.listed_token_amount >= amount,
-                Error::<T>::NotEnoughTokenAvailable
+                property_details.listed_share_amount >= amount,
+                Error::<T>::NotEnoughSharesAvailable
             );
             ensure!(
                 property_details.listing_expiry
@@ -932,17 +932,17 @@ pub mod pallet {
                 Error::<T>::ListingExpired
             );
             let asset_details =
-                T::PropertyToken::get_property_asset_info(property_details.asset_id)
+                T::PropertyShares::get_property_asset_info(property_details.asset_id)
                     .ok_or(Error::<T>::NoObjectFound)?;
 
             // Calculate fees and taxes
             let fee_percent = T::MarketplaceFeePercentage::get();
             ensure!(fee_percent < Perbill::from_percent(100), Error::<T>::InvalidFeePercentage);
             let tax_percent = property_details.tax;
-            let total_supply = property_details.token_amount;
-            let max_tokens = T::MaxOwnershipPercentage::get().mul_floor(total_supply);
+            let total_supply = property_details.share_amount;
+            let max_shares = T::MaxOwnershipPercentage::get().mul_floor(total_supply);
             let transfer_price = property_details
-                .token_price
+                .share_price
                 .checked_mul(&((amount as u128).into()))
                 .ok_or(Error::<T>::MultiplyError)?;
             // Rounding up to not undercharge for protocol fees.
@@ -966,56 +966,56 @@ pub mod pallet {
                 total_transfer_price,
             )?;
 
-            // Update token amounts in listing
-            property_details.listed_token_amount = property_details
-                .listed_token_amount
+            // Update share amounts in listing
+            property_details.listed_share_amount = property_details
+                .listed_share_amount
                 .checked_sub(amount)
                 .ok_or(Error::<T>::ArithmeticUnderflow)?;
-            property_details.unclaimed_token_amount = property_details
-                .unclaimed_token_amount
+            property_details.unclaimed_share_amount = property_details
+                .unclaimed_share_amount
                 .checked_add(amount)
                 .ok_or(Error::<T>::ArithmeticOverflow)?;
-            // Update or create token owner details
-            TokenOwner::<T>::try_mutate_exists(&signer, listing_id, |maybe_token_owner_details| {
-                if maybe_token_owner_details.is_none() {
+            // Update or create share owner details
+            ShareOwner::<T>::try_mutate_exists(&signer, listing_id, |maybe_share_owner_details| {
+                if maybe_share_owner_details.is_none() {
                     let initial_funds = Self::create_initial_funds()?;
-                    *maybe_token_owner_details = Some(TokenOwnerDetails {
-                        token_amount: 0,
+                    *maybe_share_owner_details = Some(ShareOwnerDetails {
+                        share_amount: 0,
                         paid_funds: initial_funds.clone(),
                         paid_tax: initial_funds,
                         relist_count: property_details.relist_count,
                     });
                 }
-                let token_owner_details =
-                    maybe_token_owner_details.as_mut().ok_or(Error::<T>::TokenOwnerNotFound)?;
-                // Check that the relist count matches to prevent buying tokens if he still has unclaimed tokens
+                let share_owner_details =
+                    maybe_share_owner_details.as_mut().ok_or(Error::<T>::ShareOwnerNotFound)?;
+                // Check that the relist count matches to prevent buying shares if he still has unclaimed shares
                 ensure!(
-                    token_owner_details.relist_count == property_details.relist_count,
-                    Error::<T>::StillHasUnclaimedToken
+                    share_owner_details.relist_count == property_details.relist_count,
+                    Error::<T>::StillHasUnclaimedShares
                 );
-                // Ensure max ownership token is not exceeded
-                let claimed_token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
+                // Ensure max ownership share is not exceeded
+                let claimed_share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(
                     property_details.asset_id,
                     &signer,
                 );
-                let new_token_amount = token_owner_details
-                    .token_amount
+                let new_share_amount = share_owner_details
+                    .share_amount
                     .checked_add(amount)
                     .ok_or(Error::<T>::ArithmeticOverflow)?;
-                let total_investor_token_amount = new_token_amount
-                    .checked_add(claimed_token_amount)
+                let total_investor_share_amount = new_share_amount
+                    .checked_add(claimed_share_amount)
                     .ok_or(Error::<T>::ArithmeticOverflow)?;
-                ensure!(total_investor_token_amount < max_tokens, Error::<T>::ExceedsMaxOwnership);
-                token_owner_details.token_amount = new_token_amount;
+                ensure!(total_investor_share_amount < max_shares, Error::<T>::ExceedsMaxOwnership);
+                share_owner_details.share_amount = new_share_amount;
                 // Update paid funds and tax
                 Self::update_map(
-                    &mut token_owner_details.paid_funds,
+                    &mut share_owner_details.paid_funds,
                     payment_asset,
                     transfer_price,
                 )?;
 
                 if !property_details.tax_paid_by_developer {
-                    Self::update_map(&mut token_owner_details.paid_tax, payment_asset, tax)?;
+                    Self::update_map(&mut share_owner_details.paid_tax, payment_asset, tax)?;
                 }
 
                 Ok::<(), DispatchError>(())
@@ -1024,8 +1024,8 @@ pub mod pallet {
             // Handle sold-out case
             let asset_id = property_details.asset_id;
             let tax_paid_by_developer = property_details.tax_paid_by_developer;
-            let listed_token = property_details.listed_token_amount;
-            if listed_token == 0 {
+            let listed_shares = property_details.listed_share_amount;
+            if listed_shares == 0 {
                 if asset_details.spv_created {
                     let current_block_number =
                         <T as pallet::Config>::BlockNumberProvider::current_block_number();
@@ -1036,7 +1036,7 @@ pub mod pallet {
             }
 
             OngoingObjectListing::<T>::insert(listing_id, &property_details);
-            Self::deposit_event(Event::<T>::PropertyTokenBought {
+            Self::deposit_event(Event::<T>::PropertySharesBought {
                 listing_index: listing_id,
                 asset_id,
                 buyer: signer,
@@ -1044,22 +1044,22 @@ pub mod pallet {
                 price_paid: transfer_price,
                 tax_paid: if !tax_paid_by_developer { tax } else { 0u128.into() },
                 payment_asset,
-                new_tokens_remaining: listed_token,
+                new_shares_remaining: listed_shares,
             });
             Ok(())
         }
 
-        /// Claim purchased property token once all token are sold.
+        /// Claim purchased property shares once all shares are sold.
         ///
         /// The origin must be Signed by a compliant RealEstateInvestor and have sufficient funds.
         ///
         /// Parameters:
-        /// - `listing_id`: The listing that the investor wants to claim token from.
+        /// - `listing_id`: The listing that the investor wants to claim shares from.
         ///
-        /// Emits `PropertyTokenClaimed` event when successful.
+        /// Emits `PropertySharesClaimed` event when successful.
         #[pallet::call_index(2)]
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::claim_property_token())]
-        pub fn claim_property_token(origin: OriginFor<T>, listing_id: ListingId) -> DispatchResult {
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::claim_property_shares())]
+        pub fn claim_property_shares(origin: OriginFor<T>, listing_id: ListingId) -> DispatchResult {
             let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
                 origin,
                 &Role::RealEstateInvestor,
@@ -1067,17 +1067,17 @@ pub mod pallet {
             let mut property_details =
                 OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
             // Ensure SPV has been created for this property before allowing claims
-            T::PropertyToken::ensure_spv_created(property_details.asset_id)?;
+            T::PropertyShares::ensure_spv_created(property_details.asset_id)?;
             let claim_expiry = property_details.claim_expiry.ok_or(Error::<T>::NoClaimWindow)?;
             let current_block_number =
                 <T as pallet::Config>::BlockNumberProvider::current_block_number();
             ensure!(current_block_number < claim_expiry, Error::<T>::ClaimWindowExpired);
-            // Retrieve token details for this investor and ensure they are eligible to claim
-            let token_details =
-                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
+            // Retrieve share details for this investor and ensure they are eligible to claim
+            let share_details =
+                ShareOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::ShareOwnerNotFound)?;
             ensure!(
-                token_details.relist_count == property_details.relist_count,
-                Error::<T>::NoValidTokenToClaim
+                share_details.relist_count == property_details.relist_count,
+                Error::<T>::NoValidSharesToClaim
             );
             let property_account = Self::property_account_id(property_details.asset_id);
             let fee_percent = T::MarketplaceFeePercentage::get();
@@ -1091,10 +1091,10 @@ pub mod pallet {
 
             // Process each payment asset
             for (asset, paid_funds) in
-                token_details.paid_funds.iter().filter(|(_, funds)| !funds.is_zero())
+                share_details.paid_funds.iter().filter(|(_, funds)| !funds.is_zero())
             {
                 let default = Zero::zero();
-                let paid_tax = token_details.paid_tax.get(asset).copied().unwrap_or(default);
+                let paid_tax = share_details.paid_tax.get(asset).copied().unwrap_or(default);
                 // Calculate investor's fee as 1% of paid_funds, rounding up to prevent undercharging
                 let investor_fee = fee_percent.mul_ceil(*paid_funds);
 
@@ -1133,8 +1133,8 @@ pub mod pallet {
 
                 // Update or insert investor funds in property details
                 match property_details.investor_funds.get_mut(&signer) {
-                    Some(token_funds) => {
-                        let paid_funds = &mut token_funds.paid_funds;
+                    Some(share_funds) => {
+                        let paid_funds = &mut share_funds.paid_funds;
                         if let Some(existing) = paid_funds.get_mut(asset) {
                             *existing = existing
                                 .checked_add(&investor_net_contribution)
@@ -1144,7 +1144,7 @@ pub mod pallet {
                                 .try_insert(*asset, investor_net_contribution)
                                 .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
                         }
-                        let paid_fee = &mut token_funds.paid_fee;
+                        let paid_fee = &mut share_funds.paid_fee;
                         if let Some(existing) = paid_fee.get_mut(asset) {
                             *existing = existing
                                 .checked_add(&investor_fee)
@@ -1165,7 +1165,7 @@ pub mod pallet {
                             .try_insert(*asset, investor_fee)
                             .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
 
-                        let new_entry = TokenOwnerFunds { paid_funds, paid_fee };
+                        let new_entry = ShareOwnerFunds { paid_funds, paid_fee };
                         property_details
                             .investor_funds
                             .try_insert(signer.clone(), new_entry)
@@ -1174,18 +1174,18 @@ pub mod pallet {
                 }
             }
 
-            // Distribute property tokens
-            let token_amount = token_details.token_amount;
+            // Distribute property shares
+            let share_amount = share_details.share_amount;
             let asset_id = property_details.asset_id;
 
-            T::PropertyToken::distribute_property_token_to_owner(asset_id, &signer, token_amount)?;
-            property_details.unclaimed_token_amount = property_details
-                .unclaimed_token_amount
-                .checked_sub(token_amount)
+            T::PropertyShares::distribute_property_shares_to_owner(asset_id, &signer, share_amount)?;
+            property_details.unclaimed_share_amount = property_details
+                .unclaimed_share_amount
+                .checked_sub(share_amount)
                 .ok_or(Error::<T>::ArithmeticUnderflow)?;
 
-            // If all tokens have been claimed, trigger legal process setup.
-            if property_details.unclaimed_token_amount.is_zero() {
+            // If all shares have been claimed, trigger legal process setup.
+            if property_details.unclaimed_share_amount.is_zero() {
                 ensure!(
                     PropertyLawyer::<T>::get(listing_id).is_none(),
                     Error::<T>::LegalProcessOngoing
@@ -1205,7 +1205,7 @@ pub mod pallet {
                 };
                 property_details.claim_expiry = None;
                 PropertyLawyer::<T>::insert(listing_id, property_lawyer_details);
-                Self::deposit_event(Event::<T>::AllPropertyTokenClaimed {
+                Self::deposit_event(Event::<T>::AllPropertySharesClaimed {
                     listing_id,
                     asset_id,
                     legal_process_expiry_block: expiry_block,
@@ -1213,11 +1213,11 @@ pub mod pallet {
             }
 
             OngoingObjectListing::<T>::insert(listing_id, property_details);
-            Self::deposit_event(Event::<T>::PropertyTokenClaimed {
+            Self::deposit_event(Event::<T>::PropertySharesClaimed {
                 listing_id,
                 asset_id,
                 owner: signer,
-                amount: token_amount,
+                amount: share_amount,
             });
             Ok(())
         }
@@ -1229,7 +1229,7 @@ pub mod pallet {
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to finalize the claim window from
         ///
-        /// Emits `PropertyTokenClaimed` event when successful.
+        /// Emits `PropertySharesClaimed` event when successful.
         #[pallet::call_index(3)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::finalize_claim_window())]
         pub fn finalize_claim_window(
@@ -1244,8 +1244,8 @@ pub mod pallet {
             let current_block = <T as pallet::Config>::BlockNumberProvider::current_block_number();
             ensure!(current_block > claim_expiry, Error::<T>::ClaimWindowNotExpired);
 
-            let unclaimed_amount = property_details.unclaimed_token_amount;
-            ensure!(unclaimed_amount > 0, Error::<T>::AllTokensClaimed);
+            let unclaimed_amount = property_details.unclaimed_share_amount;
+            ensure!(unclaimed_amount > 0, Error::<T>::AllSharesClaimed);
             // CASE 1: Max relist attempts reached -> cancel sale and refund buyers
             if property_details.relist_count >= T::MaxRelistAttempts::get() {
                 property_details.relist_count = property_details
@@ -1254,28 +1254,28 @@ pub mod pallet {
                     .ok_or(Error::<T>::ArithmeticOverflow)?;
                 property_details.claim_expiry = None;
                 OngoingObjectListing::<T>::insert(listing_id, &property_details);
-                // Record total number of tokens actually sold (for refund purposes).
-                RefundClaimedToken::<T>::insert(
+                // Record total number of shares actually sold (for refund purposes).
+                RefundClaimedShare::<T>::insert(
                     listing_id,
-                    property_details.token_amount.saturating_sub(unclaimed_amount),
+                    property_details.share_amount.saturating_sub(unclaimed_amount),
                 );
                 Self::deposit_event(Event::<T>::SaleCancelledUnclaimed {
                     listing_id,
                     unclaimed_amount,
                 });
-            // CASE 2: Relist unclaimed tokens and reopen claim window
+            // CASE 2: Relist unclaimed shares and reopen claim window
             } else {
-                // Add unclaimed tokens back to listed_token_amount for relisting.
-                property_details.listed_token_amount = property_details
-                    .listed_token_amount
+                // Add unclaimed shares back to listed_share_amount for relisting.
+                property_details.listed_share_amount = property_details
+                    .listed_share_amount
                     .checked_add(unclaimed_amount)
                     .ok_or(Error::<T>::ArithmeticOverflow)?;
                 property_details.relist_count = property_details
                     .relist_count
                     .checked_add(1)
                     .ok_or(Error::<T>::ArithmeticOverflow)?;
-                // Reset unclaimed tokens and claim window
-                property_details.unclaimed_token_amount = 0;
+                // Reset unclaimed shares and claim window
+                property_details.unclaimed_share_amount = 0;
                 property_details.claim_expiry = None;
                 let possible_listing_expiry = current_block.saturating_add(T::ClaimWindow::get());
                 if property_details.listing_expiry < possible_listing_expiry {
@@ -1310,14 +1310,14 @@ pub mod pallet {
                 OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::NoObjectFound)?;
             // Ensure property has been fully sold.
             ensure!(
-                property_details.listed_token_amount.is_zero(),
+                property_details.listed_share_amount.is_zero(),
                 Error::<T>::PropertyHasNotBeenSoldYet
             );
             let asset_id = property_details.asset_id;
-            T::PropertyToken::ensure_spv_not_created(asset_id)?;
+            T::PropertyShares::ensure_spv_not_created(asset_id)?;
             // Register the SPV for this property.
-            T::PropertyToken::register_spv(asset_id)?;
-            // Set a claim window for investors to claim their tokens after SPV creation.
+            T::PropertyShares::register_spv(asset_id)?;
+            // Set a claim window for investors to claim their shares after SPV creation.
             let current_block_number =
                 <T as pallet::Config>::BlockNumberProvider::current_block_number();
             let expiry_block = current_block_number.saturating_add(T::ClaimWindow::get());
@@ -1327,7 +1327,7 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Relist token on the marketplace.
+        /// Relist shares on the marketplace.
         /// The property must be registered on the marketplace.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
@@ -1335,16 +1335,16 @@ pub mod pallet {
         /// Parameters:
         /// - `region`: The region where the object is located.
         /// - `item_id`: The item id of the nft.
-        /// - `token_price`: The price of a single token.
-        /// - `amount`: The amount of token of the real estate object that should be listed.
+        /// - `share_price`: The price of a single share.
+        /// - `amount`: The amount of shares of the real estate object that should be listed.
         ///
-        /// Emits `TokenRelisted` event when successful
+        /// Emits `SharesRelisted` event when successful
         #[pallet::call_index(5)]
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::relist_token())]
-        pub fn relist_token(
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::relist_shares())]
+        pub fn relist_shares(
             origin: OriginFor<T>,
             asset_id: u32,
-            token_price: <T as pallet::Config>::Balance,
+            share_price: <T as pallet::Config>::Balance,
             amount: u32,
         ) -> DispatchResult {
             let signer = <T as pallet::Config>::CompliantOrigin::ensure_origin(
@@ -1354,12 +1354,12 @@ pub mod pallet {
 
             // Validate input parameters
             ensure!(amount > 0, Error::<T>::AmountCannotBeZero);
-            ensure!(!token_price.is_zero(), Error::<T>::InvalidTokenPrice);
+            ensure!(!share_price.is_zero(), Error::<T>::InvalidSharePrice);
 
             // Ensure property is finalized and get details
-            let asset_details = T::PropertyToken::get_if_property_finalized(asset_id)?;
+            let asset_details = T::PropertyShares::get_if_property_finalized(asset_id)?;
 
-            // Transfer tokens from seller to property account to hold during listing
+            // Transfer shares from seller to property account to hold during listing
             let property_account = Self::property_account_id(asset_id);
             <T as pallet::Config>::LocalCurrency::transfer(
                 asset_id,
@@ -1371,41 +1371,41 @@ pub mod pallet {
 
             // Create new listing
             let listing_id = NextListingId::<T>::get();
-            let token_listing = TokenListingDetails {
+            let share_listing = ShareListingDetails {
                 seller: signer.clone(),
-                token_price,
+                share_price,
                 asset_id,
                 item_id: asset_details.item_id,
                 collection_id: asset_details.collection_id,
                 amount,
             };
-            TokenListings::<T>::insert(listing_id, token_listing);
+            ShareListings::<T>::insert(listing_id, share_listing);
             let next_listing_id = Self::next_listing_id(listing_id)?;
             NextListingId::<T>::put(next_listing_id);
 
-            Self::deposit_event(Event::<T>::TokenRelisted {
+            Self::deposit_event(Event::<T>::SharesRelisted {
                 listing_index: listing_id,
                 asset_id,
-                price: token_price,
-                token_amount: amount,
+                price: share_price,
+                share_amount: amount,
                 seller: signer,
             });
             Ok(())
         }
 
-        /// Buy token from the marketplace.
+        /// Buy shares from the marketplace.
         ///
         /// The origin must be Signed by a compliant RealEstateInvestor and have sufficient funds.
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to buy from.
-        /// - `amount`: The amount of token the investor wants to buy.
+        /// - `amount`: The amount of shares the investor wants to buy.
         /// - `payment_asset`: Asset in which the investor wants to pay.
         ///
-        /// Emits `RelistedTokenBought` event when successful.
+        /// Emits `RelistedSharesBought` event when successful.
         #[pallet::call_index(6)]
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::buy_relisted_token())]
-        pub fn buy_relisted_token(
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::buy_relisted_shares())]
+        pub fn buy_relisted_shares(
             origin: OriginFor<T>,
             listing_id: ListingId,
             amount: u32,
@@ -1425,19 +1425,19 @@ pub mod pallet {
 
             // Retrieve and validate listing details
             let listing_details =
-                TokenListings::<T>::take(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
-            ensure!(listing_details.amount >= amount, Error::<T>::NotEnoughTokenAvailable);
+                ShareListings::<T>::take(listing_id).ok_or(Error::<T>::ShareNotForSale)?;
+            ensure!(listing_details.amount >= amount, Error::<T>::NotEnoughSharesAvailable);
 
             // Restrict ownership to prevent exceeding limits
             Self::restrict_ownership(listing_details.asset_id, &buyer, amount)?;
 
             // Calculate total price
             let price = listing_details
-                .token_price
+                .share_price
                 .checked_mul(&((amount as u128).into()))
                 .ok_or(Error::<T>::MultiplyError)?;
-            // Process the token purchase
-            Self::buying_token_process(
+            // Process the share purchase
+            Self::buying_shares_process(
                 listing_id,
                 &buyer,
                 &buyer,
@@ -1449,7 +1449,7 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Lets a investor cancel the property token purchase.
+        /// Lets an investor cancel the property shares purchase.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
         ///
@@ -1475,23 +1475,23 @@ pub mod pallet {
                     > <T as pallet::Config>::BlockNumberProvider::current_block_number(),
                 Error::<T>::ListingExpired
             );
-            // Ensure there are still tokens available (cannot cancel after all are sold).
+            // Ensure there are still shares available (cannot cancel after all are sold).
             ensure!(
-                !property_details.listed_token_amount.is_zero(),
+                !property_details.listed_share_amount.is_zero(),
                 Error::<T>::PropertyAlreadySold
             );
 
-            // Retrieve token details for this investor and ensure they have tokens to cancel.
-            let token_details: TokenOwnerDetails<T> =
-                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
-            ensure!(!token_details.token_amount.is_zero(), Error::<T>::NoTokenBought);
+            // Retrieve share details for this investor and ensure they have shares to cancel.
+            let share_details: ShareOwnerDetails<T> =
+                ShareOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::ShareOwnerNotFound)?;
+            ensure!(!share_details.share_amount.is_zero(), Error::<T>::NoSharesBought);
 
             // Process refunds
-            let refunds = Self::unfreeze_token_with_refunds(&token_details, &signer)?;
-            // Add the cancelled token amount back to the listing so others can buy them.
-            property_details.listed_token_amount = property_details
-                .listed_token_amount
-                .checked_add(token_details.token_amount)
+            let refunds = Self::unfreeze_shares_with_refunds(&share_details, &signer)?;
+            // Add the cancelled share amount back to the listing so others can buy them.
+            property_details.listed_share_amount = property_details
+                .listed_share_amount
+                .checked_add(share_details.share_amount)
                 .ok_or(Error::<T>::ArithmeticOverflow)?;
 
             OngoingObjectListing::<T>::insert(listing_id, &property_details);
@@ -1499,21 +1499,21 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::InvestmentCancelled {
                 listing_id,
                 investor: signer,
-                amount_returned: token_details.token_amount,
-                new_tokens_remaining: property_details.listed_token_amount,
+                amount_returned: share_details.share_amount,
+                new_shares_remaining: property_details.listed_share_amount,
                 refunds,
             });
             Ok(())
         }
 
-        /// Created an offer for a token listing.
+        /// Created an offer for a share listing.
         ///
         /// The origin must be Signed by a compliant RealEstateInvestor and have sufficient funds.
         ///
         /// Parameters:
         /// - `listing_id`: The listing that the investor wants to buy from.
-        /// - `offer_price`: The offer price for token that are offered.
-        /// - `amount`: The amount of token that the investor wants to buy.
+        /// - `offer_price`: The offer price for shares that are offered.
+        /// - `amount`: The amount of shares that the investor wants to buy.
         /// - `payment_asset`: Asset in which the investor wants to pay.
         ///
         /// Emits `OfferCreated` event when successful.
@@ -1533,7 +1533,7 @@ pub mod pallet {
 
             // Validate input parameters
             ensure!(amount > 0, Error::<T>::AmountCannotBeZero);
-            ensure!(!offer_price.is_zero(), Error::<T>::InvalidTokenPrice);
+            ensure!(!offer_price.is_zero(), Error::<T>::InvalidSharePrice);
             ensure!(
                 T::AcceptedAssets::get().contains(&payment_asset),
                 Error::<T>::PaymentAssetNotSupported
@@ -1546,8 +1546,8 @@ pub mod pallet {
 
             // Retrieve and validate listing details
             let listing_details =
-                TokenListings::<T>::get(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
-            ensure!(listing_details.amount >= amount, Error::<T>::NotEnoughTokenAvailable);
+                ShareListings::<T>::get(listing_id).ok_or(Error::<T>::ShareNotForSale)?;
+            ensure!(listing_details.amount >= amount, Error::<T>::NotEnoughSharesAvailable);
             let offer_nonce = NextOfferNonce::<T>::get();
             let price = offer_price
                 .checked_mul(&((amount as u128).into()))
@@ -1563,7 +1563,7 @@ pub mod pallet {
 
             // Generate unique nonce and store offer
             let offer_details = OfferDetails {
-                token_price: offer_price,
+                share_price: offer_price,
                 amount,
                 payment_assets: payment_asset,
                 nonce: offer_nonce,
@@ -1610,7 +1610,7 @@ pub mod pallet {
 
             // Retrieve and verify ownership
             let listing_details =
-                TokenListings::<T>::get(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
+                ShareListings::<T>::get(listing_id).ok_or(Error::<T>::ShareNotForSale)?;
             ensure!(listing_details.seller == signer, Error::<T>::NoPermission);
             let offer_details = OngoingOffers::<T>::take(listing_id, offeror.clone())
                 .ok_or(Error::<T>::OfferNotFound)?;
@@ -1618,7 +1618,7 @@ pub mod pallet {
             ensure!(offer_details.nonce == offer_nonce, Error::<T>::InvalidOfferNonce);
             ensure!(
                 listing_details.amount >= offer_details.amount,
-                Error::<T>::NotEnoughTokenAvailable
+                Error::<T>::NotEnoughSharesAvailable
             );
             let price = offer_details.get_total_amount()?;
             // Release the held funds from the investor’s account.
@@ -1637,8 +1637,8 @@ pub mod pallet {
                         &offeror,
                         offer_details.amount,
                     )?;
-                    // Process the token purchase.
-                    Self::buying_token_process(
+                    // Process the share purchase.
+                    Self::buying_shares_process(
                         listing_id,
                         &offeror,
                         &offeror,
@@ -1714,22 +1714,22 @@ pub mod pallet {
             )?;
             // Retrieve refund info and listing details
             let mut refund_infos =
-                RefundToken::<T>::get(listing_id).ok_or(Error::<T>::TokenNotRefunded)?;
+                RefundShare::<T>::get(listing_id).ok_or(Error::<T>::SharesNotRefunded)?;
             let property_details =
                 OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
             let property_account = Self::property_account_id(property_details.asset_id);
-            // Get investor's current token balance for this listing.
-            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
+            // Get investor's current share balance for this listing.
+            let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(
                 property_details.asset_id,
                 &signer,
             );
-            ensure!(!token_amount.is_zero(), Error::<T>::NoTokensOwned);
+            ensure!(!share_amount.is_zero(), Error::<T>::NoSharesOwned);
 
             // Update refund tracker
             refund_infos.refund_amount = refund_infos
                 .refund_amount
-                .checked_sub(token_amount)
-                .ok_or(Error::<T>::InsufficientRefundableTokens)?;
+                .checked_sub(share_amount)
+                .ok_or(Error::<T>::InsufficientRefundableShares)?;
 
             // Refund payments in all accepted assets (USDC, USDT, etc.)
             for &asset in T::AcceptedAssets::get().iter() {
@@ -1741,17 +1741,17 @@ pub mod pallet {
                     }
                 }
             }
-            // Transfer property tokens back from investor to property account (burn preparation).
+            // Transfer property shares back from investor to property account (burn preparation).
             <T as pallet::Config>::LocalCurrency::transfer(
                 property_details.asset_id,
                 &signer,
                 &property_account,
-                token_amount.into(),
+                share_amount.into(),
                 Preservation::Expendable,
             )?;
-            // If all tokens have been refunded, burn the property token/nft and clean up storage.
+            // If all shares have been refunded, burn the property shares/nft and clean up storage.
             if refund_infos.refund_amount == 0 {
-                T::PropertyToken::burn_property_token(property_details.asset_id)?;
+                T::PropertyShares::burn_property_shares(property_details.asset_id)?;
                 Self::refund_investors_with_fees(
                     &property_details,
                     refund_infos.property_lawyer_details,
@@ -1777,12 +1777,12 @@ pub mod pallet {
                     )?;
                 }
                 OngoingObjectListing::<T>::remove(listing_id);
-                RefundToken::<T>::remove(listing_id);
+                RefundShare::<T>::remove(listing_id);
             } else {
-                RefundToken::<T>::insert(listing_id, refund_infos);
+                RefundShare::<T>::insert(listing_id, refund_infos);
             }
             // Remove ownership record
-            T::PropertyToken::remove_property_token_ownership(property_details.asset_id, &signer)?;
+            T::PropertyShares::remove_property_share_ownership(property_details.asset_id, &signer)?;
             Self::deposit_event(Event::<T>::RejectedFundsWithdrawn { signer, listing_id });
             Ok(())
         }
@@ -1808,19 +1808,19 @@ pub mod pallet {
             let property_details =
                 OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
             let property_account = Self::property_account_id(property_details.asset_id);
-            // Get investor's token balance for this listing.
-            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
+            // Get investor's share balance for this listing.
+            let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(
                 property_details.asset_id,
                 &signer,
             );
-            ensure!(!token_amount.is_zero(), Error::<T>::NoTokensOwned);
+            ensure!(!share_amount.is_zero(), Error::<T>::NoSharesOwned);
 
             // Determine refundable amount, initializing if this is the first withdrawal.
             let mut refund_infos = match RefundLegalExpired::<T>::get(listing_id) {
                 Some(refund_infos) => refund_infos,
                 None => {
                     let property_lawyer_details =
-                        PropertyLawyer::<T>::get(listing_id).ok_or(Error::<T>::TokenNotRefunded)?;
+                        PropertyLawyer::<T>::get(listing_id).ok_or(Error::<T>::SharesNotRefunded)?;
                     let current_block_number =
                         <T as pallet::Config>::BlockNumberProvider::current_block_number();
                     ensure!(
@@ -1843,14 +1843,14 @@ pub mod pallet {
                     }
 
                     PropertyLawyer::<T>::remove(listing_id);
-                    RefundLegalExpired::<T>::insert(listing_id, property_details.token_amount);
-                    property_details.token_amount
+                    RefundLegalExpired::<T>::insert(listing_id, property_details.share_amount);
+                    property_details.share_amount
                 }
             };
 
             refund_infos = refund_infos
-                .checked_sub(token_amount)
-                .ok_or(Error::<T>::InsufficientRefundableTokens)?;
+                .checked_sub(share_amount)
+                .ok_or(Error::<T>::InsufficientRefundableShares)?;
 
             // Refund payments in all accepted assets (USDC, USDT, etc.)
             for &asset in T::AcceptedAssets::get().iter() {
@@ -1875,18 +1875,18 @@ pub mod pallet {
                     }
                 }
             }
-            // Transfer property tokens back from investor to property account (burn preparation).
+            // Transfer property shares back from investor to property account (burn preparation).
             <T as pallet::Config>::LocalCurrency::transfer(
                 property_details.asset_id,
                 &signer,
                 &property_account,
-                token_amount.into(),
+                share_amount.into(),
                 Preservation::Expendable,
             )?;
-            // If all tokens have been refunded, burn the property token/nft and clean up storage.
+            // If all shares have been refunded, burn the property shares/nft and clean up storage.
             if refund_infos == 0 {
-                T::PropertyToken::burn_property_token(property_details.asset_id)?;
-                T::PropertyToken::clear_token_owners(property_details.asset_id)?;
+                T::PropertyShares::burn_property_shares(property_details.asset_id)?;
+                T::PropertyShares::clear_share_owners(property_details.asset_id)?;
                 // Refund the original listing deposit back to the real estate developer.
                 let (depositor, deposit_amount) =
                     ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
@@ -1913,7 +1913,7 @@ pub mod pallet {
                 RefundLegalExpired::<T>::insert(listing_id, refund_infos);
             }
             // Remove ownership record
-            T::PropertyToken::remove_property_token_ownership(property_details.asset_id, &signer)?;
+            T::PropertyShares::remove_property_share_ownership(property_details.asset_id, &signer)?;
             Self::deposit_event(Event::<T>::ExpiredFundsWithdrawn { signer, listing_id });
             Ok(())
         }
@@ -1942,30 +1942,30 @@ pub mod pallet {
                 Error::<T>::ListingNotExpired
             );
 
-            // Ensure that tokens were not fully sold already (if they are, listing is no longer refundable).
+            // Ensure that shares were not fully sold already (if they are, listing is no longer refundable).
             ensure!(
-                !property_details.listed_token_amount.is_zero(),
+                !property_details.listed_share_amount.is_zero(),
                 Error::<T>::PropertyAlreadySold
             );
 
             // Retrieve investor's purchase record
-            let token_details =
-                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
-            ensure!(!token_details.token_amount.is_zero(), Error::<T>::NoTokenBought,);
+            let share_details =
+                ShareOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::ShareOwnerNotFound)?;
+            ensure!(!share_details.share_amount.is_zero(), Error::<T>::NoSharesBought,);
 
             // Unfreeze investor's funds for this listing (refund for paid assets like USDT/USDC).
-            Self::unfreeze_token(&token_details, &signer)?;
+            Self::unfreeze_shares(&share_details, &signer)?;
 
-            // Add the withdrawn token amount back to the listing.
-            property_details.listed_token_amount = property_details
-                .listed_token_amount
-                .checked_add(token_details.token_amount)
+            // Add the withdrawn share amount back to the listing.
+            property_details.listed_share_amount = property_details
+                .listed_share_amount
+                .checked_add(share_details.share_amount)
                 .ok_or(Error::<T>::ArithmeticOverflow)?;
 
-            // Check if all tokens are returned
-            if property_details.listed_token_amount >= property_details.token_amount {
-                // Burn all property tokens since listing is over.
-                T::PropertyToken::burn_property_token(property_details.asset_id)?;
+            // Check if all shares are returned
+            if property_details.listed_share_amount >= property_details.share_amount {
+                // Burn all property shares since listing is over.
+                T::PropertyShares::burn_property_shares(property_details.asset_id)?;
                 // Refund original deposit to the listing creator.
                 let (depositor, deposit_amount) =
                     ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
@@ -1995,7 +1995,7 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Lets the real estate developer withdraw his deposit in case no token have been sold.
+        /// Lets the real estate developer withdraw his deposit in case no shares have been sold.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
         ///
@@ -2024,17 +2024,17 @@ pub mod pallet {
                 Error::<T>::ListingNotExpired
             );
             ensure!(
-                !property_details.listed_token_amount.is_zero(),
+                !property_details.listed_share_amount.is_zero(),
                 Error::<T>::PropertyAlreadySold
             );
-            // Ensure that ALL tokens have been returned to the pool (no partial sales).
+            // Ensure that ALL shares have been returned to the pool (no partial sales).
             ensure!(
-                property_details.listed_token_amount >= property_details.token_amount,
-                Error::<T>::TokenNotReturned
+                property_details.listed_share_amount >= property_details.share_amount,
+                Error::<T>::SharesNotReturned
             );
 
-            // Burn property tokens since the entire listing was unsold and is now closed.
-            T::PropertyToken::burn_property_token(property_details.asset_id)?;
+            // Burn property shares since the entire listing was unsold and is now closed.
+            T::PropertyShares::burn_property_shares(property_details.asset_id)?;
             // Release developer's deposit that was initially locked for the listing.
             let (depositor, deposit_amount) =
                 ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
@@ -2083,20 +2083,20 @@ pub mod pallet {
                 &Role::RealEstateInvestor,
             )?;
             let mut refund_amount =
-                RefundClaimedToken::<T>::get(listing_id).ok_or(Error::<T>::TokenNotRefunded)?;
+                RefundClaimedShare::<T>::get(listing_id).ok_or(Error::<T>::SharesNotRefunded)?;
             let property_details =
                 OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
             let property_account = Self::property_account_id(property_details.asset_id);
-            // Get investor's token balance for this listing.
-            let token_amount = <T as pallet::Config>::PropertyToken::get_token_balance(
+            // Get investor's share balance for this listing.
+            let share_amount = <T as pallet::Config>::PropertyShares::get_share_balance(
                 property_details.asset_id,
                 &signer,
             );
-            ensure!(!token_amount.is_zero(), Error::<T>::NoTokensOwned);
+            ensure!(!share_amount.is_zero(), Error::<T>::NoSharesOwned);
             // Update refund tracker.
             refund_amount = refund_amount
-                .checked_sub(token_amount)
-                .ok_or(Error::<T>::InsufficientRefundableTokens)?;
+                .checked_sub(share_amount)
+                .ok_or(Error::<T>::InsufficientRefundableShares)?;
             // Refund payments in all accepted assets (USDC, USDT, etc.) including any paid fees.
             if let Some(investor_funds) = property_details.investor_funds.get(&signer) {
                 for (asset, paid_funds) in investor_funds.paid_funds.iter() {
@@ -2107,18 +2107,18 @@ pub mod pallet {
                     Self::transfer_funds(&property_account, &signer, transfer_amount, *asset)?;
                 }
             }
-            // Transfer property tokens back from investor to property account (burn preparation).
+            // Transfer property shares back from investor to property account (burn preparation).
             <T as pallet::Config>::LocalCurrency::transfer(
                 property_details.asset_id,
                 &signer,
                 &property_account,
-                token_amount.into(),
+                share_amount.into(),
                 Preservation::Expendable,
             )?;
-            // If all tokens have been refunded, burn the property token/nft and clean up storage.
+            // If all shares have been refunded, burn the property shares/nft and clean up storage.
             if refund_amount == 0 {
-                T::PropertyToken::burn_property_token(property_details.asset_id)?;
-                T::PropertyToken::clear_token_owners(property_details.asset_id)?;
+                T::PropertyShares::burn_property_shares(property_details.asset_id)?;
+                T::PropertyShares::clear_share_owners(property_details.asset_id)?;
                 // Refund the original listing deposit back to the real estate developer.
                 let (depositor, deposit_amount) =
                     ListingDeposits::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
@@ -2140,12 +2140,12 @@ pub mod pallet {
                     )?;
                 }
                 OngoingObjectListing::<T>::remove(listing_id);
-                RefundClaimedToken::<T>::remove(listing_id);
+                RefundClaimedShare::<T>::remove(listing_id);
             } else {
-                RefundClaimedToken::<T>::insert(listing_id, refund_amount);
+                RefundClaimedShare::<T>::insert(listing_id, refund_amount);
             }
             // Remove ownership record
-            T::PropertyToken::remove_property_token_ownership(property_details.asset_id, &signer)?;
+            T::PropertyShares::remove_property_share_ownership(property_details.asset_id, &signer)?;
             Self::deposit_event(Event::<T>::RejectedFundsWithdrawn { signer, listing_id });
             Ok(())
         }
@@ -2157,7 +2157,7 @@ pub mod pallet {
         /// Parameters:
         /// - `listing_id`: The listing that the caller wants to unfreeze the funds from.
         ///
-        /// Emits `UnclaimedTokenWithdrawn` event when successful.
+        /// Emits `UnclaimedSharesWithdrawn` event when successful.
         #[pallet::call_index(16)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::withdraw_unclaimed())]
         pub fn withdraw_unclaimed(origin: OriginFor<T>, listing_id: ListingId) -> DispatchResult {
@@ -2166,22 +2166,22 @@ pub mod pallet {
                 &Role::RealEstateInvestor,
             )?;
             // Retrieve investor's purchase record.
-            let token_details: TokenOwnerDetails<T> =
-                TokenOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::TokenOwnerNotFound)?;
-            ensure!(!token_details.token_amount.is_zero(), Error::<T>::NoTokenBought);
+            let share_details: ShareOwnerDetails<T> =
+                ShareOwner::<T>::take(&signer, listing_id).ok_or(Error::<T>::ShareOwnerNotFound)?;
+            ensure!(!share_details.share_amount.is_zero(), Error::<T>::NoSharesBought);
             // If property listing still exists, ensure it has been relisted at least once
             // since this investor's original purchase attempt (otherwise withdrawal is not allowed).
             if let Some(property_details) = OngoingObjectListing::<T>::get(listing_id) {
                 ensure!(
-                    property_details.relist_count > token_details.relist_count,
+                    property_details.relist_count > share_details.relist_count,
                     Error::<T>::NoPermission
                 );
             }
 
             // Unfreeze investor's funds for this listing (refund for paid assets like USDT/USDC).
-            let refunds = Self::unfreeze_token_with_refunds(&token_details, &signer)?;
+            let refunds = Self::unfreeze_shares_with_refunds(&share_details, &signer)?;
 
-            Self::deposit_event(Event::<T>::UnclaimedTokenWithdrawn {
+            Self::deposit_event(Event::<T>::UnclaimedSharesWithdrawn {
                 listing_id,
                 investor: signer,
                 refunds,
@@ -2210,7 +2210,7 @@ pub mod pallet {
                 &Role::RealEstateDeveloper,
             )?;
             // Validate new price.
-            ensure!(!new_price.is_zero(), Error::<T>::InvalidTokenPrice);
+            ensure!(!new_price.is_zero(), Error::<T>::InvalidSharePrice);
             // Ensure that the property is not already sold (in which case price update is not allowed).
             ensure!(
                 PropertyLawyer::<T>::get(listing_id).is_none(),
@@ -2219,27 +2219,27 @@ pub mod pallet {
             // Update the price of the ongoing listing after validating permissions and expiry.
             OngoingObjectListing::<T>::try_mutate(listing_id, |maybe_property_details| {
                 let property_details =
-                    maybe_property_details.as_mut().ok_or(Error::<T>::TokenNotForSale)?;
+                    maybe_property_details.as_mut().ok_or(Error::<T>::ShareNotForSale)?;
                 ensure!(
                     property_details.listing_expiry
                         > <T as pallet::Config>::BlockNumberProvider::current_block_number(),
                     Error::<T>::ListingExpired
                 );
                 ensure!(property_details.real_estate_developer == signer, Error::<T>::NoPermission);
-                // Ensure tokens have not all been sold (otherwise price change is irrelevant).
+                // Ensure shares have not all been sold (otherwise price change is irrelevant).
                 ensure!(
-                    !property_details.listed_token_amount.is_zero(),
+                    !property_details.listed_share_amount.is_zero(),
                     Error::<T>::PropertyAlreadySold
                 );
-                // Update the token price.
-                property_details.token_price = new_price;
+                // Update the share price.
+                property_details.share_price = new_price;
                 Ok::<(), DispatchError>(())
             })?;
             Self::deposit_event(Event::<T>::ObjectUpdated { listing_index: listing_id, new_price });
             Ok(())
         }
 
-        /// Allows a real estate investor to delist (remove) a relisted token from the marketplace.
+        /// Allows a real estate investor to delist (remove) relisted shares from the marketplace.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
         ///
@@ -2248,26 +2248,26 @@ pub mod pallet {
         ///
         /// Emits `ListingDelisted` event when successful.
         #[pallet::call_index(18)]
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::delist_token())]
-        pub fn delist_token(origin: OriginFor<T>, listing_id: ListingId) -> DispatchResult {
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::delist_shares())]
+        pub fn delist_shares(origin: OriginFor<T>, listing_id: ListingId) -> DispatchResult {
             let signer = <T as pallet::Config>::PermissionOrigin::ensure_origin(
                 origin,
                 &Role::RealEstateInvestor,
             )?;
             // Retrieve and remove the listing details.
             let listing_details =
-                TokenListings::<T>::take(listing_id).ok_or(Error::<T>::TokenNotForSale)?;
+                ShareListings::<T>::take(listing_id).ok_or(Error::<T>::ShareNotForSale)?;
             // Ensure that the caller is the original seller.
             ensure!(listing_details.seller == signer, Error::<T>::NoPermission);
-            let token_amount = listing_details.amount.into();
-            // Get the property account (escrow account holding the tokens).
+            let share_amount = listing_details.amount.into();
+            // Get the property account (escrow account holding the shares).
             let property_account = Self::property_account_id(listing_details.asset_id);
-            // Transfer the tokens back from the property account to the investor.
+            // Transfer the shares back from the property account to the investor.
             <T as pallet::Config>::LocalCurrency::transfer(
                 listing_details.asset_id,
                 &property_account,
                 &signer,
-                token_amount,
+                share_amount,
                 Preservation::Expendable,
             )?;
             Self::deposit_event(Event::<T>::ListingDelisted { listing_index: listing_id });
@@ -2300,7 +2300,7 @@ pub mod pallet {
             let property_details =
                 OngoingObjectListing::<T>::get(listing_id).ok_or(Error::<T>::ListingNotFound)?;
             let asset_details =
-                T::PropertyToken::get_property_asset_info(property_details.asset_id)
+                T::PropertyShares::get_property_asset_info(property_details.asset_id)
                     .ok_or(Error::<T>::NoObjectFound)?;
             // Ensure lawyer operates in the same region as the property.
             ensure!(lawyer_region.region == asset_details.region, Error::<T>::WrongRegion);
@@ -2360,7 +2360,7 @@ pub mod pallet {
                 }
                 LegalProperty::SpvSide => {
                     // Ensure SPV has been created for the property.
-                    T::PropertyToken::ensure_spv_created(property_details.asset_id)?;
+                    T::PropertyShares::ensure_spv_created(property_details.asset_id)?;
                     // Ensure that no other proposal is ongoing and that the job is still available.
                     ensure!(
                         !ListingSpvProposal::<T>::contains_key(listing_id),
@@ -2416,14 +2416,14 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Allows a token holder (real estate investor) to vote on the lawyer that will represent the SPV.
+        /// Allows a share holder (real estate investor) to vote on the lawyer that will represent the SPV.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
         ///
         /// Parameters:
         /// - `listing_id`: The listing from the property.
         /// - `vote`: Must be either a Yes vote or a No vote.
-        /// - `amount`: The amount of property token that the investor is using for voting.
+        /// - `amount`: The amount of property shares that the investor is using for voting.
         ///
         /// Emits `VotedOnLawyer` event when successful.
         #[pallet::call_index(20)]
@@ -2451,10 +2451,10 @@ pub mod pallet {
                 proposal_details.expiry_block > current_block_number,
                 Error::<T>::VotingExpired
             );
-            // Check voter has enough token balance to vote with the specified amount.
+            // Check voter has enough share balance to vote with the specified amount.
             let voting_power =
-                T::PropertyToken::get_token_balance(proposal_details.asset_id, &signer);
-            ensure!(voting_power >= amount, Error::<T>::NotEnoughToken);
+                T::PropertyShares::get_share_balance(proposal_details.asset_id, &signer);
+            ensure!(voting_power >= amount, Error::<T>::NotEnoughShares);
 
             let mut new_yes_power = 0u32;
             let mut new_no_power = 0u32;
@@ -2467,7 +2467,7 @@ pub mod pallet {
 
                 // Update user's vote record and adjust voting power accordingly.
                 UserLawyerVote::<T>::try_mutate(proposal_id, &signer, |maybe_vote_record| {
-                    // If user had a previous vote, unfreeze their tokens and update tallies.
+                    // If user had a previous vote, unfreeze their shares and update tallies.
                     if let Some(previous_vote) = maybe_vote_record.take() {
                         T::AssetsFreezer::decrease_frozen(
                             proposal_details.asset_id,
@@ -2640,7 +2640,7 @@ pub mod pallet {
             let mut property_lawyer_details =
                 PropertyLawyer::<T>::get(listing_id).ok_or(Error::<T>::InvalidIndex)?;
             // Fetch asset details to compute quorum.
-            let asset_details = <T as pallet::Config>::PropertyToken::get_property_asset_info(
+            let asset_details = <T as pallet::Config>::PropertyShares::get_property_asset_info(
                 property_details.asset_id,
             )
             .ok_or(Error::<T>::NoObjectFound)?;
@@ -2648,7 +2648,7 @@ pub mod pallet {
                 .yes_voting_power
                 .saturating_add(voting_result.no_voting_power)
                 .saturating_add(voting_result.abstain_voting_power);
-            let total_supply = asset_details.token_amount;
+            let total_supply = asset_details.share_amount;
 
             // There must be a nonzero supply for voting to be meaningful.
             ensure!(total_supply > Zero::zero(), Error::<T>::NoObjectFound);
@@ -2697,17 +2697,17 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Lets a voter unlock his locked token after voting on a spv lawyer.
+        /// Lets a voter unlock his locked shares after voting on a spv lawyer.
         ///
         /// The origin must be signed and have sufficient funds.
         ///
         /// Parameters:
         /// - `proposal_id`: Id of the spv lawyer proposal.
         ///
-        /// Emits `TokenUnfrozen` event when successful.
+        /// Emits `SharesUnfrozen` event when successful.
         #[pallet::call_index(23)]
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::unfreeze_spv_lawyer_token())]
-        pub fn unfreeze_spv_lawyer_token(
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::unfreeze_spv_lawyer_shares())]
+        pub fn unfreeze_spv_lawyer_shares(
             origin: OriginFor<T>,
             proposal_id: ProposalId,
         ) -> DispatchResult {
@@ -2726,7 +2726,7 @@ pub mod pallet {
                 );
             }
 
-            // Unfreeze the voter's tokens.
+            // Unfreeze the voter's shares.
             T::AssetsFreezer::decrease_frozen(
                 vote_record.asset_id,
                 &MarketplaceFreezeReason::SpvLawyerVoting,
@@ -2737,7 +2737,7 @@ pub mod pallet {
             // Remove vote record.
             UserLawyerVote::<T>::remove(proposal_id, &signer);
 
-            Self::deposit_event(Event::TokenUnfrozen {
+            Self::deposit_event(Event::SharesUnfrozen {
                 proposal_id,
                 asset_id: vote_record.asset_id,
                 voter: signer,
@@ -2802,7 +2802,7 @@ pub mod pallet {
         /// Emits `DocumentsConfirmed` event when successful.
         #[pallet::call_index(25)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::lawyer_confirm_documents(
-            <T as pallet::Config>::MaxPropertyToken::get(),
+            <T as pallet::Config>::MaxPropertyShares::get(),
         ))]
         pub fn lawyer_confirm_documents(
             origin: OriginFor<T>,
@@ -2899,23 +2899,23 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Allows a sender to transfer property tokens to another account.
+        /// Allows a sender to transfer property shares to another account.
         ///
         /// The origin must be Signed by a RealEstateInvestor and have sufficient funds.
         ///
         /// Parameters:
         /// - `asset_id`: The asset id of the property.
         /// - `receiver`: AccountId of the person that the seller wants to handle the offer from.
-        /// - `token_amount`: The amount of token the sender wants to send.
+        /// - `share_amount`: The amount of shares the sender wants to send.
         ///
         /// Emits `DocumentsConfirmed` event when successful.
         #[pallet::call_index(26)]
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::send_property_token())]
-        pub fn send_property_token(
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::send_property_shares())]
+        pub fn send_property_shares(
             origin: OriginFor<T>,
             asset_id: u32,
             receiver: AccountIdOf<T>,
-            token_amount: u32,
+            share_amount: u32,
         ) -> DispatchResult {
             // Verify the caller is a compliant RealEstateInvestor.
             let sender = <T as pallet::Config>::CompliantOrigin::ensure_origin(
@@ -2928,24 +2928,24 @@ pub mod pallet {
                 Error::<T>::UserNotCompliant
             );
 
-            Self::restrict_ownership(asset_id, &receiver, token_amount)?;
+            Self::restrict_ownership(asset_id, &receiver, share_amount)?;
             // Settle any pending income for both sender and receiver before the transfer.
             T::IncomeSettlement::settle_income(sender.clone(), asset_id)?;
             T::IncomeSettlement::settle_income(receiver.clone(), asset_id)?;
-            // Execute the token transfer.
-            T::PropertyToken::transfer_property_token(
+            // Execute the share transfer.
+            T::PropertyShares::transfer_property_shares(
                 asset_id,
                 &sender,
                 &sender,
                 &receiver,
-                token_amount,
+                share_amount,
             )?;
 
-            Self::deposit_event(Event::<T>::PropertyTokenSend {
+            Self::deposit_event(Event::<T>::PropertySharesSent {
                 asset_id,
                 sender,
                 receiver,
-                amount: token_amount,
+                amount: share_amount,
             });
             Ok(())
         }
@@ -2972,9 +2972,9 @@ pub mod pallet {
             listing_id.checked_add(1).ok_or(Error::<T>::ArithmeticOverflow)
         }
 
-        /// Executes the deal by distributing tokens to owners and funds to the real estate developer.
+        /// Executes the deal by distributing shares to owners and funds to the real estate developer.
         ///
-        /// Called when all tokens (100%) of a collection are sold and both lawyers approve the deal.
+        /// Called when all shares (100%) of a collection are sold and both lawyers approve the deal.
         fn execute_deal(
             listing_id: u32,
             property_lawyer_details: PropertyLawyerDetails<T>,
@@ -2983,7 +2983,7 @@ pub mod pallet {
             let property_details =
                 OngoingObjectListing::<T>::take(listing_id).ok_or(Error::<T>::ListingNotFound)?;
             let asset_details =
-                T::PropertyToken::get_property_asset_info(property_details.asset_id)
+                T::PropertyShares::get_property_asset_info(property_details.asset_id)
                     .ok_or(Error::<T>::NoObjectFound)?;
             let treasury_id = Self::treasury_account_id();
             let property_account = Self::property_account_id(property_details.asset_id);
@@ -3105,8 +3105,8 @@ pub mod pallet {
                     .try_insert(asset, region_owner_amount)
                     .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
             }
-            // Finalize the property token
-            T::PropertyToken::finalize_property(property_details.asset_id)?;
+            // Finalize the property share
+            T::PropertyShares::finalize_property(property_details.asset_id)?;
             // Release the listing deposit
             if let Some((depositor, deposit_amount)) = ListingDeposits::<T>::take(listing_id) {
                 <T as pallet::Config>::NativeCurrency::release(
@@ -3156,10 +3156,10 @@ pub mod pallet {
             )?;
             <T as pallet::Config>::RegionProvider::decrement_active_cases(&spv_lawyer_id)?;
             // Store refund information.
-            RefundToken::<T>::insert(
+            RefundShare::<T>::insert(
                 listing_id,
                 RefundInfos {
-                    refund_amount: property_details.token_amount,
+                    refund_amount: property_details.share_amount,
                     property_lawyer_details: property_lawyer_details.clone(),
                 },
             );
@@ -3199,12 +3199,12 @@ pub mod pallet {
                 Self::transfer_funds(&property_account, &spv_lawyer_id, lawyer_costs, *asset)?;
             }
             // Clear ownership tracking
-            T::PropertyToken::clear_token_owners(property_details.asset_id)?;
+            T::PropertyShares::clear_share_owners(property_details.asset_id)?;
             Ok(())
         }
 
-        /// Processes the purchase of relisted tokens.
-        fn buying_token_process(
+        /// Processes the purchase of relisted shares.
+        fn buying_shares_process(
             listing_id: u32,
             transfer_from: &AccountIdOf<T>,
             account: &AccountIdOf<T>,
@@ -3222,28 +3222,28 @@ pub mod pallet {
                 listing_details.asset_id,
             )?;
             T::IncomeSettlement::settle_income(account.clone(), listing_details.asset_id)?;
-            // Transfer property tokens to buyer.
-            T::PropertyToken::transfer_property_token(
+            // Transfer property shares to buyer.
+            T::PropertyShares::transfer_property_shares(
                 listing_details.asset_id,
                 &listing_details.seller,
                 &property_account,
                 account,
                 amount,
             )?;
-            // Update remaining token amount in the listing.
+            // Update remaining share amount in the listing.
             listing_details.amount = listing_details
                 .amount
                 .checked_sub(amount)
                 .ok_or(Error::<T>::ArithmeticUnderflow)?;
             if listing_details.amount > 0 {
-                TokenListings::<T>::insert(listing_id, listing_details.clone());
+                ShareListings::<T>::insert(listing_id, listing_details.clone());
             }
-            Self::deposit_event(Event::<T>::RelistedTokenBought {
+            Self::deposit_event(Event::<T>::RelistedSharesBought {
                 listing_index: listing_id,
                 asset_id: listing_details.asset_id,
                 buyer: account.clone(),
                 seller: listing_details.seller,
-                price: listing_details.token_price,
+                price: listing_details.share_price,
                 amount,
                 payment_asset,
                 new_amount_remaining: listing_details.amount,
@@ -3251,17 +3251,17 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Unfreezes tokens held for a token owner.
-        fn unfreeze_token(
-            token_details: &TokenOwnerDetails<T>,
+        /// Unfreezes shares held for a share owner.
+        fn unfreeze_shares(
+            share_details: &ShareOwnerDetails<T>,
             signer: &AccountIdOf<T>,
         ) -> DispatchResult {
             for asset in T::AcceptedAssets::get().iter() {
-                if let Some(paid_funds) = token_details.paid_funds.get(asset).copied() {
+                if let Some(paid_funds) = share_details.paid_funds.get(asset).copied() {
                     if paid_funds.is_zero() {
                         continue;
                     }
-                    let paid_tax = token_details.paid_tax.get(asset).copied().unwrap_or_default();
+                    let paid_tax = share_details.paid_tax.get(asset).copied().unwrap_or_default();
 
                     // Calculate refund and investor fee (1% of paid funds)
                     let refund_amount =
@@ -3286,10 +3286,10 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Unfreezes tokens and returns refund details
+        /// Unfreezes shares and returns refund details
         #[allow(clippy::type_complexity)]
-        fn unfreeze_token_with_refunds(
-            token_details: &TokenOwnerDetails<T>,
+        fn unfreeze_shares_with_refunds(
+            share_details: &ShareOwnerDetails<T>,
             signer: &AccountIdOf<T>,
         ) -> Result<
             BoundedBTreeMap<
@@ -3303,13 +3303,13 @@ pub mod pallet {
 
             // Unfreeze funds for each accepted asset and track refunds.
             for asset in T::AcceptedAssets::get().iter() {
-                if let Some(paid_funds) = token_details.paid_funds.get(asset).copied() {
+                if let Some(paid_funds) = share_details.paid_funds.get(asset).copied() {
                     if paid_funds.is_zero() {
                         continue;
                     }
 
                     let default = Zero::zero();
-                    let paid_tax = token_details.paid_tax.get(asset).copied().unwrap_or(default);
+                    let paid_tax = share_details.paid_tax.get(asset).copied().unwrap_or(default);
 
                     // Calculate refund and investor fee (1% of paid funds)
                     let refund_amount =
@@ -3339,7 +3339,7 @@ pub mod pallet {
             Ok(refunds)
         }
 
-        /// Calculates and distributes fees for a token purchase.
+        /// Calculates and distributes fees for a share purchase.
         fn calculate_fees(
             price: <T as pallet::Config>::Balance,
             sender: &AccountIdOf<T>,
@@ -3470,24 +3470,24 @@ pub mod pallet {
             Ok(allocated_costs)
         }
 
-        /// Restricts token ownership to prevent exceeding maximum ownership limits.
+        /// Restricts share ownership to prevent exceeding maximum ownership limits.
         fn restrict_ownership(
             asset_id: u32,
             account: &AccountIdOf<T>,
             amount: u32,
         ) -> DispatchResult {
             let property_info =
-                <T as pallet::Config>::PropertyToken::get_property_asset_info(asset_id)
+                <T as pallet::Config>::PropertyShares::get_property_asset_info(asset_id)
                     .ok_or(Error::<T>::NoObjectFound)?;
-            // Calculate maximum allowable tokens.
-            let max_tokens = T::MaxOwnershipPercentage::get().mul_floor(property_info.token_amount);
+            // Calculate maximum allowable shares.
+            let max_shares = T::MaxOwnershipPercentage::get().mul_floor(property_info.share_amount);
             // Current + new amount
-            let owned_token =
-                <T as pallet::Config>::PropertyToken::get_token_balance(asset_id, account);
-            let new_token_amount =
-                owned_token.checked_add(amount).ok_or(Error::<T>::ArithmeticOverflow)?;
+            let owned_shares =
+                <T as pallet::Config>::PropertyShares::get_share_balance(asset_id, account);
+            let new_share_amount =
+                owned_shares.checked_add(amount).ok_or(Error::<T>::ArithmeticOverflow)?;
             // Ensure ownership does not exceed maximum limit.
-            ensure!(new_token_amount < max_tokens, Error::<T>::ExceedsMaxOwnership);
+            ensure!(new_share_amount < max_shares, Error::<T>::ExceedsMaxOwnership);
             Ok(())
         }
     }

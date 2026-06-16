@@ -29,8 +29,8 @@ use scale_info::TypeInfo;
 pub struct PropertyListingDetails<NftId, NftCollectionId, T: Config> {
     /// The account of the real estate developer who listed the property.
     pub real_estate_developer: AccountIdOf<T>,
-    /// The price per token for the property.
-    pub token_price: <T as pallet::Config>::Balance,
+    /// The price per share for the property.
+    pub share_price: <T as pallet::Config>::Balance,
     /// Funds collected from investors, mapped by asset ID.
     pub collected_funds: BoundedBTreeMap<
         u32,
@@ -55,10 +55,10 @@ pub struct PropertyListingDetails<NftId, NftCollectionId, T: Config> {
     pub item_id: NftId,
     /// The NFT collection ID of the region of the property.
     pub collection_id: NftCollectionId,
-    /// The total number of tokens issued for the property.
-    pub token_amount: u32,
-    /// The number of tokens currently listed for sale.
-    pub listed_token_amount: u32,
+    /// The total number of shares issued for the property.
+    pub share_amount: u32,
+    /// The number of shares currently listed for sale.
+    pub listed_share_amount: u32,
     /// Indicates whether the developer pays the tax (true) or it’s passed to investors (false).
     pub tax_paid_by_developer: bool,
     /// The tax rate applied to the property sale.
@@ -68,33 +68,33 @@ pub struct PropertyListingDetails<NftId, NftCollectionId, T: Config> {
     /// Mapping of investor accounts to their funds and fees paid.
     pub investor_funds: BoundedBTreeMap<
         AccountIdOf<T>,
-        TokenOwnerFunds<T>,
-        <T as pallet::Config>::MaxPropertyToken,
+        ShareOwnerFunds<T>,
+        <T as pallet::Config>::MaxPropertyShares,
     >,
     /// The block number when claims expire, if applicable.
     pub claim_expiry: Option<BlockNumberFor<T>>,
     /// The number of times the property has been relisted.
     pub relist_count: u8,
-    /// The number of tokens that remain unclaimed.
-    pub unclaimed_token_amount: u32,
+    /// The number of shares that remain unclaimed.
+    pub unclaimed_share_amount: u32,
 }
 
-/// Infos regarding the listing of a token.
+/// Infos regarding the listing of a share.
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Encode, Decode, Clone, PartialEq, Eq, MaxEncodedLen, RuntimeDebug, TypeInfo)]
 #[scale_info(skip_type_params(T))]
-pub struct TokenListingDetails<NftId, NftCollectionId, T: Config> {
-    /// The account ID of the seller listing the tokens.
+pub struct ShareListingDetails<NftId, NftCollectionId, T: Config> {
+    /// The account ID of the seller listing the shares.
     pub seller: AccountIdOf<T>,
-    /// The price per token for the listing.
-    pub token_price: <T as pallet::Config>::Balance,
-    /// The asset ID of the property tokens being listed.
+    /// The price per share for the listing.
+    pub share_price: <T as pallet::Config>::Balance,
+    /// The asset ID of the property shares being listed.
     pub asset_id: u32,
     /// The unique ID of the NFT representing the property.
     pub item_id: NftId,
     /// The NFT collection ID of the region of the property.
     pub collection_id: NftCollectionId,
-    /// The number of tokens listed for sale.
+    /// The number of shares listed for sale.
     pub amount: u32,
 }
 
@@ -103,9 +103,9 @@ pub struct TokenListingDetails<NftId, NftCollectionId, T: Config> {
 #[derive(Encode, Decode, Clone, PartialEq, Eq, MaxEncodedLen, RuntimeDebug, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub struct OfferDetails<T: Config> {
-    /// The price per token offered.
-    pub token_price: <T as pallet::Config>::Balance,
-    /// Amount of tokens the offer is for.
+    /// The price per share offered.
+    pub share_price: <T as pallet::Config>::Balance,
+    /// Amount of shares the offer is for.
     pub amount: u32,
     /// The asset ID of the payment currency.
     pub payment_assets: u32,
@@ -153,14 +153,14 @@ pub struct PropertyLawyerDetails<T: Config> {
     pub second_attempt: bool,
 }
 
-/// Details about a token owner’s investment in a property.
+/// Details about a share owner’s investment in a property.
 #[derive(
     Encode, Decode, Clone, PartialEq, Eq, MaxEncodedLen, RuntimeDebug, TypeInfo, DefaultNoBound,
 )]
 #[scale_info(skip_type_params(T))]
-pub struct TokenOwnerDetails<T: Config> {
-    /// The number of tokens purchased by the investor.
-    pub token_amount: u32,
+pub struct ShareOwnerDetails<T: Config> {
+    /// The number of shares purchased by the investor.
+    pub share_amount: u32,
     /// Funds paid by the investor, mapped by asset ID.
     pub paid_funds: BoundedBTreeMap<
         u32,
@@ -173,16 +173,16 @@ pub struct TokenOwnerDetails<T: Config> {
         <T as pallet::Config>::Balance,
         <T as pallet::Config>::MaxAcceptedAssets,
     >,
-    /// At which relisted count the tokens were purchased.
+    /// At which relisted count the shares were purchased.
     pub relist_count: u8,
 }
 
-/// Details about funds and fees paid by a token owner.
+/// Details about funds and fees paid by a share owner.
 #[derive(
     Encode, Decode, Clone, PartialEq, Eq, MaxEncodedLen, RuntimeDebug, TypeInfo, DefaultNoBound,
 )]
 #[scale_info(skip_type_params(T))]
-pub struct TokenOwnerFunds<T: Config> {
+pub struct ShareOwnerFunds<T: Config> {
     /// Funds paid by the investor, mapped by asset ID.
     pub paid_funds: BoundedBTreeMap<
         u32,
@@ -215,7 +215,7 @@ where
     pub fn get_total_amount(&self) -> Result<<T as pallet::Config>::Balance, Error<T>> {
         let amount_in_balance: <T as pallet::Config>::Balance = (self.amount as u128).into();
 
-        self.token_price.checked_mul(&amount_in_balance).ok_or(Error::<T>::MultiplyError)
+        self.share_price.checked_mul(&amount_in_balance).ok_or(Error::<T>::MultiplyError)
     }
 }
 

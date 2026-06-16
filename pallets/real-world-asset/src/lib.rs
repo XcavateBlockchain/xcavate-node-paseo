@@ -77,7 +77,7 @@ pub mod pallet {
     use sp_runtime::traits::{CheckedAdd, One};
 
     /// Details of a property asset in the Xcavate marketplace.
-    /// Represents a tokenized real estate asset with associated NFT and region data.
+    /// Represents a fractionalized real estate asset with associated NFT and region data.
     #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
     #[derive(Encode, Decode, Clone, PartialEq, Eq, MaxEncodedLen, RuntimeDebug, TypeInfo)]
     #[scale_info(skip_type_params(T))]
@@ -94,8 +94,8 @@ pub mod pallet {
         pub location: LocationId,
         /// The total price of the property.
         pub price: Balance,
-        /// The total amount of tokens representing shares in the property.
-        pub token_amount: u32,
+        /// The total amount of shares representing shares in the property.
+        pub share_amount: u32,
         /// Indicates if a Special Purpose Vehicle (SPV) has been created for this property.
         pub spv_created: bool,
         /// Indicates if the property sale has been finalized.
@@ -141,7 +141,7 @@ pub mod pallet {
         #[pallet::constant]
         type MarketplacePalletId: Get<PalletId>;
 
-        /// The currency for property tokens.
+        /// The currency for property shares.
         type LocalCurrency: fungibles::InspectEnumerable<
                 AccountIdOf<Self>,
                 Balance = <Self as pallet::Config>::Balance,
@@ -180,9 +180,9 @@ pub mod pallet {
         #[pallet::constant]
         type PropertyAccountFundingAmount: Get<<Self as pallet::Config>::Balance>;
 
-        /// The maximum number of tokens for a property.
+        /// The maximum number of shares for a property.
         #[pallet::constant]
-        type MaxPropertyToken: Get<u32>;
+        type MaxPropertyShares: Get<u32>;
 
         /// The maximum length of a name or symbol stored on-chain.
         #[pallet::constant]
@@ -241,19 +241,19 @@ pub mod pallet {
     pub type PropertyAssetInfo<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, PropertyAssetDetailsOf<T>, OptionQuery>;
 
-    /// Mapping of the assetid to the vector of token holder.
+    /// Mapping of the assetid to the vector of share holder.
     #[pallet::storage]
     pub type PropertyOwner<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
         u32,
-        BoundedBTreeSet<AccountIdOf<T>, T::MaxPropertyToken>,
+        BoundedBTreeSet<AccountIdOf<T>, T::MaxPropertyShares>,
         ValueQuery,
     >;
 
-    /// Mapping of assetid and accountid to the amount of token an account is holding of the asset.
+    /// Mapping of assetid and accountid to the amount of shares an account is holding of the asset.
     #[pallet::storage]
-    pub type PropertyOwnerToken<T: Config> = StorageDoubleMap<
+    pub type PropertyOwnerShares<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
         u32,
@@ -267,7 +267,7 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// Test
-        PropertyTokenCreated { asset_id: u32, namespace_id: u128 },
+        PropertySharesCreated { asset_id: u32, namespace_id: u128 },
         /// The property nft got burned.
         PropertyNftBurned {
             collection_id: <T as pallet::Config>::NftCollectionId,
@@ -286,12 +286,12 @@ pub mod pallet {
         NotEnoughFunds,
         /// The property asset is not registered.
         PropertyAssetNotRegistered,
-        /// The sender does not hold enough tokens.
-        NotEnoughToken,
+        /// The sender does not hold enough shares.
+        NotEnoughShares,
         /// The specified index is invalid.
         InvalidIndex,
-        /// Too many token buyers for the property.
-        TooManyTokenBuyer,
+        /// Too many share buyers for the property.
+        TooManyShareBuyers,
         /// The property is not registered.
         PropertyNotFound,
         /// The Special Purpose Vehicle (SPV) is already created.
@@ -314,14 +314,14 @@ pub mod pallet {
                 .into_sub_account_truncating(("pr", asset_id))
         }
 
-        /// Create a new property token by minting an NFT and fractionalizing it into tokens.   
+        /// Create new property shares by minting an NFT and fractionalizing it into shares.
         /// Transfers funding to the property account, mints an NFT, fractionalizes it, and stores details.
         #[transactional]
-        pub(crate) fn do_create_property_token(
+        pub(crate) fn do_create_property_shares(
             funding_account: &AccountIdOf<T>,
             region: RegionId,
             location: LocationId<T>,
-            token_amount: u32,
+            share_amount: u32,
             property_price: <T as pallet::Config>::Balance,
             data: BoundedVec<u8, <T as pallet::Config>::StringLimit>,
         ) -> Result<(<T as pallet::Config>::NftId, u32), DispatchError> {
@@ -378,7 +378,7 @@ pub mod pallet {
                 fractionalize_item_id.into(),
                 asset_id.into(),
                 user_lookup,
-                token_amount.into(),
+                share_amount.into(),
             )?;
 
             let namespace_id =
@@ -394,7 +394,7 @@ pub mod pallet {
                     region,
                     location,
                     price: property_price,
-                    token_amount,
+                    share_amount,
                     spv_created: false,
                     finalized: false,
                 },
@@ -407,7 +407,7 @@ pub mod pallet {
 
             NextNftId::<T>::insert(region_info.collection_id, next_item_id);
             NextAssetId::<T>::put(next_asset_number);
-            Self::deposit_event(Event::<T>::PropertyTokenCreated {
+            Self::deposit_event(Event::<T>::PropertySharesCreated {
                 asset_id: asset_number,
                 namespace_id,
             });
@@ -415,12 +415,12 @@ pub mod pallet {
         }
 
         /// Burns a property’s NFT and removes its details.
-        /// Unifies fractionalized tokens, burns the NFT, and removes asset details from storage.
-        pub(crate) fn do_burn_property_token(asset_id: u32) -> DispatchResult {
+        /// Unifies fractionalized shares, burns the NFT, and removes asset details from storage.
+        pub(crate) fn do_burn_property_shares(asset_id: u32) -> DispatchResult {
             PropertyAssetInfo::<T>::try_mutate_exists(asset_id, |maybe_details| {
                 let asset_details =
                     maybe_details.as_ref().ok_or(Error::<T>::PropertyAssetNotRegistered)?;
-                // Unify fractionalized tokens
+                // Unify fractionalized shares
                 let pallet_account = Self::property_account_id(asset_id);
                 let pallet_origin: OriginFor<T> = RawOrigin::Signed(pallet_account.clone()).into();
                 let user_lookup = <T::Lookup as StaticLookup>::unlookup(pallet_account);
@@ -454,38 +454,38 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Transfer property tokens between accounts.
+        /// Transfer property shares between accounts.
         /// Updates balances and ownership lists accordingly.
-        pub(crate) fn do_transfer_property_token(
+        pub(crate) fn do_transfer_property_shares(
             asset_id: u32,
             sender: &AccountIdOf<T>,
             funds_source: &AccountIdOf<T>,
             receiver: &AccountIdOf<T>,
-            token_amount: u32,
+            share_amount: u32,
         ) -> DispatchResult {
-            let sender_balance = PropertyOwnerToken::<T>::get(asset_id, sender);
+            let sender_balance = PropertyOwnerShares::<T>::get(asset_id, sender);
             let updated_sender_balance =
-                sender_balance.checked_sub(token_amount).ok_or(Error::<T>::NotEnoughToken)?;
+                sender_balance.checked_sub(share_amount).ok_or(Error::<T>::NotEnoughShares)?;
 
-            // Transfer tokens
+            // Transfer shares
             <T as pallet::Config>::LocalCurrency::transfer(
                 asset_id,
                 funds_source,
                 receiver,
-                token_amount.into(),
+                share_amount.into(),
                 Preservation::Expendable,
             )
-            .map_err(|_| Error::<T>::NotEnoughToken)?;
+            .map_err(|_| Error::<T>::NotEnoughShares)?;
 
-            // Update sender's token balance or remove if zero
+            // Update sender's share balance or remove if zero
             if updated_sender_balance == 0 {
-                PropertyOwnerToken::<T>::remove(asset_id, sender);
+                PropertyOwnerShares::<T>::remove(asset_id, sender);
                 PropertyOwner::<T>::try_mutate(asset_id, |owner_set| {
                     owner_set.remove(sender);
                     Ok::<(), DispatchError>(())
                 })?;
             } else {
-                PropertyOwnerToken::<T>::insert(asset_id, sender, updated_sender_balance);
+                PropertyOwnerShares::<T>::insert(asset_id, sender, updated_sender_balance);
             }
 
             // Update receiver's ownership
@@ -495,38 +495,38 @@ pub mod pallet {
                 } else {
                     owner_set
                         .try_insert(receiver.clone())
-                        .map_err(|_| Error::<T>::TooManyTokenBuyer)?;
+                        .map_err(|_| Error::<T>::TooManyShareBuyers)?;
                     Ok::<bool, DispatchError>(false)
                 }
             })?;
 
-            // Update receiver's token balance
+            // Update receiver's share balance
             if already_exists {
-                PropertyOwnerToken::<T>::try_mutate(asset_id, receiver, |receiver_balance| {
+                PropertyOwnerShares::<T>::try_mutate(asset_id, receiver, |receiver_balance| {
                     *receiver_balance = receiver_balance
-                        .checked_add(token_amount)
+                        .checked_add(share_amount)
                         .ok_or(Error::<T>::ArithmeticOverflow)?;
                     Ok::<(), DispatchError>(())
                 })?;
             } else {
-                PropertyOwnerToken::<T>::insert(asset_id, receiver, token_amount);
+                PropertyOwnerShares::<T>::insert(asset_id, receiver, share_amount);
             }
             Ok(())
         }
 
-        /// Distributes property tokens to an investor from the property account.
-        pub(crate) fn do_distribute_property_token_to_owner(
+        /// Distributes property shares to an investor from the property account.
+        pub(crate) fn do_distribute_property_shares_to_owner(
             asset_id: u32,
             investor: &AccountIdOf<T>,
-            token_amount: u32,
+            share_amount: u32,
         ) -> DispatchResult {
-            // Transfer tokens from property account
+            // Transfer shares from property account
             let property_account = Self::property_account_id(asset_id);
             <T as pallet::Config>::LocalCurrency::transfer(
                 asset_id,
                 &property_account,
                 investor,
-                token_amount.into(),
+                share_amount.into(),
                 Preservation::Expendable,
             )?;
 
@@ -535,35 +535,35 @@ pub mod pallet {
                 if !owners.contains(investor) {
                     owners
                         .try_insert(investor.clone())
-                        .map_err(|_| Error::<T>::TooManyTokenBuyer)?;
+                        .map_err(|_| Error::<T>::TooManyShareBuyers)?;
                 }
                 Ok::<(), DispatchError>(())
             })?;
 
-            // Update investor's token balance
-            let old_amount = PropertyOwnerToken::<T>::get(asset_id, investor);
+            // Update investor's share balance
+            let old_amount = PropertyOwnerShares::<T>::get(asset_id, investor);
             let new_amount =
-                old_amount.checked_add(token_amount).ok_or(Error::<T>::ArithmeticOverflow)?;
-            PropertyOwnerToken::<T>::insert(asset_id, investor, new_amount);
+                old_amount.checked_add(share_amount).ok_or(Error::<T>::ArithmeticOverflow)?;
+            PropertyOwnerShares::<T>::insert(asset_id, investor, new_amount);
             Ok(())
         }
 
-        /// Removes and returns the token balance of an owner for a property.
-        pub(crate) fn do_take_property_token(asset_id: u32, owner: &AccountIdOf<T>) -> u32 {
-            PropertyOwnerToken::<T>::take(asset_id, owner)
+        /// Removes and returns the share balance of an owner for a property.
+        pub(crate) fn do_take_property_shares(asset_id: u32, owner: &AccountIdOf<T>) -> u32 {
+            PropertyOwnerShares::<T>::take(asset_id, owner)
         }
 
-        /// Removes an account’s token ownership for a property.
-        pub(crate) fn do_remove_property_token_ownership(
+        /// Removes an account’s share ownership for a property.
+        pub(crate) fn do_remove_property_share_ownership(
             asset_id: u32,
             account: &AccountIdOf<T>,
         ) -> DispatchResult {
-            PropertyOwnerToken::<T>::remove(asset_id, account);
+            PropertyOwnerShares::<T>::remove(asset_id, account);
             Ok(())
         }
 
-        /// Clears all token owners for a property.
-        pub(crate) fn do_clear_token_owners(asset_id: u32) -> DispatchResult {
+        /// Clears all share owners for a property.
+        pub(crate) fn do_clear_share_owners(asset_id: u32) -> DispatchResult {
             PropertyOwner::<T>::remove(asset_id);
             Ok(())
         }
@@ -648,16 +648,16 @@ pub mod pallet {
             PropertyAssetInfo::<T>::get(asset_id)
         }
 
-        /// Retrieves the list of token owners for a property.
+        /// Retrieves the list of share owners for a property.
         pub(crate) fn get_property_owner(
             asset_id: u32,
-        ) -> BoundedBTreeSet<AccountIdOf<T>, T::MaxPropertyToken> {
+        ) -> BoundedBTreeSet<AccountIdOf<T>, T::MaxPropertyShares> {
             PropertyOwner::<T>::get(asset_id)
         }
 
-        /// Retrieves the token balance of an account for a property.
-        pub(crate) fn get_token_balance(asset_id: u32, owner: &AccountIdOf<T>) -> u32 {
-            PropertyOwnerToken::<T>::get(asset_id, owner)
+        /// Retrieves the share balance of an account for a property.
+        pub(crate) fn get_share_balance(asset_id: u32, owner: &AccountIdOf<T>) -> u32 {
+            PropertyOwnerShares::<T>::get(asset_id, owner)
         }
 
         /// Set the default item configuration for minting a nft.

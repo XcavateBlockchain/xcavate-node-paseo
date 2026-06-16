@@ -378,7 +378,7 @@ impl pallet_real_world_asset::Config for Test {
     type FractionalizeItemId = <Self as pallet_nfts::Config>::ItemId;
     type AssetId = <Self as pallet_assets::Config<Instance1>>::AssetId;
     type PropertyAccountFundingAmount = ConstU128<100>;
-    type MaxPropertyToken = MaxPropertyTokens;
+    type MaxPropertyShares = MaxPropertyShares;
     type StringLimit = ConstU32<50>;
     type RegionProvider = Regions;
     type PostcodeLimit = Postcode;
@@ -400,8 +400,8 @@ impl IncomeSettlement for MockIncomeSettlement {
 
 parameter_types! {
     pub const MarketplacePalletId: PalletId = PalletId(*b"py/nftxc");
-    pub const MinPropertyTokens: u32 = 100;
-    pub const MaxPropertyTokens: u32 = 250;
+    pub const MinPropertyShares: u32 = 100;
+    pub const MaxPropertyShares: u32 = 250;
     pub const MaxNftsInCollection: u32 = 100;
     pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
     pub const AcceptedPaymentAssets: [u32; 2] = [1337, 1984];
@@ -429,15 +429,15 @@ impl pallet_marketplace::Config for Test {
     type NftCollectionId = <Self as pallet_nfts::Config>::CollectionId;
     type NftId = <Self as pallet_nfts::Config>::ItemId;
     type PalletId = MarketplacePalletId;
-    type MinPropertyToken = MinPropertyTokens;
-    type MaxPropertyToken = MaxPropertyTokens;
+    type MinPropertyShares = MinPropertyShares;
+    type MaxPropertyShares = MaxPropertyShares;
     type TreasuryId = TreasuryPalletId;
     type AssetId = <Self as pallet_assets::Config<Instance1>>::AssetId;
     type ListingDeposit = ConstU128<200_000>;
     type MarketplaceFeePercentage = MarketplaceFeePercent;
     type AcceptedAssets = AcceptedPaymentAssets;
     type MaxAcceptedAssets = MaximumAcceptedAssets;
-    type PropertyToken = RealWorldAsset;
+    type PropertyShares = RealWorldAsset;
     type LawyerVotingTime = LawyerVotingDuration;
     type LegalProcessTime = LegalProcessDuration;
     type Whitelist = XcavateWhitelist;

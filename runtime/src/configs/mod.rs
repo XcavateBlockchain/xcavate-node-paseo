@@ -941,7 +941,7 @@ parameter_types! {
     pub const MarketplacePalletId: PalletId = PalletId(*b"py/nftxc");
     pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
     pub const PropertyFundingAmount: Balance = 10 * XCAV;
-    pub const MaxPropertyTokens: u32 = 250;
+    pub const MaxPropertyShares: u32 = 250;
 }
 
 pub struct BucketNamespaceManager;
@@ -994,7 +994,7 @@ impl pallet_real_world_asset::Config for Runtime {
     type FractionalizeItemId = <Self as pallet_nfts::Config<Instance1>>::ItemId;
     type AssetId = <Self as pallet_assets::Config<Instance1>>::AssetId;
     type PropertyAccountFundingAmount = PropertyFundingAmount;
-    type MaxPropertyToken = MaxPropertyTokens;
+    type MaxPropertyShares = MaxPropertyShares;
     type StringLimit = StringLimit;
     type RegionProvider = Regions;
     type PostcodeLimit = Postcode;
@@ -1002,7 +1002,7 @@ impl pallet_real_world_asset::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MinPropertyTokens: u32 = 100;
+    pub const MinPropertyShares: u32 = 100;
     pub const ListingDepositAmount: Balance = 10 * MICROXCAV;
     pub const MarketplaceFeePercent: Perbill = Perbill::from_percent(1);
     pub const MaximumAcceptedAssets: u32 = 2;
@@ -1029,15 +1029,15 @@ impl pallet_marketplace::Config for Runtime {
     type NftCollectionId = <Self as pallet_nfts::Config<Instance1>>::CollectionId;
     type NftId = <Self as pallet_nfts::Config<Instance1>>::ItemId;
     type PalletId = MarketplacePalletId;
-    type MinPropertyToken = MinPropertyTokens;
-    type MaxPropertyToken = MaxPropertyTokens;
+    type MinPropertyShares = MinPropertyShares;
+    type MaxPropertyShares = MaxPropertyShares;
     type TreasuryId = TreasuryPalletId;
     type AssetId = <Self as pallet_assets::Config<Instance1>>::AssetId;
     type ListingDeposit = ListingDepositAmount;
     type MarketplaceFeePercentage = MarketplaceFeePercent;
     type AcceptedAssets = AcceptedMarketplacePaymentAssets;
     type MaxAcceptedAssets = MaximumAcceptedAssets;
-    type PropertyToken = RealWorldAsset;
+    type PropertyShares = RealWorldAsset;
     type LawyerVotingTime = LawyerVotingDuration;
     type LegalProcessTime = LegalProcessDuration;
     type Whitelist = XcavateWhitelist;
@@ -1079,7 +1079,7 @@ impl pallet_property_management::Config for Runtime {
     type MaxProperties = MaxProperty;
     type MaxLocations = MaxLocation;
     type AcceptedAssets = AcceptedMarketplacePaymentAssets;
-    type PropertyToken = RealWorldAsset;
+    type PropertyShares = RealWorldAsset;
     type LettingAgentVotingTime = LettingAgentVotingDuration;
     type PermissionOrigin = EnsureHasRole<Self>;
     type MinVotingQuorum = MinimumVotingQuorum;
@@ -1119,7 +1119,7 @@ impl pallet_property_governance::Config for Runtime {
     type HighProposal = HighProposal;
     type MarketplacePalletId = MarketplacePalletId;
     type Slash = ();
-    type PropertyToken = RealWorldAsset;
+    type PropertyShares = RealWorldAsset;
     type PermissionOrigin = EnsureHasRole<Self>;
     type MinVotingQuorum = MinimumVotingQuorum;
     type BlockNumberProvider = System;
