@@ -11,7 +11,6 @@ pub mod assets;
 pub mod authorization;
 pub mod configs;
 pub mod constants;
-mod migrations;
 mod types;
 mod weights;
 
