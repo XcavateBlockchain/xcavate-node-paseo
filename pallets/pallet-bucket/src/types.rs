@@ -33,6 +33,20 @@ pub struct BucketPublicKey(pub [u8; 32]);
     PartialEq,
     Eq,
     Clone,
+    Copy,
+    RuntimeDebug,
+    DecodeWithMemTracking,
+)]
+pub struct X25519PublicKey(pub [u8; 32]);
+
+#[derive(
+    Encode,
+    Decode,
+    MaxEncodedLen,
+    TypeInfo,
+    PartialEq,
+    Eq,
+    Clone,
     RuntimeDebug,
     DecodeWithMemTracking,
 )]

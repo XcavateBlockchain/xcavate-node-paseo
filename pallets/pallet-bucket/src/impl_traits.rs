@@ -78,6 +78,22 @@ impl<T: Config> UserManagement<T> for Pallet<T> {
     ) -> DispatchResult {
         Self::do_remove_contributor(namespace_id, bucket_id, contributor, None)
     }
+
+    fn add_viewer(
+        namespace_id: T::NamespaceId,
+        bucket_id: T::BucketId,
+        viewer: T::ViewerId,
+    ) -> DispatchResult {
+        Self::do_add_viewer(namespace_id, bucket_id, viewer, None)
+    }
+
+    fn remove_viewer(
+        namespace_id: T::NamespaceId,
+        bucket_id: T::BucketId,
+        viewer: T::ViewerId,
+    ) -> DispatchResult {
+        Self::do_remove_viewer(namespace_id, bucket_id, viewer, None)
+    }
 }
 
 impl<T: Config> BucketManager<T> for Pallet<T> {
@@ -105,6 +121,10 @@ impl<T: Config> Inspect<T> for Pallet<T> {
 
     fn is_contributor(bucket_id: &T::BucketId, subject: &T::SubjectId) -> bool {
         Self::is_contributor(bucket_id, subject)
+    }
+
+    fn is_viewer(bucket_id: &T::BucketId, viewer: &T::ViewerId) -> bool {
+        Self::is_viewer(bucket_id, viewer)
     }
 
     fn bucket_details(

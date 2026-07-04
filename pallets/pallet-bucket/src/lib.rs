@@ -45,6 +45,8 @@ pub mod pallet {
 
     pub(crate) type SubjectIdOf<T> = <T as Config>::SubjectId;
 
+    pub(crate) type ViewerIdOf<T> = <T as Config>::ViewerId;
+
     pub(crate) type TagOf<T> = BoundedVec<u8, <T as Config>::MaxStringInputLengthTag>;
 
     pub(crate) type NamespaceMetadataOf<T> = <T as Config>::NamespaceMetadata;
@@ -88,6 +90,9 @@ pub mod pallet {
 
         /// The type of the identifier for the subject most likely the DID.
         type SubjectId: Member + Parameter + MaxEncodedLen;
+
+        /// The type of the viewer identifier. This is expected to be an X25519 public key.
+        type ViewerId: Member + Parameter + MaxEncodedLen;
 
         type FeeCollector: OnUnbalanced<CreditOf<Self>>;
 
@@ -259,6 +264,21 @@ pub mod pallet {
         OptionQuery,
     >;
 
+    /// Viewers stored on chain.
+    ///
+    /// Double storage map from bucket id to viewer X25519 public key to an empty tuple.
+    #[pallet::storage]
+    #[pallet::getter(fn viewer_with_id)]
+    pub type Viewers<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        T::BucketId,
+        Blake2_128Concat,
+        ViewerIdOf<T>,
+        (),
+        OptionQuery,
+    >;
+
     /// Admins stored on chain.
     ///
     /// Double storage map from bucket id to admin id to an empty tuple.
@@ -353,6 +373,22 @@ pub mod pallet {
             namespace_id: T::NamespaceId,
             bucket_id: T::BucketId,
             contributor: SubjectIdOf<T>,
+            caller: Option<SubjectIdOf<T>>,
+        },
+
+        /// A viewer is assigned to a bucket.
+        ViewerAdded {
+            namespace_id: T::NamespaceId,
+            bucket_id: T::BucketId,
+            viewer: ViewerIdOf<T>,
+            caller: Option<SubjectIdOf<T>>,
+        },
+
+        /// A viewer is removed from a bucket.
+        ViewerRemoved {
+            namespace_id: T::NamespaceId,
+            bucket_id: T::BucketId,
+            viewer: ViewerIdOf<T>,
             caller: Option<SubjectIdOf<T>>,
         },
 
@@ -473,6 +509,8 @@ pub mod pallet {
         UnableToPayFees,
         /// There are dangling contributors
         DanglingContributors,
+        /// There are dangling viewers
+        DanglingViewers,
         /// There are dangling admins
         DanglingAdmins,
         /// There are dangling managers
@@ -1034,6 +1072,72 @@ pub mod pallet {
         ) -> DispatchResult {
             T::ForceOriginCheck::ensure_origin(origin)?;
             Self::do_add_manager(namespace_id, manager, None)
+        }
+
+        /// Add a viewer to a bucket.
+        ///
+        /// The viewer is identified by their X25519 public key and is allowed to read bucket
+        /// contents off-chain. Only bucket admins can manage viewers.
+        ///
+        /// # Parameters
+        /// - `namespace_id`: The id of the namespace to which the bucket belongs.
+        /// - `bucket_id`: The id of the bucket to which the viewer is added.
+        /// - `viewer`: The X25519 public key of the viewer to be added.
+        #[pallet::call_index(18)]
+        #[pallet::weight(T::WeightInfo::add_viewer())]
+        pub fn add_viewer(
+            origin: OriginFor<T>,
+            namespace_id: T::NamespaceId,
+            bucket_id: T::BucketId,
+            viewer: ViewerIdOf<T>,
+        ) -> DispatchResult {
+            let success_origin = T::OriginCheck::ensure_origin(origin)?;
+
+            let call = Call::<T>::new_call_variant_add_viewer(
+                namespace_id.clone(),
+                bucket_id.clone(),
+                viewer.clone(),
+            );
+            T::OnCallHooks::pre_call_dispatch(&success_origin, call.clone())?;
+
+            let admin = success_origin.subject();
+
+            Self::do_add_viewer(namespace_id, bucket_id, viewer, Some(admin))?;
+
+            T::OnCallHooks::post_call_dispatch(&success_origin, call)
+        }
+
+        /// Remove a viewer from a bucket.
+        ///
+        /// The viewer is identified by their X25519 public key. Only bucket admins can manage
+        /// viewers.
+        ///
+        /// # Parameters
+        /// - `namespace_id`: The id of the namespace to which the bucket belongs.
+        /// - `bucket_id`: The id of the bucket from which the viewer is removed.
+        /// - `viewer`: The X25519 public key of the viewer to be removed.
+        #[pallet::call_index(19)]
+        #[pallet::weight(T::WeightInfo::remove_viewer())]
+        pub fn remove_viewer(
+            origin: OriginFor<T>,
+            namespace_id: T::NamespaceId,
+            bucket_id: T::BucketId,
+            viewer: ViewerIdOf<T>,
+        ) -> DispatchResult {
+            let success_origin = T::OriginCheck::ensure_origin(origin)?;
+
+            let call = Call::<T>::new_call_variant_remove_viewer(
+                namespace_id.clone(),
+                bucket_id.clone(),
+                viewer.clone(),
+            );
+            T::OnCallHooks::pre_call_dispatch(&success_origin, call.clone())?;
+
+            let admin = success_origin.subject();
+
+            Self::do_remove_viewer(namespace_id, bucket_id, viewer, Some(admin))?;
+
+            T::OnCallHooks::post_call_dispatch(&success_origin, call)
         }
     }
 }

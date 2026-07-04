@@ -1,6 +1,6 @@
 use frame_support::assert_ok;
 
-use crate::{mock::*, traits::UserManagement, Admins, Contributors, Managers};
+use crate::{mock::*, traits::UserManagement, Admins, Contributors, Managers, Viewers};
 
 #[test]
 fn add_admin() {
@@ -69,6 +69,41 @@ fn remove_contributor() {
                 ACCOUNT_01
             ));
             assert!(Contributors::<Test>::get(DEFAULT_BUCKET_ID, ACCOUNT_01).is_none());
+        });
+}
+
+#[test]
+fn add_viewer() {
+    ExtBuilder::default()
+        .add_namespace(DEFAULT_NAMESPACE_ID, MetadataMock { unique_plus_1: 10 })
+        .add_bucket(DEFAULT_NAMESPACE_ID, DEFAULT_BUCKET_ID, BUCKET_EXAMPLE_LOCKED)
+        .add_admin(DEFAULT_BUCKET_ID, ACCOUNT_00)
+        .build_and_execute_with_sanity_tests(|| {
+            assert!(Viewers::<Test>::get(DEFAULT_BUCKET_ID, DEFAULT_VIEWER_KEY).is_none());
+            assert_ok!(<Buckets as UserManagement<Test>>::add_viewer(
+                DEFAULT_NAMESPACE_ID,
+                DEFAULT_BUCKET_ID,
+                DEFAULT_VIEWER_KEY
+            ));
+            assert!(Viewers::<Test>::get(DEFAULT_BUCKET_ID, DEFAULT_VIEWER_KEY).is_some());
+        });
+}
+
+#[test]
+fn remove_viewer() {
+    ExtBuilder::default()
+        .add_namespace(DEFAULT_NAMESPACE_ID, MetadataMock { unique_plus_1: 10 })
+        .add_bucket(DEFAULT_NAMESPACE_ID, DEFAULT_BUCKET_ID, BUCKET_EXAMPLE_LOCKED)
+        .add_manager(DEFAULT_NAMESPACE_ID, ACCOUNT_00)
+        .add_viewer(DEFAULT_BUCKET_ID, DEFAULT_VIEWER_KEY)
+        .build_and_execute_with_sanity_tests(|| {
+            assert!(Viewers::<Test>::get(DEFAULT_BUCKET_ID, DEFAULT_VIEWER_KEY).is_some());
+            assert_ok!(<Buckets as UserManagement<Test>>::remove_viewer(
+                DEFAULT_NAMESPACE_ID,
+                DEFAULT_BUCKET_ID,
+                DEFAULT_VIEWER_KEY
+            ));
+            assert!(Viewers::<Test>::get(DEFAULT_BUCKET_ID, DEFAULT_VIEWER_KEY).is_none());
         });
 }
 

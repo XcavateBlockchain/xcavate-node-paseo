@@ -4,7 +4,7 @@ use frame_system::RawOrigin;
 
 use crate::{
     types::Status, Buckets, Call, Config, Managers, MessageMetadataInputOf, Messages, Namespaces,
-    NextBucketId, SubjectIdOf, TagOf, Tags,
+    NextBucketId, SubjectIdOf, TagOf, Tags, Viewers,
 };
 
 /// Benchmark helper trait for generating worst-case scenarios for benchmarking.
@@ -23,6 +23,8 @@ pub trait BenchmarkHelper<T: Config> {
     fn get_message(seed: u32) -> (T::Reference, MessageMetadataInputOf<T>, T::MessageMetadata);
     /// Generate a new key_id.
     fn get_key_id(seed: u32) -> T::KeyId;
+    /// Generate a new viewer id.
+    fn get_viewer_id(seed: u32) -> T::ViewerId;
 }
 
 impl<T: Config> BenchmarkHelper<T> for ()
@@ -37,6 +39,7 @@ where
     T::MessageMetadataInput: Default,
     T::MessageMetadata: Default,
     T::KeyId: Default,
+    T::ViewerId: Default,
 {
     fn create_origin(_seed: u32) -> T::RuntimeOrigin {
         RawOrigin::None.into()
@@ -61,6 +64,10 @@ where
     }
 
     fn get_key_id(_seed: u32) -> T::KeyId {
+        Default::default()
+    }
+
+    fn get_viewer_id(_seed: u32) -> T::ViewerId {
         Default::default()
     }
 }
@@ -91,6 +98,17 @@ mod benchmarks {
         );
 
         key_id
+    }
+
+    fn get_viewer_id<T: Config>(seed: u32) -> T::ViewerId {
+        let viewer_id = T::BenchmarkHelper::get_viewer_id(seed);
+
+        assert!(
+            has_max_length(&viewer_id),
+            "BenchmarkHelper::get_viewer_id() must produce worst-case (maximum length) ids."
+        );
+
+        viewer_id
     }
 
     fn get_bucket_data<T: Config>(
@@ -408,6 +426,52 @@ mod benchmarks {
         );
 
         assert_eq!(Pallet::<T>::is_contributor(&bucket_id, &contributor), false);
+    }
+
+    #[benchmark]
+    fn add_viewer() {
+        let caller: T::RuntimeOrigin = T::BenchmarkHelper::create_origin(0);
+        let admin: SubjectIdOf<T> = get_success_origin::<T>(caller.clone()).subject();
+        let namespace_id = setup_namespace::<T>(caller.clone(), 0);
+        let bucket_id =
+            setup_bucket::<T>(caller.clone(), namespace_id.clone(), 0, Some(admin), Status::Locked);
+        let viewer = get_viewer_id::<T>(0);
+
+        assert!(!Pallet::<T>::is_viewer(&bucket_id, &viewer));
+
+        let bucket_id_param = bucket_id.clone();
+        let viewer_param = viewer.clone();
+        #[extrinsic_call]
+        add_viewer(caller as T::RuntimeOrigin, namespace_id, bucket_id_param, viewer_param);
+
+        assert!(Pallet::<T>::is_viewer(&bucket_id, &viewer));
+    }
+
+    #[benchmark]
+    fn remove_viewer() {
+        let caller: T::RuntimeOrigin = T::BenchmarkHelper::create_origin(0);
+        let admin: SubjectIdOf<T> = get_success_origin::<T>(caller.clone()).subject();
+        let namespace_id = setup_namespace::<T>(caller.clone(), 0);
+        let bucket_id =
+            setup_bucket::<T>(caller.clone(), namespace_id.clone(), 0, Some(admin), Status::Locked);
+        let viewer = get_viewer_id::<T>(0);
+
+        Pallet::<T>::add_viewer(
+            caller.clone(),
+            namespace_id.clone(),
+            bucket_id.clone(),
+            viewer.clone(),
+        )
+        .unwrap();
+
+        assert!(Pallet::<T>::is_viewer(&bucket_id, &viewer));
+
+        let bucket_id_param = bucket_id.clone();
+        let viewer_param = viewer.clone();
+        #[extrinsic_call]
+        remove_viewer(caller as T::RuntimeOrigin, namespace_id, bucket_id_param, viewer_param);
+
+        assert!(!Viewers::<T>::contains_key(&bucket_id, &viewer));
     }
 
     #[benchmark]

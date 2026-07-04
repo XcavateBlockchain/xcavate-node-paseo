@@ -1133,7 +1133,7 @@ use pallet_bucket::{traits::CallSources, AccountIdOf};
 
 use pallet_bucket::types::{
     BucketMetadata, BucketMetadataInput, BucketPublicKey, MessageMetadata, MessageMetadataInput,
-    NamespaceMetadata, NamespaceMetadataInput,
+    NamespaceMetadata, NamespaceMetadataInput, X25519PublicKey,
 };
 
 pub struct SuccessOrigin {
@@ -1255,6 +1255,11 @@ impl pallet_bucket::benchmarking::BenchmarkHelper<Runtime> for BucketHelper {
     fn get_key_id(seed: u32) -> <Runtime as pallet_bucket::Config>::KeyId {
         let account_id = frame_benchmarking::account::<AccountId>("key_id", seed, 0);
         BucketPublicKey(account_id.into())
+    }
+
+    fn get_viewer_id(seed: u32) -> <Runtime as pallet_bucket::Config>::ViewerId {
+        let account_id = frame_benchmarking::account::<AccountId>("viewer_id", seed, 0);
+        X25519PublicKey(account_id.into())
     }
 
     fn get_message(
@@ -1383,6 +1388,7 @@ impl pallet_bucket::Config for Runtime {
     type Reference = BoundedVec<u8, MaxStringLength>;
     type RuntimeEvent = RuntimeEvent;
     type SubjectId = AccountIdOf<Runtime>;
+    type ViewerId = X25519PublicKey;
     type WeightInfo = weights::pallet_bucket::WeightInfo<Runtime>;
     type MaxNameLen = MaxNameLen;
     type MaxUriLen = MaxUriLen;
