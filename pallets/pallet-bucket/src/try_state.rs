@@ -2,6 +2,7 @@ use frame_support::{ensure, sp_runtime::TryRuntimeError};
 
 use crate::{
     Admins, Buckets, Config, Contributors, Managers, Messages, Namespaces, NextBucketId, Tags,
+    Viewers,
 };
 
 pub(crate) fn do_try_state<T: Config>() -> Result<(), TryRuntimeError> {
@@ -53,6 +54,15 @@ pub(crate) fn do_try_state<T: Config>() -> Result<(), TryRuntimeError> {
         ensure!(
             known_bucket_ids.contains(&bucket_id),
             TryRuntimeError::Other("Contributor of unknown bucket")
+        );
+        Ok::<(), TryRuntimeError>(())
+    })?;
+
+    // each viewer should have a valid bucket
+    Viewers::<T>::iter().try_for_each(|(bucket_id, _, _)| {
+        ensure!(
+            known_bucket_ids.contains(&bucket_id),
+            TryRuntimeError::Other("Viewer of unknown bucket")
         );
         Ok::<(), TryRuntimeError>(())
     })?;

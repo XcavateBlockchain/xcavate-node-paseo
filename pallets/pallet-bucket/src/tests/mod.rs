@@ -8,4 +8,5 @@ mod resume_writing;
 mod rotate_key;
 mod tags;
 mod traits;
+mod viewers;
 mod write;

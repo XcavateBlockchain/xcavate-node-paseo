@@ -36,6 +36,18 @@ fn is_contributor() {
 }
 
 #[test]
+fn is_viewer() {
+    ExtBuilder::default()
+        .add_namespace(DEFAULT_NAMESPACE_ID, MetadataMock { unique_plus_1: 10 })
+        .add_bucket(DEFAULT_NAMESPACE_ID, DEFAULT_BUCKET_ID, BUCKET_EXAMPLE_LOCKED)
+        .add_viewer(DEFAULT_BUCKET_ID, DEFAULT_VIEWER_KEY)
+        .build_and_execute_with_sanity_tests(|| {
+            assert!(<Buckets as Inspect<Test>>::is_viewer(&DEFAULT_BUCKET_ID, &DEFAULT_VIEWER_KEY));
+            assert!(!<Buckets as Inspect<Test>>::is_viewer(&DEFAULT_BUCKET_ID, &OTHER_VIEWER_KEY));
+        });
+}
+
+#[test]
 fn bucket_details() {
     ExtBuilder::default()
         .add_namespace(DEFAULT_NAMESPACE_ID, MetadataMock { unique_plus_1: 10 })

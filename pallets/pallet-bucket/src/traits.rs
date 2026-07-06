@@ -86,6 +86,20 @@ pub trait UserManagement<T: Config> {
         account: T::SubjectId,
     ) -> DispatchResult;
 
+    // Adds a new X25519 public key to the list of viewers.
+    fn add_viewer(
+        namespace_id: T::NamespaceId,
+        bucket_id: T::BucketId,
+        viewer: T::ViewerId,
+    ) -> DispatchResult;
+
+    // Removes an X25519 public key from the viewers list.
+    fn remove_viewer(
+        namespace_id: T::NamespaceId,
+        bucket_id: T::BucketId,
+        viewer: T::ViewerId,
+    ) -> DispatchResult;
+
     // Adds a new account to the list of managers.
     fn add_manager(namespace_id: T::NamespaceId, account: T::SubjectId) -> DispatchResult;
 
@@ -130,6 +144,8 @@ pub trait Inspect<T: Config> {
     fn is_admin(bucket_id: &T::BucketId, subject_id: &T::SubjectId) -> bool;
 
     fn is_contributor(bucket_id: &T::BucketId, subject_id: &T::SubjectId) -> bool;
+
+    fn is_viewer(bucket_id: &T::BucketId, viewer_id: &T::ViewerId) -> bool;
 
     fn bucket_details(
         namespace_id: &T::NamespaceId,

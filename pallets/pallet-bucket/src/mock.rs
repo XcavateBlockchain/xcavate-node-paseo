@@ -17,7 +17,7 @@ use super::{Buckets as BucketsStorage, *};
 use crate::{
     self as pallet_buckets,
     traits::CallSources,
-    types::{Bucket, Message, Status},
+    types::{Bucket, Message, Status, X25519PublicKey},
 };
 
 pub(crate) const ACCOUNT_00: AccountId = AccountId::new([0u8; 32]);
@@ -28,6 +28,8 @@ pub(crate) const DEFAULT_NAMESPACE_ID: u128 = 0;
 pub(crate) const DEFAULT_BUCKET_ID: u128 = 4;
 pub(crate) const DEFAULT_BALANCE: u128 = 1_000_000_000_000_000;
 pub(crate) const DEFAULT_ENCRYPTION_KEY: u128 = 1;
+pub(crate) const DEFAULT_VIEWER_KEY: X25519PublicKey = X25519PublicKey([7u8; 32]);
+pub(crate) const OTHER_VIEWER_KEY: X25519PublicKey = X25519PublicKey([8u8; 32]);
 
 pub(crate) const BUCKET_EXAMPLE_LOCKED: BucketMock = BucketMock {
     metadata: MetadataMock { unique_plus_1: 10 },
@@ -230,6 +232,12 @@ impl crate::benchmarking::BenchmarkHelper<Test> for BenchmarkHelper {
         seed.into()
     }
 
+    fn get_viewer_id(seed: u32) -> <Test as crate::Config>::ViewerId {
+        let mut key = [0u8; 32];
+        key[..4].copy_from_slice(&seed.to_le_bytes());
+        X25519PublicKey(key)
+    }
+
     fn get_message(
         _seed: u32,
     ) -> (
@@ -282,6 +290,7 @@ impl pallet_buckets::Config for Test {
     type Reference = BoundedVec<u8, MaxStringLength>;
     type RuntimeEvent = RuntimeEvent;
     type SubjectId = AccountIdOf<Test>;
+    type ViewerId = X25519PublicKey;
     type WeightInfo = weights::SubstrateWeight<Test>;
     type MaxNameLen = MaxNameLen;
     type MaxUriLen = MaxUriLen;
@@ -309,6 +318,7 @@ pub struct ExtBuilder {
     managers: Vec<(u128, AccountId)>,
     buckets: Vec<(u128, u128, BucketMock)>,
     contributors: Vec<(u128, AccountId)>,
+    viewers: Vec<(u128, X25519PublicKey)>,
     admins: Vec<(u128, AccountId)>,
     tags: Vec<(u128, BoundedVec<u8, MaxStringLength>)>,
     messages: Vec<(u128, u128, MessageMock)>,
@@ -337,6 +347,11 @@ impl ExtBuilder {
 
     pub fn add_contributor(mut self, bucket_id: u128, account: AccountId) -> Self {
         self.contributors.push((bucket_id, account));
+        self
+    }
+
+    pub fn add_viewer(mut self, bucket_id: u128, viewer: X25519PublicKey) -> Self {
+        self.viewers.push((bucket_id, viewer));
         self
     }
 
@@ -383,6 +398,10 @@ impl ExtBuilder {
             self.contributors.into_iter().for_each(|contributor| {
                 let (bucket_id, account) = contributor;
                 Contributors::<Test>::insert(bucket_id, account, ());
+            });
+            self.viewers.into_iter().for_each(|viewer| {
+                let (bucket_id, viewer) = viewer;
+                Viewers::<Test>::insert(bucket_id, viewer, ());
             });
             self.admins.into_iter().for_each(|contributor| {
                 let (bucket_id, account) = contributor;

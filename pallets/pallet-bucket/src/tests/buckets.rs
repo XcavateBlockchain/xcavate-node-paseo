@@ -170,6 +170,27 @@ fn remove_bucket_dangling_admin() {
 }
 
 #[test]
+fn remove_bucket_dangling_viewer() {
+    ExtBuilder::default()
+        .add_namespace(DEFAULT_NAMESPACE_ID, MetadataMock { unique_plus_1: 10 })
+        .add_manager(DEFAULT_NAMESPACE_ID, ACCOUNT_00)
+        .add_bucket(DEFAULT_NAMESPACE_ID, DEFAULT_BUCKET_ID, BUCKET_EXAMPLE_LOCKED)
+        .add_viewer(DEFAULT_BUCKET_ID, DEFAULT_VIEWER_KEY)
+        .build_and_execute_with_sanity_tests(|| {
+            let origin = RawOrigin::Root;
+            assert_err!(
+                Buckets::force_remove_bucket(
+                    origin.into(),
+                    DEFAULT_NAMESPACE_ID,
+                    DEFAULT_BUCKET_ID
+                ),
+                Error::<Test>::DanglingViewers
+            );
+            assert_eq!(events().len(), 0);
+        });
+}
+
+#[test]
 fn remove_bucket_dangling_tags() {
     ExtBuilder::default()
         .with_balances(vec![(ACCOUNT_01, DEFAULT_BALANCE)])

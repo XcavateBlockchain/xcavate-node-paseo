@@ -135,6 +135,8 @@ impl<T: frame_system::Config> pallet_bucket::WeightInfo for WeightInfo<T> {
 	/// Proof: `Buckets::Admins` (`max_values`: None, `max_size`: Some(80), added: 2555, mode: `MaxEncodedLen`)
 	/// Storage: `Buckets::Contributors` (r:1 w:0)
 	/// Proof: `Buckets::Contributors` (`max_values`: None, `max_size`: Some(80), added: 2555, mode: `MaxEncodedLen`)
+	/// Storage: `Buckets::Viewers` (r:1 w:0)
+	/// Proof: `Buckets::Viewers` (`max_values`: None, `max_size`: Some(80), added: 2555, mode: `MaxEncodedLen`)
 	/// Storage: `Buckets::Tags` (r:1 w:0)
 	/// Proof: `Buckets::Tags` (`max_values`: None, `max_size`: Some(250), added: 2725, mode: `MaxEncodedLen`)
 	/// Storage: `Buckets::Buckets` (r:1 w:1)
@@ -146,7 +148,7 @@ impl<T: frame_system::Config> pallet_bucket::WeightInfo for WeightInfo<T> {
 		// Minimum execution time: 29_145_000 picoseconds.
 		Weight::from_parts(29_856_000, 0)
 			.saturating_add(Weight::from_parts(0, 6654))
-			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	/// Storage: `Buckets::TagMessages` (r:1 w:0)
@@ -223,6 +225,30 @@ impl<T: frame_system::Config> pallet_bucket::WeightInfo for WeightInfo<T> {
 		//  Estimated: `6266`
 		// Minimum execution time: 16_530_000 picoseconds.
 		Weight::from_parts(16_871_000, 0)
+			.saturating_add(Weight::from_parts(0, 6266))
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: `Buckets::Buckets` (r:1 w:0)
+	/// Proof: `Buckets::Buckets` (`max_values`: None, `max_size`: Some(2801), added: 5276, mode: `MaxEncodedLen`)
+	/// Storage: `Buckets::Admins` (r:1 w:0)
+	/// Proof: `Buckets::Admins` (`max_values`: None, `max_size`: Some(80), added: 2555, mode: `MaxEncodedLen`)
+	/// Storage: `Buckets::Viewers` (r:0 w:1)
+	/// Proof: `Buckets::Viewers` (`max_values`: None, `max_size`: Some(80), added: 2555, mode: `MaxEncodedLen`)
+	fn add_viewer() -> Weight {
+		Weight::from_parts(28_308_000, 0)
+			.saturating_add(Weight::from_parts(0, 6266))
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: `Buckets::Buckets` (r:1 w:0)
+	/// Proof: `Buckets::Buckets` (`max_values`: None, `max_size`: Some(2801), added: 5276, mode: `MaxEncodedLen`)
+	/// Storage: `Buckets::Admins` (r:1 w:0)
+	/// Proof: `Buckets::Admins` (`max_values`: None, `max_size`: Some(80), added: 2555, mode: `MaxEncodedLen`)
+	/// Storage: `Buckets::Viewers` (r:0 w:1)
+	/// Proof: `Buckets::Viewers` (`max_values`: None, `max_size`: Some(80), added: 2555, mode: `MaxEncodedLen`)
+	fn remove_viewer() -> Weight {
+		Weight::from_parts(30_715_000, 0)
 			.saturating_add(Weight::from_parts(0, 6266))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))

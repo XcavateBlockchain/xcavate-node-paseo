@@ -17,7 +17,7 @@ use crate::{
     AccountIdOf, Admins, BalanceOf, BucketDetailsOf, BucketMetadataOf, Buckets, Config,
     Contributors, Error, Event, Managers, MessageMetadataOf, Messages, NamespaceMetadataOf,
     Namespaces, NextBucketId, NextNamespaceId, Pallet, ReferenceOf, SubjectIdOf, TagMessages,
-    TagOf, Tags,
+    TagOf, Tags, ViewerIdOf, Viewers,
 };
 
 impl<T: Config> Pallet<T> {
@@ -34,6 +34,11 @@ impl<T: Config> Pallet<T> {
     /// Check if the subject is a contributor for the bucket.
     pub fn is_contributor(bucket_id: &T::BucketId, subject: &SubjectIdOf<T>) -> bool {
         Contributors::<T>::contains_key(bucket_id, subject)
+    }
+
+    /// Check if the X25519 public key belongs to a viewer for the bucket.
+    pub fn is_viewer(bucket_id: &T::BucketId, viewer: &ViewerIdOf<T>) -> bool {
+        Viewers::<T>::contains_key(bucket_id, viewer)
     }
 
     /// Ensures that the subject is a manager for the specified namespace.
@@ -187,6 +192,7 @@ impl<T: Config> Pallet<T> {
         ensure!(!Messages::<T>::contains_prefix(&bucket_id), Error::<T>::DanglingMessages);
         ensure!(!Admins::<T>::contains_prefix(&bucket_id), Error::<T>::DanglingAdmins);
         ensure!(!Contributors::<T>::contains_prefix(&bucket_id), Error::<T>::DanglingContributors);
+        ensure!(!Viewers::<T>::contains_prefix(&bucket_id), Error::<T>::DanglingViewers);
         ensure!(!Tags::<T>::contains_prefix(&bucket_id), Error::<T>::DanglingTags);
 
         // find and remove bucket
@@ -397,6 +403,53 @@ impl<T: Config> Pallet<T> {
             contributor,
             caller,
         });
+
+        Ok(())
+    }
+
+    /// Adds a new viewer to the specified bucket within a namespace.
+    ///
+    /// This function ensures that the bucket exists before adding the viewer.
+    /// If a caller is provided, it verifies that the caller is an admin of the bucket.
+    /// The viewer is identified by their X25519 public key.
+    pub(super) fn do_add_viewer(
+        namespace_id: T::NamespaceId,
+        bucket_id: T::BucketId,
+        viewer: ViewerIdOf<T>,
+        caller: Option<SubjectIdOf<T>>,
+    ) -> DispatchResult {
+        ensure!(Buckets::<T>::contains_key(&namespace_id, &bucket_id), Error::<T>::UnknownBucket);
+
+        if let Some(ref admin) = caller {
+            Self::ensure_is_admin(&bucket_id, admin)?;
+        }
+
+        Viewers::<T>::insert(&bucket_id, &viewer, ());
+
+        Self::deposit_event(Event::ViewerAdded { namespace_id, bucket_id, viewer, caller });
+
+        Ok(())
+    }
+
+    /// Removes a viewer from the specified bucket within a namespace.
+    ///
+    /// This function ensures that the bucket exists before removing the viewer.
+    /// If a caller is provided, it verifies that the caller is an admin of the bucket.
+    pub(super) fn do_remove_viewer(
+        namespace_id: T::NamespaceId,
+        bucket_id: T::BucketId,
+        viewer: ViewerIdOf<T>,
+        caller: Option<SubjectIdOf<T>>,
+    ) -> DispatchResult {
+        ensure!(Buckets::<T>::contains_key(&namespace_id, &bucket_id), Error::<T>::UnknownBucket);
+
+        if let Some(ref admin) = caller {
+            Self::ensure_is_admin(&bucket_id, admin)?;
+        }
+
+        Viewers::<T>::remove(&bucket_id, &viewer);
+
+        Self::deposit_event(Event::ViewerRemoved { namespace_id, bucket_id, viewer, caller });
 
         Ok(())
     }
