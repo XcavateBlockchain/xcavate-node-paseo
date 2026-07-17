@@ -516,9 +516,25 @@ pub mod pallet {
             payouts: FinalSettlementPayouts<T>,
         },
         /// Funds has been withdrawn.
-        RejectedFundsWithdrawn { signer: AccountIdOf<T>, listing_id: ListingId },
+        RejectedFundsWithdrawn {
+            signer: AccountIdOf<T>,
+            listing_id: ListingId,
+            refunds: BoundedBTreeMap<
+                u32,
+                (<T as pallet::Config>::Balance, <T as pallet::Config>::Balance), // (principal, tax)
+                <T as pallet::Config>::MaxAcceptedAssets,
+            >,
+        },
         /// Funds have been refunded after expired listing.
-        ExpiredFundsWithdrawn { signer: AccountIdOf<T>, listing_id: ListingId },
+        ExpiredFundsWithdrawn {
+            signer: AccountIdOf<T>,
+            listing_id: ListingId,
+            refunds: BoundedBTreeMap<
+                u32,
+                (<T as pallet::Config>::Balance, <T as pallet::Config>::Balance), // (principal, tax)
+                <T as pallet::Config>::MaxAcceptedAssets,
+            >,
+        },
         /// An offer has been accepted.
         OfferAccepted {
             listing_id: ListingId,
@@ -544,6 +560,17 @@ pub mod pallet {
                 (<T as pallet::Config>::Balance, <T as pallet::Config>::Balance), // (principal, tax)
                 <T as pallet::Config>::MaxAcceptedAssets,
             >,
+        },
+        /// Property shares have been sold back (unbought) - shares returned to seller.
+        /// This event clearly indicates a "cancellation" of the original PropertySharesBought action.
+        PropertySharesSoldBack {
+            listing_index: ListingId,
+            asset_id: u32,
+            seller: AccountIdOf<T>,
+            buyer: AccountIdOf<T>,
+            amount: u32,
+            refund: <T as pallet::Config>::Balance,
+            payment_asset: u32,
         },
         /// Property shares have been transferred.
         PropertySharesSent {
@@ -1731,13 +1758,31 @@ pub mod pallet {
                 .checked_sub(share_amount)
                 .ok_or(Error::<T>::InsufficientRefundableShares)?;
 
+            // Track refunds for event
+            let mut refunds = BoundedBTreeMap::new();
+
             // Refund payments in all accepted assets (USDC, USDT, etc.)
             for &asset in T::AcceptedAssets::get().iter() {
                 if let Some(investor_funds) = property_details.investor_funds.get(&signer).cloned()
                 {
                     if let Some(paid_funds) = investor_funds.paid_funds.get(&asset).copied() {
+                        if paid_funds.is_zero() {
+                            continue;
+                        }
+                        // Get paid tax if any
+                        let paid_tax = investor_funds
+                            .paid_fee
+                            .get(&asset)
+                            .copied()
+                            .unwrap_or(Zero::zero());
+
                         // Transfer funds to owner account
                         Self::transfer_funds(&property_account, &signer, paid_funds, asset)?;
+
+                        // Record refund details
+                        refunds
+                            .try_insert(asset, (paid_funds, paid_tax))
+                            .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
                     }
                 }
             }
@@ -1749,6 +1794,20 @@ pub mod pallet {
                 share_amount.into(),
                 Preservation::Expendable,
             )?;
+
+            // Emit PropertySharesSoldBack event for each refund
+            for (asset, (principal, tax)) in refunds.iter() {
+                Self::deposit_event(Event::<T>::PropertySharesSoldBack {
+                    listing_index: listing_id,
+                    asset_id: property_details.asset_id,
+                    seller: property_details.real_estate_developer.clone(),
+                    buyer: signer.clone(),
+                    amount: share_amount,
+                    refund: *principal,
+                    payment_asset: *asset,
+                });
+            }
+
             // If all shares have been refunded, burn the property shares/nft and clean up storage.
             if refund_infos.refund_amount == 0 {
                 T::PropertyShares::burn_property_shares(property_details.asset_id)?;
@@ -1783,7 +1842,11 @@ pub mod pallet {
             }
             // Remove ownership record
             T::PropertyShares::remove_property_share_ownership(property_details.asset_id, &signer)?;
-            Self::deposit_event(Event::<T>::RejectedFundsWithdrawn { signer, listing_id });
+            Self::deposit_event(Event::<T>::RejectedFundsWithdrawn {
+                signer,
+                listing_id,
+                refunds,
+            });
             Ok(())
         }
 
@@ -1875,6 +1938,48 @@ pub mod pallet {
                     }
                 }
             }
+            // Track refunds for event
+            let mut refunds = BoundedBTreeMap::new();
+
+            // Refund payments in all accepted assets (USDC, USDT, etc.)
+            for &asset in T::AcceptedAssets::get().iter() {
+                if let Some(investor_funds) = property_details.investor_funds.get(&signer).cloned()
+                {
+                    if let Some(paid_funds) = investor_funds.paid_funds.get(&asset).copied() {
+                        if paid_funds.is_zero() {
+                            continue;
+                        }
+                        // Get paid fee if any
+                        let paid_fee = investor_funds
+                            .paid_fee
+                            .get(&asset)
+                            .copied()
+                            .unwrap_or(Zero::zero());
+
+                        // Refund both funds + paid fees.
+                        let transfer_amount = paid_funds
+                            .checked_add(&paid_fee)
+                            .ok_or(Error::<T>::ArithmeticOverflow)?;
+                        Self::transfer_funds(&property_account, &signer, transfer_amount, asset)?;
+
+                        // Record refund details
+                        refunds
+                            .try_insert(asset, (paid_funds, paid_fee))
+                            .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
+
+                        // Emit PropertySharesSoldBack event for each refund
+                        Self::deposit_event(Event::<T>::PropertySharesSoldBack {
+                            listing_index: listing_id,
+                            asset_id: property_details.asset_id,
+                            seller: property_details.real_estate_developer.clone(),
+                            buyer: signer.clone(),
+                            amount: share_amount,
+                            refund: paid_funds,
+                            payment_asset: asset,
+                        });
+                    }
+                }
+            }
             // Transfer property shares back from investor to property account (burn preparation).
             <T as pallet::Config>::LocalCurrency::transfer(
                 property_details.asset_id,
@@ -1914,7 +2019,11 @@ pub mod pallet {
             }
             // Remove ownership record
             T::PropertyShares::remove_property_share_ownership(property_details.asset_id, &signer)?;
-            Self::deposit_event(Event::<T>::ExpiredFundsWithdrawn { signer, listing_id });
+            Self::deposit_event(Event::<T>::ExpiredFundsWithdrawn {
+                signer,
+                listing_id,
+                refunds,
+            });
             Ok(())
         }
 

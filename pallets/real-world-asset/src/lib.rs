@@ -599,13 +599,11 @@ pub mod pallet {
         /// Removes and returns the share balance of an owner for a property.
         pub(crate) fn do_take_property_shares(asset_id: u32, owner: &AccountIdOf<T>) -> u32 {
             let amount = PropertyOwnerShares::<T>::take(asset_id, owner);
-            if amount > 0 {
-                Self::deposit_event(Event::<T>::PropertySharesTaken {
-                    asset_id,
-                    owner: owner.clone(),
-                    amount,
-                });
-            }
+            Self::deposit_event(Event::<T>::PropertySharesTaken {
+                asset_id,
+                owner: owner.clone(),
+                amount,
+            });
             amount
         }
 
@@ -614,11 +612,11 @@ pub mod pallet {
             asset_id: u32,
             account: &AccountIdOf<T>,
         ) -> DispatchResult {
+            PropertyOwnerShares::<T>::remove(asset_id, account);
             Self::deposit_event(Event::<T>::PropertyShareOwnershipRemoved {
                 asset_id,
                 account: account.clone(),
             });
-            PropertyOwnerShares::<T>::remove(asset_id, account);
             Ok(())
         }
 
