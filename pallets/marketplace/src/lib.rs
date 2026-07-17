@@ -1796,7 +1796,7 @@ pub mod pallet {
             )?;
 
             // Emit PropertySharesSoldBack event for each refund
-            for (asset, (principal, tax)) in refunds.iter() {
+            for (asset, (principal, _tax)) in refunds.iter() {
                 Self::deposit_event(Event::<T>::PropertySharesSoldBack {
                     listing_index: listing_id,
                     asset_id: property_details.asset_id,
@@ -2100,7 +2100,37 @@ pub mod pallet {
             } else {
                 OngoingObjectListing::<T>::insert(listing_id, &property_details);
             }
-            Self::deposit_event(Event::<T>::ExpiredFundsWithdrawn { signer, listing_id });
+
+            // Track refunds for event
+            let mut refunds = BoundedBTreeMap::new();
+
+            // Refund payments in all accepted assets (USDC, USDT, etc.)
+            for &asset in T::AcceptedAssets::get().iter() {
+                if let Some(investor_funds) = property_details.investor_funds.get(&signer).cloned() {
+                    if let Some(paid_funds) = investor_funds.paid_funds.get(&asset).copied() {
+                        if paid_funds.is_zero() {
+                            continue;
+                        }
+                        // Get paid fee if any
+                        let paid_fee = investor_funds
+                            .paid_fee
+                            .get(&asset)
+                            .copied()
+                            .unwrap_or(Zero::zero());
+
+                        // Record refund details
+                        refunds
+                            .try_insert(asset, (paid_funds, paid_fee))
+                            .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
+                    }
+                }
+            }
+
+            Self::deposit_event(Event::<T>::ExpiredFundsWithdrawn {
+                signer,
+                listing_id,
+                refunds,
+            });
             Ok(())
         }
 
@@ -2255,7 +2285,37 @@ pub mod pallet {
             }
             // Remove ownership record
             T::PropertyShares::remove_property_share_ownership(property_details.asset_id, &signer)?;
-            Self::deposit_event(Event::<T>::RejectedFundsWithdrawn { signer, listing_id });
+
+            // Track refunds for event
+            let mut refunds = BoundedBTreeMap::new();
+
+            // Refund payments in all accepted assets (USDC, USDT, etc.)
+            for &asset in T::AcceptedAssets::get().iter() {
+                if let Some(investor_funds) = property_details.investor_funds.get(&signer).cloned() {
+                    if let Some(paid_funds) = investor_funds.paid_funds.get(&asset).copied() {
+                        if paid_funds.is_zero() {
+                            continue;
+                        }
+                        // Get paid fee if any
+                        let paid_fee = investor_funds
+                            .paid_fee
+                            .get(&asset)
+                            .copied()
+                            .unwrap_or(Zero::zero());
+
+                        // Record refund details
+                        refunds
+                            .try_insert(asset, (paid_funds, paid_fee))
+                            .map_err(|_| Error::<T>::ExceedsMaxEntries)?;
+                    }
+                }
+            }
+
+            Self::deposit_event(Event::<T>::RejectedFundsWithdrawn {
+                signer,
+                listing_id,
+                refunds,
+            });
             Ok(())
         }
 
