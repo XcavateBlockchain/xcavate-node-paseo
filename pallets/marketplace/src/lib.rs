@@ -1915,29 +1915,6 @@ pub mod pallet {
                 .checked_sub(share_amount)
                 .ok_or(Error::<T>::InsufficientRefundableShares)?;
 
-            // Refund payments in all accepted assets (USDC, USDT, etc.)
-            for &asset in T::AcceptedAssets::get().iter() {
-                if let Some(investor_funds) = property_details.investor_funds.get(&signer).cloned()
-                {
-                    if let Some(paid_funds) = investor_funds.paid_funds.get(&asset).copied() {
-                        if let Some(paid_fee) = investor_funds.paid_fee.get(&asset).copied() {
-                            // Refund both funds + paid fees.
-                            let transfer_amount = paid_funds
-                                .checked_add(&paid_fee)
-                                .ok_or(Error::<T>::ArithmeticOverflow)?;
-                            Self::transfer_funds(
-                                &property_account,
-                                &signer,
-                                transfer_amount,
-                                asset,
-                            )?;
-                        } else {
-                            // Refund only paid funds (no fees).
-                            Self::transfer_funds(&property_account, &signer, paid_funds, asset)?;
-                        }
-                    }
-                }
-            }
             // Track refunds for event
             let mut refunds = BoundedBTreeMap::new();
 
