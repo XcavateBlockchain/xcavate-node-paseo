@@ -266,14 +266,48 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Test
-        PropertySharesCreated { asset_id: u32, namespace_id: u128 },
-        /// The property nft got burned.
+        /// Property shares created via NFT fractionalization.
+        PropertySharesCreated {
+            asset_id: u32,
+            namespace_id: u128,
+            owner: AccountIdOf<T>,
+        },
+        /// The property NFT got burned.
         PropertyNftBurned {
             collection_id: <T as pallet::Config>::NftCollectionId,
             item_id: <T as pallet::Config>::NftId,
             asset_id: u32,
         },
+        /// SPV (Special Purpose Vehicle) registered for a property.
+        SpvRegistered { asset_id: u32 },
+        /// Property sale finalized.
+        PropertyFinalized { asset_id: u32 },
+        /// Property shares transferred between accounts.
+        PropertySharesTransferred {
+            asset_id: u32,
+            from: AccountIdOf<T>,
+            to: AccountIdOf<T>,
+            amount: u32,
+        },
+        /// Property shares distributed to an owner.
+        PropertySharesDistributed {
+            asset_id: u32,
+            owner: AccountIdOf<T>,
+            amount: u32,
+        },
+        /// Property share ownership removed.
+        PropertyShareOwnershipRemoved {
+            asset_id: u32,
+            account: AccountIdOf<T>,
+        },
+        /// Property shares taken from an owner.
+        PropertySharesTaken {
+            asset_id: u32,
+            owner: AccountIdOf<T>,
+            amount: u32,
+        },
+        /// All share owners cleared for a property.
+        PropertyShareOwnersCleared { asset_id: u32 },
     }
 
     #[pallet::error]
@@ -410,6 +444,7 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::PropertySharesCreated {
                 asset_id: asset_number,
                 namespace_id,
+                owner: funding_account.clone(),
             });
             Ok((item_id, asset_number))
         }
@@ -511,6 +546,13 @@ pub mod pallet {
             } else {
                 PropertyOwnerShares::<T>::insert(asset_id, receiver, share_amount);
             }
+
+            Self::deposit_event(Event::<T>::PropertySharesTransferred {
+                asset_id,
+                from: sender.clone(),
+                to: receiver.clone(),
+                amount: share_amount,
+            });
             Ok(())
         }
 
@@ -545,12 +587,26 @@ pub mod pallet {
             let new_amount =
                 old_amount.checked_add(share_amount).ok_or(Error::<T>::ArithmeticOverflow)?;
             PropertyOwnerShares::<T>::insert(asset_id, investor, new_amount);
+
+            Self::deposit_event(Event::<T>::PropertySharesDistributed {
+                asset_id,
+                owner: investor.clone(),
+                amount: share_amount,
+            });
             Ok(())
         }
 
         /// Removes and returns the share balance of an owner for a property.
         pub(crate) fn do_take_property_shares(asset_id: u32, owner: &AccountIdOf<T>) -> u32 {
-            PropertyOwnerShares::<T>::take(asset_id, owner)
+            let amount = PropertyOwnerShares::<T>::take(asset_id, owner);
+            if amount > 0 {
+                Self::deposit_event(Event::<T>::PropertySharesTaken {
+                    asset_id,
+                    owner: owner.clone(),
+                    amount,
+                });
+            }
+            amount
         }
 
         /// Removes an account’s share ownership for a property.
@@ -558,12 +614,17 @@ pub mod pallet {
             asset_id: u32,
             account: &AccountIdOf<T>,
         ) -> DispatchResult {
+            Self::deposit_event(Event::<T>::PropertyShareOwnershipRemoved {
+                asset_id,
+                account: account.clone(),
+            });
             PropertyOwnerShares::<T>::remove(asset_id, account);
             Ok(())
         }
 
         /// Clears all share owners for a property.
         pub(crate) fn do_clear_share_owners(asset_id: u32) -> DispatchResult {
+            Self::deposit_event(Event::<T>::PropertyShareOwnersCleared { asset_id });
             PropertyOwner::<T>::remove(asset_id);
             Ok(())
         }
@@ -574,6 +635,7 @@ pub mod pallet {
                 let asset_details =
                     maybe_asset_details.as_mut().ok_or(Error::<T>::PropertyAssetNotRegistered)?;
                 asset_details.spv_created = true;
+                Self::deposit_event(Event::<T>::SpvRegistered { asset_id });
                 Ok::<(), DispatchError>(())
             })
         }
@@ -584,6 +646,7 @@ pub mod pallet {
                 let asset_details =
                     maybe_asset_details.as_mut().ok_or(Error::<T>::PropertyAssetNotRegistered)?;
                 asset_details.finalized = true;
+                Self::deposit_event(Event::<T>::PropertyFinalized { asset_id });
                 Ok::<(), DispatchError>(())
             })
         }
