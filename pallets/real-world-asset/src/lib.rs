@@ -622,8 +622,13 @@ pub mod pallet {
 
         /// Clears all share owners for a property.
         pub(crate) fn do_clear_share_owners(asset_id: u32) -> DispatchResult {
-            Self::deposit_event(Event::<T>::PropertyShareOwnersCleared { asset_id });
+            // Remove all owner share balances
+            let _ = PropertyOwnerShares::<T>::clear_prefix(&asset_id, u32::MAX, None);
+
+            // Remove the owner set
             PropertyOwner::<T>::remove(asset_id);
+
+            Self::deposit_event(Event::<T>::PropertyShareOwnersCleared { asset_id });
             Ok(())
         }
 
